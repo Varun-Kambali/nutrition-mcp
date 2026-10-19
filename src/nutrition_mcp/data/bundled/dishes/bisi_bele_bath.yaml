@@ -1,0 +1,56 @@
+# The spice powder is modelled as red chilli powder, garam masala, coconut and
+# chana dal. Jaggery is left out because it has no open source.
+id: bisi_bele_bath
+name: Bisi bele bath
+aliases:
+  - bisibele bath
+  - bisibelebath
+regions: [south]
+diet: veg
+servings: 5
+cooked_weight_g: 1200
+ingredients:
+  - ingredient_id: white_rice
+    grams: 100
+  - ingredient_id: toor_dal
+    grams: 60
+  - ingredient_id: carrot
+    grams: 50
+  - ingredient_id: green_beans
+    grams: 50
+  - ingredient_id: green_peas
+    grams: 40
+  - ingredient_id: potato
+    grams: 50
+  - ingredient_id: onion
+    grams: 50
+  - ingredient_id: tomato
+    grams: 60
+  - ingredient_id: tamarind
+    grams: 12
+  - ingredient_id: red_chilli_powder
+    grams: 5  # spice powder
+  - ingredient_id: fresh_coconut
+    grams: 15  # spice powder
+  - ingredient_id: garam_masala
+    grams: 2  # spice powder
+  - ingredient_id: chana_dal
+    grams: 5  # spice powder
+  - ingredient_id: turmeric
+    grams: 1
+  - ingredient_id: ghee
+    grams: 25
+  - ingredient_id: peanuts
+    grams: 20  # fried in the ghee
+  - ingredient_id: mustard_seeds
+    grams: 2
+  - ingredient_id: curry_leaves
+    grams: 4
+  - ingredient_id: salt
+    grams: 8
+measures:
+  katori: 150
+assumptions: >-
+  25 g ghee for the tempering and peanuts, 5 g per serving. Rice, dal and vegetables are
+  cooked with tamarind water to a soft, pourable 1200 g, about twice the raw weight.
+source_id: recipes_cc_by

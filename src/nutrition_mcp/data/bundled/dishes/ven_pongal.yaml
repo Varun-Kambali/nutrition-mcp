@@ -1,0 +1,33 @@
+# Cashews are left out; the ingredient table has none.
+id: ven_pongal
+name: Ven pongal
+aliases:
+  - khara pongal
+  - pongal
+regions: [south]
+diet: veg
+servings: 4
+cooked_weight_g: 720
+ingredients:
+  - ingredient_id: white_rice
+    grams: 100
+  - ingredient_id: moong_dal
+    grams: 50
+  - ingredient_id: ghee
+    grams: 30
+  - ingredient_id: black_pepper
+    grams: 3
+  - ingredient_id: cumin_seeds
+    grams: 3
+  - ingredient_id: ginger
+    grams: 6
+  - ingredient_id: curry_leaves
+    grams: 3
+  - ingredient_id: salt
+    grams: 5
+measures:
+  katori: 150
+assumptions: >-
+  30 g ghee, 7.5 g per serving, for the tempering and stirred in at the end. The rice and
+  dal are cooked very soft to about 4.5 times their raw weight.
+source_id: recipes_cc_by

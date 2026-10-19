@@ -1,0 +1,44 @@
+id: rava_upma
+name: Rava upma
+aliases:
+  - upma
+  - uppittu
+  - upit
+  - sooji upma
+regions: [south, west]
+diet: vegan
+servings: 4
+cooked_weight_g: 720
+ingredients:
+  - ingredient_id: rava
+    grams: 150
+  - ingredient_id: sunflower_oil
+    grams: 20
+  - ingredient_id: mustard_seeds
+    grams: 2
+  - ingredient_id: urad_dal
+    grams: 5
+  - ingredient_id: chana_dal
+    grams: 5
+  - ingredient_id: onion
+    grams: 60
+  - ingredient_id: green_chilli
+    grams: 6
+  - ingredient_id: ginger
+    grams: 5
+  - ingredient_id: curry_leaves
+    grams: 3
+  - ingredient_id: carrot
+    grams: 30
+  - ingredient_id: green_peas
+    grams: 30
+  - ingredient_id: salt
+    grams: 5
+  - ingredient_id: coriander_leaves
+    grams: 4
+measures:
+  katori: 150
+assumptions: >-
+  20 g sunflower oil, 5 g per serving. The roasted rava is cooked in 450 g water, 3 times
+  its weight, and about 55 g steams off.
+source_id: recipes_cc_by

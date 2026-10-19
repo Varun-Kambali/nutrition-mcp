@@ -1,0 +1,44 @@
+# Rasam powder is modelled as black pepper, cumin and red chilli powder.
+id: rasam
+name: Rasam
+aliases:
+  - saaru
+  - chaaru
+  - tomato rasam
+regions: [south]
+diet: veg
+servings: 6
+cooked_weight_g: 900
+ingredients:
+  - ingredient_id: toor_dal
+    grams: 25
+  - ingredient_id: tomato
+    grams: 150
+  - ingredient_id: tamarind
+    grams: 10
+  - ingredient_id: black_pepper
+    grams: 3
+  - ingredient_id: cumin_seeds
+    grams: 3
+  - ingredient_id: garlic
+    grams: 6
+  - ingredient_id: red_chilli_powder
+    grams: 2
+  - ingredient_id: turmeric
+    grams: 1
+  - ingredient_id: ghee
+    grams: 10  # tempering
+  - ingredient_id: mustard_seeds
+    grams: 2  # tempering
+  - ingredient_id: curry_leaves
+    grams: 3  # tempering
+  - ingredient_id: coriander_leaves
+    grams: 6
+  - ingredient_id: salt
+    grams: 7
+measures:
+  katori: 150
+assumptions: >-
+  10 g ghee for the tempering, under 2 g per serving. Tomato, tamarind water and a little
+  cooked dal are simmered with about 750 g water to 900 g.
+source_id: recipes_cc_by

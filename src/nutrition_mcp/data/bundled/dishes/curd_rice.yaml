@@ -1,0 +1,39 @@
+id: curd_rice
+name: Curd rice
+aliases:
+  - mosaranna
+  - thayir sadam
+  - dahi chawal
+regions: [south]
+diet: veg
+servings: 4
+cooked_weight_g: 840
+ingredients:
+  - ingredient_id: white_rice
+    grams: 120
+  - ingredient_id: curd
+    grams: 250
+  - ingredient_id: whole_milk
+    grams: 80
+  - ingredient_id: salt
+    grams: 4
+  - ingredient_id: sunflower_oil
+    grams: 8  # tempering
+  - ingredient_id: mustard_seeds
+    grams: 2  # tempering
+  - ingredient_id: urad_dal
+    grams: 4  # tempering
+  - ingredient_id: curry_leaves
+    grams: 3  # tempering
+  - ingredient_id: green_chilli
+    grams: 6
+  - ingredient_id: ginger
+    grams: 5
+  - ingredient_id: coriander_leaves
+    grams: 4
+measures:
+  katori: 150
+assumptions: >-
+  8 g sunflower oil for the tempering, 2 g per serving. The rice is cooked soft to 4 times
+  its raw weight and mixed with curd and milk, which add their full weight.
+source_id: recipes_cc_by
