@@ -1,0 +1,47 @@
+# Dried Kashmiri chillies are modelled as red chilli powder; the coriander seed in
+# the masala is left out. Each serving holds 100 g of raw fish.
+id: goan_fish_curry
+name: Goan fish curry
+aliases:
+  - surmai curry
+  - kingfish curry
+  - goan kingfish curry
+regions: [west]
+diet: non_veg
+servings: 5
+cooked_weight_g: 1000
+ingredients:
+  - ingredient_id: surmai
+    grams: 500  # edible portion, without bones
+  - ingredient_id: fresh_coconut
+    grams: 150
+  - ingredient_id: red_chilli_powder
+    grams: 10
+  - ingredient_id: turmeric
+    grams: 3
+  - ingredient_id: cumin_seeds
+    grams: 3
+  - ingredient_id: black_pepper
+    grams: 2
+  - ingredient_id: garlic
+    grams: 10
+  - ingredient_id: ginger
+    grams: 8
+  - ingredient_id: tamarind
+    grams: 15
+  - ingredient_id: onion
+    grams: 80
+  - ingredient_id: tomato
+    grams: 60
+  - ingredient_id: green_chilli
+    grams: 6
+  - ingredient_id: coconut_oil
+    grams: 25
+  - ingredient_id: salt
+    grams: 8
+measures:
+  katori: 150
+assumptions: >-
+  25 g coconut oil, 5 g per serving. The coconut masala is ground with water and the curry
+  is simmered with about 300 g water to 1000 g.
+source_id: recipes_cc_by

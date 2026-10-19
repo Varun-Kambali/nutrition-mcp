@@ -1,0 +1,63 @@
+# Farsan is modelled as besan fried in sunflower oil, and goda masala as garam
+# masala. Moth beans have no carbohydrate or fibre value, so both come back
+# incomplete.
+id: misal_pav
+name: Misal pav
+aliases:
+  - misal
+  - misal paav
+regions: [west]
+diet: vegan
+servings: 4
+cooked_weight_g: 1360
+ingredients:
+  - ingredient_id: moth_beans
+    grams: 150  # sprouted
+  - ingredient_id: onion
+    grams: 80
+  - ingredient_id: tomato
+    grams: 80
+  - ingredient_id: potato
+    grams: 60
+  - ingredient_id: ginger
+    grams: 8
+  - ingredient_id: garlic
+    grams: 10
+  - ingredient_id: fresh_coconut
+    grams: 30
+  - ingredient_id: red_chilli_powder
+    grams: 8
+  - ingredient_id: garam_masala
+    grams: 5
+  - ingredient_id: turmeric
+    grams: 2
+  - ingredient_id: mustard_seeds
+    grams: 2
+  - ingredient_id: curry_leaves
+    grams: 3
+  - ingredient_id: sunflower_oil
+    grams: 30  # usal and tarri
+  - ingredient_id: tamarind
+    grams: 8
+  - ingredient_id: salt
+    grams: 8
+  - ingredient_id: coriander_leaves
+    grams: 8
+  - ingredient_id: besan
+    grams: 50  # farsan
+  - ingredient_id: sunflower_oil
+    grams: 25  # taken up by the fried farsan
+  - ingredient_id: onion
+    grams: 40  # raw, on top
+  - ingredient_id: lemon_juice
+    grams: 10
+  - ingredient_id: pav
+    grams: 320  # 8 pav of 40 g
+measures:
+  plate: 340
+  piece: 170
+assumptions: >-
+  30 g sunflower oil in the usal and about 25 g taken up by the fried farsan, about 14 g per
+  plate. The usal is cooked with about 500 g water; a plate is 2 pav with about 260 g of
+  usal, farsan and onion, and a piece is one pav with half of that.
+source_id: recipes_cc_by

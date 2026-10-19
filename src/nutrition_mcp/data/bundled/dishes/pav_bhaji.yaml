@@ -1,0 +1,54 @@
+# Pav bhaji masala is modelled as garam masala and red chilli powder.
+id: pav_bhaji
+name: Pav bhaji
+aliases:
+  - pao bhaji
+regions: [west]
+diet: veg
+servings: 4
+cooked_weight_g: 1040
+ingredients:
+  - ingredient_id: potato
+    grams: 250
+  - ingredient_id: cauliflower
+    grams: 80
+  - ingredient_id: green_peas
+    grams: 60
+  - ingredient_id: capsicum
+    grams: 60
+  - ingredient_id: tomato
+    grams: 250
+  - ingredient_id: onion
+    grams: 120
+  - ingredient_id: ginger
+    grams: 8
+  - ingredient_id: garlic
+    grams: 12
+  - ingredient_id: red_chilli_powder
+    grams: 5
+  - ingredient_id: garam_masala
+    grams: 6
+  - ingredient_id: turmeric
+    grams: 2
+  - ingredient_id: lemon_juice
+    grams: 12
+  - ingredient_id: coriander_leaves
+    grams: 8
+  - ingredient_id: salt
+    grams: 7
+  - ingredient_id: sunflower_oil
+    grams: 10
+  - ingredient_id: butter
+    grams: 40  # bhaji
+  - ingredient_id: pav
+    grams: 320  # 8 pav of 40 g
+  - ingredient_id: butter
+    grams: 24  # 3 g to toast each pav
+measures:
+  plate: 260
+  piece: 130
+assumptions: >-
+  10 g sunflower oil and 64 g butter in all, 2.5 g oil and 16 g butter per plate. The bhaji
+  cooks down to about three quarters of its raw weight, and a plate is 2 toasted pav with
+  about 175 g of it (a piece is one pav with half that).
+source_id: recipes_cc_by

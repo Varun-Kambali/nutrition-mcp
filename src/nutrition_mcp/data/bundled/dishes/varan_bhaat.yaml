@@ -1,0 +1,31 @@
+# Hing and jaggery in the varan are left out.
+id: varan_bhaat
+name: Varan bhaat
+aliases:
+  - varan bhat
+  - varan bhath
+  - dal bhaat
+regions: [west]
+diet: veg
+servings: 4
+cooked_weight_g: 1040
+ingredients:
+  - ingredient_id: white_rice
+    grams: 200
+  - ingredient_id: toor_dal
+    grams: 100
+  - ingredient_id: turmeric
+    grams: 1
+  - ingredient_id: salt
+    grams: 6  # in the varan only
+  - ingredient_id: ghee
+    grams: 20
+  - ingredient_id: lemon_juice
+    grams: 10
+measures:
+  plate: 260
+  katori: 150
+assumptions: >-
+  20 g ghee poured over the rice, 5 g per plate. The rice cooks to 3 times its raw weight
+  and the dal to a thick varan of 4 times its raw weight.
+source_id: recipes_cc_by

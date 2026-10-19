@@ -1,0 +1,47 @@
+id: batata_vada
+name: Batata vada
+aliases:
+  - batata wada
+  - aloo vada
+  - aloo bonda
+regions: [west]
+diet: vegan
+servings: 5
+cooked_weight_g: 600
+ingredients:
+  - ingredient_id: potato
+    grams: 400  # boiled
+  - ingredient_id: sunflower_oil
+    grams: 10  # filling
+  - ingredient_id: mustard_seeds
+    grams: 2
+  - ingredient_id: ginger
+    grams: 10
+  - ingredient_id: garlic
+    grams: 10
+  - ingredient_id: green_chilli
+    grams: 10
+  - ingredient_id: turmeric
+    grams: 3
+  - ingredient_id: curry_leaves
+    grams: 4
+  - ingredient_id: coriander_leaves
+    grams: 8
+  - ingredient_id: lemon_juice
+    grams: 10
+  - ingredient_id: salt
+    grams: 8
+  - ingredient_id: besan
+    grams: 80  # batter
+  - ingredient_id: red_chilli_powder
+    grams: 2  # batter
+  - ingredient_id: baking_soda
+    grams: 1  # batter
+  - ingredient_id: sunflower_oil
+    grams: 70  # taken up in deep-frying
+measures:
+  piece: 60
+assumptions: >-
+  10 g sunflower oil in the filling and about 70 g taken up in deep-frying, 16 g per serving
+  of 2 vadas. The filling and besan batter fry to 10 vadas of about 60 g.
+source_id: recipes_cc_by
