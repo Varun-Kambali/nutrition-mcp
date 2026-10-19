@@ -9,7 +9,7 @@ The open sources have ingredients but few Indian dishes. USDA FoodData Central i
 Every number the server returns has to trace to a source row with a license that allows redistribution. The requirements treat two things as failures: a dish value typed in by hand, and one copied from a source we cannot redistribute.
 
 ## Decision
-Ship ingredient rows only from openly licensed sources (USDA FoodData Central and CoFID), each with its source, record ID and license. Write the dish recipes ourselves as standard home recipes: raw grams per ingredient, cooked weight, servings, household measures, and an assumptions note that states the fat used. Compute each dish's per-100 g nutrition when the dataset loads, from its ingredient rows. The recipes are our own work and are released under CC BY 4.0.
+Take nutrient values only from openly licensed sources (USDA FoodData Central and CoFID), and ship each ingredient row with its source, record ID and license. Glycemic index values come from the compendium of GI values for non-Western foods (Henry et al., 2021, CC BY 4.0). Write the dish recipes ourselves as standard home recipes: raw grams per ingredient, cooked weight, servings, household measures, and an assumptions note that states the fat used. Compute each dish's per-100 g nutrition when the dataset loads, from its ingredient rows. The recipes are our own work and are released under CC BY 4.0.
 
 ## Alternatives considered
 - **Ship IFCT dish values.** Not allowed, because the book is copyrighted.

@@ -9,7 +9,7 @@ The people most likely to look up iron, vitamin B12 or vitamin D are the ones ma
 ## Decision
 Missing stays `None` from the CSV to the tool output. An empty cell loads as `None`, never 0, and every field on `Nutrients` is optional.
 
-For a dish, each nutrient is summed over the ingredients that report it and divided by the cooked weight. If any ingredient lacks the nutrient, the dish gets an `incomplete` entry for it that names those ingredients. If no ingredient reports it, the dish value is `None`. A dish value with an `incomplete` entry is therefore a floor: it counts what is known and says what is not. Everything downstream (scaling to an amount, meal totals, rankings) carries the `incomplete` list forward.
+For a dish, each nutrient is summed over the ingredients that report it and divided by the cooked weight. If any ingredient lacks the nutrient, the dish gets an `incomplete` entry for it that names those ingredients. If no ingredient reports it, the dish value is `None`. A dish value with an `incomplete` entry is therefore a floor: it counts what is known and says what is not. Everything downstream (scaling to an amount, meal totals) carries the `incomplete` list forward. Rankings are the exception: foods missing the ranked value are left out and counted in the response.
 
 ## Alternatives considered
 - **Treat a blank as 0.** The simplest option, and it under-counts without a warning. It breaks the rule above.
