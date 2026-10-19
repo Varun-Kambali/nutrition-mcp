@@ -97,4 +97,4 @@ Written as the build goes.
 
 ## License and data
 
-MIT. Planned data sources and licenses: USDA FoodData Central (public domain), CoFID 2021 (Open Government Licence v3.0) and a compendium of glycemic index values for non-Western foods (CC BY 4.0). No data is bundled yet.
+The code is MIT. The bundled ingredient table comes from USDA FoodData Central (public domain) and CoFID 2021 (Open Government Licence v3.0); glycemic index values will come from a compendium of GI values for non-Western foods (CC BY 4.0). The license and attribution for each data file are in [`src/nutrition_mcp/data/bundled/LICENSE.md`](src/nutrition_mcp/data/bundled/LICENSE.md), and the nutrient mappings are in [`docs/data.md`](docs/data.md).
