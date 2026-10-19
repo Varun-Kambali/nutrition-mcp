@@ -44,6 +44,18 @@ def dish(**overrides: Any) -> Food:
     return ingredient(**data)
 
 
+def gravy(**overrides: Any) -> Food:
+    """A dish served by the bowl, with no countable measure."""
+    data: dict[str, Any] = {
+        "id": "dal_tadka",
+        "name": "Dal tadka",
+        "measures": {"serving": 225.0},
+        "serving_g": 225.0,
+    }
+    data.update(overrides)
+    return dish(**data)
+
+
 def test_grams_passthrough() -> None:
     grams, assumption = to_grams(ingredient(), 250, "g", DEFAULT_KATORI_G)
     assert grams == 250.0
@@ -83,14 +95,17 @@ def test_dish_measure_used() -> None:
     [
         ("rotis", 80.0),
         ("Pieces", 80.0),
-        ("katoris", 300.0),
-        ("KATORI", 300.0),
         ("servings", 160.0),
     ],
 )
 def test_plural_units(unit: str, expected_grams: float) -> None:
     grams, _ = to_grams(dish(), 2, unit, DEFAULT_KATORI_G)
     assert grams == expected_grams
+
+
+@pytest.mark.parametrize("unit", ["katoris", "KATORI", " Katori "])
+def test_katori_spellings(unit: str) -> None:
+    assert to_grams(gravy(), 2, unit, DEFAULT_KATORI_G)[0] == 300.0
 
 
 def test_plural_of_a_word_ending_in_s() -> None:
@@ -107,17 +122,24 @@ def test_exact_unit_wins_over_its_singular() -> None:
 
 
 def test_default_katori_for_dishes() -> None:
-    grams, assumption = to_grams(dish(), 1, "katori", DEFAULT_KATORI_G)
+    grams, assumption = to_grams(gravy(), 1, "katori", DEFAULT_KATORI_G)
     assert grams == 150.0
     assert assumption == "1 katori = 150 g (default katori)"
 
 
 def test_default_katori_follows_the_setting() -> None:
-    assert to_grams(dish(), 2, "katori", 180.0)[0] == 360.0
+    assert to_grams(gravy(), 2, "katori", 180.0)[0] == 360.0
 
 
 def test_dish_own_katori_beats_the_default() -> None:
     food = dish(measures={"katori": 120.0})
+    grams, assumption = to_grams(food, 1, "katori", DEFAULT_KATORI_G)
+    assert grams == 120.0
+    assert assumption == "1 katori = 120 g"
+
+
+def test_countable_dish_with_its_own_katori_accepts_it() -> None:
+    food = dish(measures={"piece": 40.0, "katori": 120.0})
     grams, assumption = to_grams(food, 1, "katori", DEFAULT_KATORI_G)
     assert grams == 120.0
     assert assumption == "1 katori = 120 g"
@@ -131,12 +153,18 @@ def test_katori_rejected_for_ingredient() -> None:
 
 
 def test_katori_of_roti_rejected() -> None:
-    # A plain roti entry with no measures of its own: a katori of it is not a real portion.
-    roti = ingredient(id="roti", name="Roti")
+    roti = dish(measures={"roti": 40.0, "serving": 80.0})
     with pytest.raises(UnitError) as exc_info:
         to_grams(roti, 1, "katori", DEFAULT_KATORI_G)
-    assert exc_info.value.valid_units == ["g"]
-    assert "valid units: g" in str(exc_info.value)
+    assert "roti" in exc_info.value.valid_units
+    assert "katori" not in exc_info.value.valid_units
+    assert "'katori'" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("measure", ["piece", "roti"])
+def test_countable_dish_gets_no_default_katori(measure: str) -> None:
+    food = dish(measures={measure: 40.0})
+    assert valid_units(food, DEFAULT_KATORI_G) == ["g", measure]
 
 
 def test_ml_needs_density() -> None:
@@ -221,10 +249,10 @@ def test_unknown_unit_names_the_unit_and_lists_valid_ones() -> None:
         to_grams(dish(), 1, "bowl", DEFAULT_KATORI_G)
     error = exc_info.value
     assert isinstance(error, ValueError)
-    assert error.valid_units == ["g", "piece", "roti", "serving", "katori"]
+    assert error.valid_units == ["g", "piece", "roti", "serving"]
     assert "'bowl'" in str(error)
     assert "roti_wheat" in str(error)
-    assert "valid units: g, piece, roti, serving, katori" in str(error)
+    assert "valid units: g, piece, roti, serving" in str(error)
 
 
 def test_empty_unit_is_unknown() -> None:
@@ -241,8 +269,12 @@ def test_valid_units_for_an_ingredient_with_density() -> None:
     assert valid_units(food, DEFAULT_KATORI_G) == ["g", "ml", "tbsp", "tsp", "cup", "glass"]
 
 
-def test_valid_units_list_a_dish_default_katori_after_its_own_measures() -> None:
-    assert valid_units(dish(), DEFAULT_KATORI_G) == ["g", "piece", "roti", "serving", "katori"]
+def test_valid_units_list_a_gravy_dish_default_katori_after_its_own_measures() -> None:
+    assert valid_units(gravy(), DEFAULT_KATORI_G) == ["g", "serving", "katori"]
+
+
+def test_valid_units_for_a_countable_dish() -> None:
+    assert valid_units(dish(), DEFAULT_KATORI_G) == ["g", "piece", "roti", "serving"]
 
 
 def test_valid_units_do_not_repeat_a_measure_the_food_defines() -> None:

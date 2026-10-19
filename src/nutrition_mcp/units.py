@@ -16,6 +16,9 @@ _VOLUME_ML = {"ml": 1.0, "tbsp": 15.0, "tsp": 5.0, "cup": 240.0, "glass": 250.0}
 
 _GRAM_SPELLINGS = frozenset({"gram", "grams", "gm"})
 
+# A dish that defines one of these is counted, not ladled, so it gets no default katori.
+_COUNTED_MEASURES = frozenset({"piece", "roti"})
+
 
 class UnitError(ValueError):
     """The unit does not fit the food. `valid_units` is what the caller can use instead."""
@@ -45,7 +48,9 @@ def _unit_table(food: Food, default_katori_g: float) -> dict[str, _Unit]:
     table = {"g": _Unit(1.0)}
     for name, grams in food.measures.items():
         table.setdefault(name, _Unit(grams))
-    if food.kind == "dish":
+    # A bowl size means nothing for a dish counted by the piece, so "a katori of roti" is an
+    # error unless the dish defines its own katori (which the measures loop already added).
+    if food.kind == "dish" and not _COUNTED_MEASURES & food.measures.keys():
         table.setdefault("katori", _Unit(default_katori_g, "(default katori)"))
     density = food.density_g_per_ml
     if density is not None:
