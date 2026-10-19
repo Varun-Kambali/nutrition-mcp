@@ -1,0 +1,14 @@
+- id: test_source
+  name: Loader test values
+  url: https://example.org/loader-test-values
+  license: CC0-1.0
+  version: "1"
+  retrieved: 2026-10-19
+  attribution: Synthetic values written for the loader tests. They are not real food data.
+- id: test_recipes
+  name: Loader test recipes
+  url: https://example.org/loader-test-recipes
+  license: CC0-1.0
+  version: "1"
+  retrieved: 2026-10-19
+  attribution: Synthetic recipe written for the loader tests.

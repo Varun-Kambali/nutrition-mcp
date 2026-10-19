@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ingredient row",
+  "description": "One row of ingredients.csv in a dataset folder. Each column is one key; an empty cell means the value is not reported.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$",
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "aliases": {
+      "type": "string",
+      "description": "Other names and spellings, separated by '|'. Leave empty for none."
+    },
+    "diet": {
+      "enum": [
+        "veg",
+        "egg",
+        "non_veg",
+        "vegan"
+      ],
+      "title": "Diet",
+      "type": "string"
+    },
+    "source_id": {
+      "title": "Source Id",
+      "type": "string",
+      "description": "ID of an entry in a sources.yaml."
+    },
+    "source_record": {
+      "title": "Source Record",
+      "type": "string",
+      "description": "Record ID in the source, such as a USDA FDC ID or a CoFID food code."
+    },
+    "kcal": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Energy in kcal per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "protein_g": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Protein in g per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "fat_g": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Total fat in g per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "sat_fat_g": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Saturated fat in g per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "carbs_available_g": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Available carbohydrate in g per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "sugars_g": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Total sugars in g per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "fibre_g": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Fibre in g per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "sodium_mg": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Sodium in mg per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "iron_mg": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Iron in mg per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "calcium_mg": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Calcium in mg per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "zinc_mg": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Zinc in mg per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "folate_ug": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Folate in µg per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "vit_a_ug": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Vitamin A in µg per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "vit_b12_ug": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Vitamin B12 in µg per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "vit_c_mg": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Vitamin C in mg per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "vit_d_ug": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Vitamin D in µg per 100 g. Leave empty when the source does not report it; empty is not the same as 0."
+    },
+    "gi": {
+      "anyOf": [
+        {
+          "maximum": 110,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Gi",
+      "description": "Glycemic index. Needs gi_ref."
+    },
+    "gi_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Gi Ref",
+      "description": "The compendium's food name and table the GI came from. Needs gi."
+    },
+    "density_g_per_ml": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Density G Per Ml",
+      "description": "Grams per millilitre, for liquids."
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "aliases",
+    "diet",
+    "source_id",
+    "source_record"
+  ],
+  "additionalProperties": false
+}

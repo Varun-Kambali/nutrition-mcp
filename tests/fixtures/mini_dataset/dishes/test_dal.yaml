@@ -1,0 +1,17 @@
+id: test_dal
+name: Test dal
+aliases:
+  - plain dal
+regions: [south, north]
+diet: vegan
+servings: 2
+cooked_weight_g: 400
+ingredients:
+  - ingredient_id: toor_dal
+    grams: 100
+  - ingredient_id: water
+    grams: 400
+measures:
+  katori: 150
+assumptions: No added fat. The dal is boiled in water only.
+source_id: test_recipes
