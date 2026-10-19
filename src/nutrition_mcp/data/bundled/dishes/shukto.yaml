@@ -1,5 +1,4 @@
-# Sweet potato, radish and flat beans are replaced by potato and green beans;
-# panch phoran is modelled as cumin.
+# Panch phoran is modelled as cumin.
 id: shukto
 name: Shukto
 aliases:
@@ -45,5 +44,6 @@ measures:
 assumptions: >-
   20 g mustard oil for frying the vegetables and 10 g ghee to finish, 4 g oil and 2 g ghee
   per serving. The vegetables simmer in milk and about 150 g water, and the dish ends at
-  650 g, a little above the weight of the raw ingredients.
+  650 g, a little above the weight of the raw ingredients. Sweet potato, radish and flat
+  beans are replaced by potato and green beans.
 source_id: recipes_cc_by

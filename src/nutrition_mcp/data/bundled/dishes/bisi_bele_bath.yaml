@@ -1,5 +1,5 @@
 # The spice powder is modelled as red chilli powder, garam masala, coconut and
-# chana dal. Jaggery is left out because it has no open source.
+# chana dal.
 id: bisi_bele_bath
 name: Bisi bele bath
 aliases:
@@ -52,5 +52,6 @@ measures:
   katori: 150
 assumptions: >-
   25 g ghee for the tempering and peanuts, 5 g per serving. Rice, dal and vegetables are
-  cooked with tamarind water to a soft, pourable 1200 g, about twice the raw weight.
+  cooked with tamarind water to a soft, pourable 1200 g, about twice the raw weight. Jaggery
+  is left out because it has no open source.
 source_id: recipes_cc_by

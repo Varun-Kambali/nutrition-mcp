@@ -1,6 +1,5 @@
-# Farsan is modelled as besan fried in sunflower oil, and goda masala as garam
-# masala. Moth beans have no carbohydrate or fibre value, so both come back
-# incomplete.
+# Goda masala is modelled as garam masala. Moth beans have no carbohydrate or
+# fibre value, so both come back incomplete.
 id: misal_pav
 name: Misal pav
 aliases:
@@ -12,7 +11,7 @@ servings: 4
 cooked_weight_g: 1360
 ingredients:
   - ingredient_id: moth_beans
-    grams: 150  # sprouted
+    grams: 150  # dry weight, sprouted before cooking
   - ingredient_id: onion
     grams: 80
   - ingredient_id: tomato
@@ -59,5 +58,6 @@ measures:
 assumptions: >-
   30 g sunflower oil in the usal and about 25 g taken up by the fried farsan, about 14 g per
   plate. The usal is cooked with about 500 g water; a plate is 2 pav with about 260 g of
-  usal, farsan and onion, and a piece is one pav with half of that.
+  usal, farsan and onion, and a piece is one pav with half of that. Farsan is modelled as
+  besan fried in sunflower oil.
 source_id: recipes_cc_by

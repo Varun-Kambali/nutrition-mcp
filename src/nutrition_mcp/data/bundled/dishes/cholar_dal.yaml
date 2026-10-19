@@ -1,4 +1,4 @@
-# Raisins are left out; bay leaf and whole spices are modelled as garam masala.
+# Bay leaf and whole spices are modelled as garam masala.
 id: cholar_dal
 name: Cholar dal
 aliases:
@@ -33,5 +33,6 @@ measures:
   katori: 150
 assumptions: >-
   20 g ghee for the tempering and for frying the coconut, 4 g per serving. The dal is boiled
-  until soft and thick and ends at 750 g, 5 times the raw dal.
+  until soft and thick and ends at 750 g, 5 times the raw dal. Raisins are left out; the
+  ingredient table has none.
 source_id: recipes_cc_by

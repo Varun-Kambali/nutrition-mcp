@@ -1,4 +1,3 @@
-# Cashews are left out; the ingredient table has none.
 id: ven_pongal
 name: Ven pongal
 aliases:
@@ -29,5 +28,6 @@ measures:
   katori: 150
 assumptions: >-
   30 g ghee, 7.5 g per serving, for the tempering and stirred in at the end. The rice and
-  dal are cooked very soft to about 4.5 times their raw weight.
+  dal are cooked very soft to about 4.5 times their raw weight. Cashews are left out; the
+  ingredient table has none.
 source_id: recipes_cc_by

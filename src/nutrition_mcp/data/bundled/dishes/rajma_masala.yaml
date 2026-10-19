@@ -1,7 +1,6 @@
 id: rajma_masala
 name: Rajma masala
 aliases:
-  - rajma
   - rajma curry
 regions: [north]
 diet: vegan

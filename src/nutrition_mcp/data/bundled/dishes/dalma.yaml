@@ -1,4 +1,4 @@
-# Panch phoran is modelled as cumin and mustard seeds; raw papaya is left out.
+# Panch phoran is modelled as cumin and mustard seeds.
 id: dalma
 name: Dalma
 aliases:
@@ -43,5 +43,6 @@ measures:
   katori: 150
 assumptions: >-
   15 g ghee for the tempering, 2.5 g per serving. Dal and vegetables are cooked together
-  with water to 1050 g, about 1.7 times the raw weight.
+  with water to 1050 g, about 1.7 times the raw weight. Raw papaya is left out; the
+  ingredient table has none.
 source_id: recipes_cc_by

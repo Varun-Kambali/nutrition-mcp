@@ -1,5 +1,4 @@
-# Roasted gram (hurigadale, pottukadalai) is modelled as raw chana dal, the nearest
-# row in the ingredient table. The katori here is a small chutney bowl of 60 g.
+# The katori here is a small chutney bowl of 60 g.
 id: coconut_chutney
 name: Coconut chutney
 aliases:
@@ -32,5 +31,6 @@ measures:
   tbsp: 15
 assumptions: >-
   5 g coconut oil for the tempering, 1.25 g per serving. Coconut, dal and chillies are
-  ground with about 100 g water and nothing is cooked off.
+  ground with about 100 g water and nothing is cooked off. Roasted gram (hurigadale) is
+  modelled with the raw chana dal row.
 source_id: recipes_cc_by

@@ -1,4 +1,3 @@
-# Each serving holds 100 g of raw fish.
 id: machher_jhol
 name: Machher jhol (rohu curry)
 aliases:
@@ -38,4 +37,5 @@ measures:
 assumptions: >-
   40 g mustard oil, 8 g per serving, for frying the fish and potato and for the gravy. About
   400 g water is added for a thin jhol, which ends at 1000 g after frying and simmering.
+  Each serving holds 100 g of boneless raw rohu.
 source_id: recipes_cc_by

@@ -1,5 +1,5 @@
 # Dried Kashmiri chillies are modelled as red chilli powder; the coriander seed in
-# the masala is left out. Each serving holds 100 g of raw fish.
+# the masala is left out.
 id: goan_fish_curry
 name: Goan fish curry
 aliases:
@@ -43,5 +43,6 @@ measures:
   katori: 150
 assumptions: >-
   25 g coconut oil, 5 g per serving. The coconut masala is ground with water and the curry
-  is simmered with about 300 g water to 1000 g.
+  is simmered with about 300 g water to 1000 g. Each serving holds 100 g of boneless raw
+  surmai.
 source_id: recipes_cc_by

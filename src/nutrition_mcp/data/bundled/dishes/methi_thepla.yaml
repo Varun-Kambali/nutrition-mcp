@@ -1,4 +1,4 @@
-# Ajwain and sesame are left out; the ingredient table has neither.
+# Ajwain is left out; the ingredient table has none.
 id: methi_thepla
 name: Methi thepla
 aliases:
@@ -37,5 +37,6 @@ measures:
   piece: 40
 assumptions: >-
   30 g sunflower oil, 10 g in the dough and 20 g on the tawa, 6 g per serving of 2 theplas.
-  The dough makes 10 theplas of about 40 g once cooked.
+  The dough makes 10 theplas of about 40 g once cooked. Sesame seeds are left out; the
+  ingredient table has none.
 source_id: recipes_cc_by
