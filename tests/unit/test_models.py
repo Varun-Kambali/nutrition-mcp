@@ -146,9 +146,11 @@ def test_id_must_be_slug() -> None:
 
 
 def test_ingredient_gi_and_density_bounds() -> None:
-    assert Ingredient.model_validate(ingredient_data(gi=110, density_g_per_ml=1.03))
+    assert Ingredient.model_validate(
+        ingredient_data(gi=110, gi_ref="Atkinson 2021", density_g_per_ml=1.03)
+    )
     with pytest.raises(ValidationError):
-        Ingredient.model_validate(ingredient_data(gi=111))
+        Ingredient.model_validate(ingredient_data(gi=111, gi_ref="Atkinson 2021"))
     with pytest.raises(ValidationError):
         Ingredient.model_validate(ingredient_data(density_g_per_ml=0))
 
@@ -188,3 +190,75 @@ def test_food_holds_a_resolved_record() -> None:
     )
     assert food.per_100g.iron_mg is None
     assert food.incomplete["iron_mg"] == ["rajma_dried"]
+
+
+def error_locs(exc_info: pytest.ExceptionInfo[ValidationError]) -> list[tuple[int | str, ...]]:
+    return [error["loc"] for error in exc_info.value.errors()]
+
+
+def test_dish_rejects_unknown_key() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        Dish.model_validate(dish_data(gi_rf="x"))
+    assert error_locs(exc_info) == [("gi_rf",)]
+
+
+def test_ingredient_rejects_unknown_key() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        Ingredient.model_validate(ingredient_data(density="1.0"))
+    assert error_locs(exc_info) == [("density",)]
+
+
+def test_source_and_recipe_item_reject_unknown_key() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        Dish.model_validate(
+            dish_data(ingredients=[{"ingredient_id": "rajma_dried", "grams": 200, "gram": 1}])
+        )
+    assert error_locs(exc_info) == [("ingredients", 0, "gram")]
+    with pytest.raises(ValidationError) as exc_info:
+        Source.model_validate(
+            {
+                "id": "usda_fdc",
+                "name": "USDA FoodData Central",
+                "url": "https://fdc.nal.usda.gov",
+                "license": "CC0 1.0",
+                "version": "2026-04",
+                "retrieved": "2026-10-19",
+                "attribution": "U.S. Department of Agriculture",
+                "licence": "typo",
+            }
+        )
+    assert error_locs(exc_info) == [("licence",)]
+
+
+def test_non_finite_numbers_are_rejected() -> None:
+    with pytest.raises(ValidationError):
+        Dish.model_validate(dish_data(cooked_weight_g=float("inf")))
+    with pytest.raises(ValidationError):
+        Dish.model_validate(dish_data(measures={"katori": float("inf")}))
+    with pytest.raises(ValidationError):
+        Ingredient.model_validate(ingredient_data(density_g_per_ml=float("inf")))
+    with pytest.raises(ValidationError):
+        Nutrients(kcal=float("nan"))
+    with pytest.raises(ValidationError):
+        Nutrients(kcal=float("inf"))
+
+
+def test_gi_needs_its_compendium_reference() -> None:
+    with pytest.raises(ValidationError, match="compendium reference"):
+        Dish.model_validate(dish_data(gi=29, gi_ref=None))
+    with pytest.raises(ValidationError, match="compendium reference"):
+        Ingredient.model_validate(ingredient_data(gi=55, gi_ref=None))
+
+
+def test_gi_ref_needs_a_gi_value() -> None:
+    with pytest.raises(ValidationError, match="compendium reference"):
+        Dish.model_validate(dish_data(gi=None, gi_ref="Atkinson 2021"))
+    with pytest.raises(ValidationError, match="compendium reference"):
+        Ingredient.model_validate(ingredient_data(gi=None, gi_ref="Atkinson 2021"))
+
+
+def test_gi_with_reference_or_neither_is_accepted() -> None:
+    assert Dish.model_validate(dish_data(gi=29, gi_ref="Atkinson 2021"))
+    assert Dish.model_validate(dish_data(gi=None, gi_ref=None))
+    assert Ingredient.model_validate(ingredient_data(gi=55, gi_ref="Atkinson 2021"))
+    assert Ingredient.model_validate(ingredient_data(gi=None, gi_ref=None))

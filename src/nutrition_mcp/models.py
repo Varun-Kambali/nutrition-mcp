@@ -2,7 +2,14 @@ import re
 from datetime import date
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PositiveFloat,
+    field_validator,
+    model_validator,
+)
 
 from nutrition_mcp.nutrients import NUTRIENT_KEYS
 
@@ -18,7 +25,19 @@ _FAT_ASSUMPTION = re.compile(r"\b(?:oils?|ghee|no added fat)\b", re.IGNORECASE)
 Amount = Annotated[float | None, Field(ge=0)]
 
 
-class Source(BaseModel):
+class DatasetModel(BaseModel):
+    """Base for models read from dataset files: unknown keys and inf/nan are load errors."""
+
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+
+def _require_gi_with_reference(gi: float | None, gi_ref: str | None) -> None:
+    # gi_ref names the compendium entry the GI came from, so neither may stand alone.
+    if (gi is None) != (gi_ref is None):
+        raise ValueError("a GI value needs its compendium reference (gi_ref), and gi_ref needs gi")
+
+
+class Source(DatasetModel):
     id: Slug
     name: str
     url: str
@@ -28,10 +47,8 @@ class Source(BaseModel):
     attribution: str
 
 
-class Nutrients(BaseModel):
+class Nutrients(DatasetModel):
     """Per-100 g amounts. None means the source did not report it, which is not the same as 0."""
-
-    model_config = ConfigDict(extra="forbid")
 
     kcal: Amount = None
     protein_g: Amount = None
@@ -63,7 +80,7 @@ class Nutrients(BaseModel):
         return value
 
 
-class Ingredient(BaseModel):
+class Ingredient(DatasetModel):
     id: Slug
     name: str
     aliases: list[str]
@@ -75,13 +92,18 @@ class Ingredient(BaseModel):
     gi_ref: str | None = None
     density_g_per_ml: PositiveFloat | None = None
 
+    @model_validator(mode="after")
+    def _gi_has_reference(self) -> "Ingredient":
+        _require_gi_with_reference(self.gi, self.gi_ref)
+        return self
 
-class RecipeItem(BaseModel):
+
+class RecipeItem(DatasetModel):
     ingredient_id: str
     grams: PositiveFloat
 
 
-class Dish(BaseModel):
+class Dish(DatasetModel):
     id: Slug
     name: str
     aliases: list[str]
@@ -95,6 +117,11 @@ class Dish(BaseModel):
     gi: Annotated[float, Field(ge=0, le=110)] | None = None
     gi_ref: str | None = None
     source_id: str
+
+    @model_validator(mode="after")
+    def _gi_has_reference(self) -> "Dish":
+        _require_gi_with_reference(self.gi, self.gi_ref)
+        return self
 
     @field_validator("regions")
     @classmethod
