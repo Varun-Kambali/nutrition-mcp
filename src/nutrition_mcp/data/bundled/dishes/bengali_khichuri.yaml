@@ -1,0 +1,45 @@
+# Gobindobhog rice is modelled as long-grain white rice.
+id: bengali_khichuri
+name: Bengali khichuri
+aliases:
+  - khichuri
+  - bhoger khichuri
+regions: [east]
+diet: veg
+servings: 6
+cooked_weight_g: 1320
+ingredients:
+  - ingredient_id: white_rice
+    grams: 120
+  - ingredient_id: moong_dal
+    grams: 100  # dry-roasted
+  - ingredient_id: potato
+    grams: 100
+  - ingredient_id: cauliflower
+    grams: 120
+  - ingredient_id: green_peas
+    grams: 50
+  - ingredient_id: tomato
+    grams: 60
+  - ingredient_id: ginger
+    grams: 8
+  - ingredient_id: turmeric
+    grams: 2
+  - ingredient_id: cumin_seeds
+    grams: 3
+  - ingredient_id: green_chilli
+    grams: 5
+  - ingredient_id: garam_masala
+    grams: 2
+  - ingredient_id: sugar
+    grams: 4
+  - ingredient_id: ghee
+    grams: 25
+  - ingredient_id: salt
+    grams: 8
+measures:
+  katori: 150
+assumptions: >-
+  25 g ghee, about 4 g per serving. Rice and roasted moong dal are cooked soft with the
+  vegetables in plenty of water, and the khichuri weighs about 1320 g.
+source_id: recipes_cc_by

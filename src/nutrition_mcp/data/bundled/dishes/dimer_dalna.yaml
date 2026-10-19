@@ -1,0 +1,46 @@
+id: dimer_dalna
+name: Dimer dalna (egg curry)
+aliases:
+  - dimer dalna
+  - egg curry
+  - anda curry
+  - dim er dalna
+regions: [east]
+diet: egg
+servings: 3
+cooked_weight_g: 900
+ingredients:
+  - ingredient_id: egg
+    grams: 300  # 6 eggs of 50 g, boiled
+  - ingredient_id: potato
+    grams: 250
+  - ingredient_id: onion
+    grams: 120
+  - ingredient_id: tomato
+    grams: 100
+  - ingredient_id: ginger
+    grams: 10
+  - ingredient_id: garlic
+    grams: 8
+  - ingredient_id: green_chilli
+    grams: 6
+  - ingredient_id: turmeric
+    grams: 3
+  - ingredient_id: red_chilli_powder
+    grams: 4
+  - ingredient_id: cumin_seeds
+    grams: 2
+  - ingredient_id: garam_masala
+    grams: 3
+  - ingredient_id: sugar
+    grams: 3
+  - ingredient_id: mustard_oil
+    grams: 30
+  - ingredient_id: salt
+    grams: 6
+measures:
+  katori: 150
+assumptions: >-
+  30 g mustard oil for frying the eggs and potatoes and for the gravy, 10 g per serving of 2
+  eggs. The gravy is made with about 250 g water and the curry ends at 900 g.
+source_id: recipes_cc_by

@@ -1,0 +1,41 @@
+# Each serving holds 100 g of raw fish.
+id: machher_jhol
+name: Machher jhol (rohu curry)
+aliases:
+  - macher jhol
+  - maacher jhol
+  - rui macher jhol
+  - fish jhol
+regions: [east]
+diet: non_veg
+servings: 5
+cooked_weight_g: 1000
+ingredients:
+  - ingredient_id: rohu
+    grams: 500  # edible portion, without bones
+  - ingredient_id: potato
+    grams: 200
+  - ingredient_id: tomato
+    grams: 80
+  - ingredient_id: mustard_oil
+    grams: 40
+  - ingredient_id: turmeric
+    grams: 4
+  - ingredient_id: red_chilli_powder
+    grams: 3
+  - ingredient_id: cumin_seeds
+    grams: 3
+  - ingredient_id: ginger
+    grams: 10
+  - ingredient_id: green_chilli
+    grams: 8
+  - ingredient_id: coriander_leaves
+    grams: 5
+  - ingredient_id: salt
+    grams: 8
+measures:
+  katori: 150
+assumptions: >-
+  40 g mustard oil, 8 g per serving, for frying the fish and potato and for the gravy. About
+  400 g water is added for a thin jhol, which ends at 1000 g after frying and simmering.
+source_id: recipes_cc_by

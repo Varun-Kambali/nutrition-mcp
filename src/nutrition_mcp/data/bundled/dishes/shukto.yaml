@@ -1,0 +1,49 @@
+# Sweet potato, radish and flat beans are replaced by potato and green beans;
+# panch phoran is modelled as cumin.
+id: shukto
+name: Shukto
+aliases:
+  - shukta
+  - sukto
+regions: [east]
+diet: veg
+servings: 5
+cooked_weight_g: 650
+ingredients:
+  - ingredient_id: bitter_gourd
+    grams: 60
+  - ingredient_id: raw_banana
+    grams: 80
+  - ingredient_id: brinjal
+    grams: 80
+  - ingredient_id: potato
+    grams: 80
+  - ingredient_id: drumstick
+    grams: 60
+  - ingredient_id: green_beans
+    grams: 60
+  - ingredient_id: mustard_seeds
+    grams: 10  # paste
+  - ingredient_id: poppy_seeds
+    grams: 10  # paste
+  - ingredient_id: ginger
+    grams: 10  # paste
+  - ingredient_id: mustard_oil
+    grams: 20
+  - ingredient_id: ghee
+    grams: 10
+  - ingredient_id: whole_milk
+    grams: 100
+  - ingredient_id: sugar
+    grams: 6
+  - ingredient_id: cumin_seeds
+    grams: 2
+  - ingredient_id: salt
+    grams: 7
+measures:
+  katori: 150
+assumptions: >-
+  20 g mustard oil for frying the vegetables and 10 g ghee to finish, 4 g oil and 2 g ghee
+  per serving. The vegetables simmer in milk and about 150 g water, and the dish ends at
+  650 g, a little above the weight of the raw ingredients.
+source_id: recipes_cc_by

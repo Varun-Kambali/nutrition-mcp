@@ -1,0 +1,36 @@
+# Kalonji (nigella) in the tempering is modelled as cumin and mustard seeds.
+id: musur_dal
+name: Musur dal
+aliases:
+  - masoor dal
+  - musurir dal
+  - red lentil dal
+regions: [east]
+diet: vegan
+servings: 6
+cooked_weight_g: 900
+ingredients:
+  - ingredient_id: masoor_dal
+    grams: 150
+  - ingredient_id: turmeric
+    grams: 2
+  - ingredient_id: green_chilli
+    grams: 6
+  - ingredient_id: onion
+    grams: 40
+  - ingredient_id: tomato
+    grams: 50
+  - ingredient_id: mustard_oil
+    grams: 15  # tempering
+  - ingredient_id: mustard_seeds
+    grams: 1  # tempering
+  - ingredient_id: cumin_seeds
+    grams: 1  # tempering
+  - ingredient_id: salt
+    grams: 8
+measures:
+  katori: 150
+assumptions: >-
+  15 g mustard oil for the tempering, 2.5 g per serving. The dal is thin: the lentils are
+  boiled in plenty of water and end at 900 g, 6 times their raw weight.
+source_id: recipes_cc_by

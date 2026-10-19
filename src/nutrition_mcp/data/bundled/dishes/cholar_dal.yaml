@@ -1,0 +1,37 @@
+# Raisins are left out; bay leaf and whole spices are modelled as garam masala.
+id: cholar_dal
+name: Cholar dal
+aliases:
+  - chholar dal
+  - bengali chana dal
+regions: [east]
+diet: veg
+servings: 5
+cooked_weight_g: 750
+ingredients:
+  - ingredient_id: chana_dal
+    grams: 150
+  - ingredient_id: fresh_coconut
+    grams: 30
+  - ingredient_id: ghee
+    grams: 20
+  - ingredient_id: sugar
+    grams: 8
+  - ingredient_id: turmeric
+    grams: 2
+  - ingredient_id: ginger
+    grams: 8
+  - ingredient_id: cumin_seeds
+    grams: 2
+  - ingredient_id: garam_masala
+    grams: 2
+  - ingredient_id: red_chilli_powder
+    grams: 1
+  - ingredient_id: salt
+    grams: 8
+measures:
+  katori: 150
+assumptions: >-
+  20 g ghee for the tempering and for frying the coconut, 4 g per serving. The dal is boiled
+  until soft and thick and ends at 750 g, 5 times the raw dal.
+source_id: recipes_cc_by
