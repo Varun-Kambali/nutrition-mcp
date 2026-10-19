@@ -346,6 +346,17 @@ def test_invalid_yaml_names_file_and_line(tmp_path: Path) -> None:
     assert "invalid YAML" in str(error.value)
 
 
+def test_impossible_yaml_date_names_file(tmp_path: Path) -> None:
+    # PyYAML raises a bare ValueError for a date that matches the format but does not exist.
+    folder = copy_fixture(tmp_path)
+    path = folder / "sources.yaml"
+    edit(path, "retrieved: 2026-10-19", "retrieved: 2026-13-45")
+    with pytest.raises(DataError) as error:
+        load_dataset(folder)
+    assert str(error.value).startswith(f"{path}:")
+    assert "invalid YAML" in str(error.value)
+
+
 def test_sources_file_must_be_a_list(tmp_path: Path) -> None:
     folder = copy_fixture(tmp_path)
     path = folder / "sources.yaml"

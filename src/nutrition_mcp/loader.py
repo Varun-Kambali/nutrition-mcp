@@ -82,7 +82,9 @@ def _read_text(path: Path, *, newline: str | None = None) -> str:
 def _read_yaml(path: Path) -> Any:
     try:
         return yaml.safe_load(_read_text(path))
-    except yaml.YAMLError as err:
+    except (yaml.YAMLError, ValueError) as err:
+        # PyYAML raises a plain ValueError, with no position, for a date that matches the
+        # format but does not exist (2026-13-45), so it needs the same file-level report.
         mark = getattr(err, "problem_mark", None)
         problem = getattr(err, "problem", None) or str(err)
         raise DataError(path, mark.line + 1 if mark else 0, f"invalid YAML: {problem}") from err
