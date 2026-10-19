@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "One dishes/<id>.yaml file in a dataset folder.",
+  "$defs": {
+    "RecipeItem": {
+      "additionalProperties": false,
+      "properties": {
+        "ingredient_id": {
+          "title": "Ingredient Id",
+          "type": "string"
+        },
+        "grams": {
+          "exclusiveMinimum": 0,
+          "title": "Grams",
+          "type": "number"
+        }
+      },
+      "required": [
+        "ingredient_id",
+        "grams"
+      ],
+      "title": "RecipeItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$",
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "aliases": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Aliases",
+      "type": "array"
+    },
+    "regions": {
+      "items": {
+        "enum": [
+          "north",
+          "south",
+          "east",
+          "west"
+        ],
+        "type": "string"
+      },
+      "maxItems": 4,
+      "minItems": 1,
+      "title": "Regions",
+      "type": "array"
+    },
+    "diet": {
+      "enum": [
+        "veg",
+        "egg",
+        "non_veg",
+        "vegan"
+      ],
+      "title": "Diet",
+      "type": "string"
+    },
+    "servings": {
+      "minimum": 1,
+      "title": "Servings",
+      "type": "integer"
+    },
+    "cooked_weight_g": {
+      "exclusiveMinimum": 0,
+      "title": "Cooked Weight G",
+      "type": "number"
+    },
+    "ingredients": {
+      "items": {
+        "$ref": "#/$defs/RecipeItem"
+      },
+      "minItems": 1,
+      "title": "Ingredients",
+      "type": "array"
+    },
+    "measures": {
+      "additionalProperties": {
+        "exclusiveMinimum": 0,
+        "type": "number"
+      },
+      "title": "Measures",
+      "type": "object"
+    },
+    "assumptions": {
+      "title": "Assumptions",
+      "type": "string"
+    },
+    "gi": {
+      "anyOf": [
+        {
+          "maximum": 110,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Gi"
+    },
+    "gi_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Gi Ref"
+    },
+    "source_id": {
+      "title": "Source Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "aliases",
+    "regions",
+    "diet",
+    "servings",
+    "cooked_weight_g",
+    "ingredients",
+    "measures",
+    "assumptions",
+    "source_id"
+  ],
+  "title": "Dish",
+  "type": "object"
+}
