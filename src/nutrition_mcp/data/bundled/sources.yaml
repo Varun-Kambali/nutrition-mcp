@@ -1,1 +1,38 @@
-[]
+# Every source_id used in ingredients.csv and dishes/ must be listed here.
+- id: usda_fdc
+  name: USDA FoodData Central
+  url: https://fdc.nal.usda.gov
+  license: Public domain
+  version: SR Legacy 2018-04, published in FoodData Central 2019-04-01
+  retrieved: 2026-10-19
+  attribution: >-
+    U.S. Department of Agriculture, Agricultural Research Service. FoodData Central.
+    fdc.nal.usda.gov.
+
+- id: cofid_2021
+  name: McCance and Widdowson's Composition of Foods Integrated Dataset (CoFID) 2021
+  url: https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid
+  license: Open Government Licence v3.0
+  version: "2021 (Public Health England, updated 2021-03-19)"
+  retrieved: 2026-10-19
+  attribution: >-
+    Contains public sector information licensed under the Open Government Licence v3.0.
+
+- id: recipes_cc_by
+  name: nutrition-mcp standard recipes
+  url: https://github.com/Varun-Kambali/nutrition-mcp
+  license: CC BY 4.0
+  version: "0.1.0"
+  retrieved: 2026-10-19
+  attribution: Varun Kambali, nutrition-mcp
+
+- id: gi_compendium_2021
+  name: A glycaemic index compendium of non-western foods
+  url: https://doi.org/10.1038/s41387-020-00145-w
+  license: CC BY 4.0
+  version: Nutrition & Diabetes 11, 2 (2021)
+  retrieved: 2026-10-19
+  attribution: >-
+    Henry CJ, Quek RYC, Kaur B, Shyam S, Singh HKG. A glycaemic index compendium of
+    non-western foods. Nutrition & Diabetes 11, 2 (2021). doi:10.1038/s41387-020-00145-w.
+    Licensed under CC BY 4.0.

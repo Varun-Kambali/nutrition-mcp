@@ -9,7 +9,6 @@ from nutrition_mcp.loader import (
     INGREDIENT_COLUMNS,
     DataError,
     build_registry,
-    bundled_dir,
     compute_dish,
     load_dataset,
 )
@@ -17,6 +16,10 @@ from nutrition_mcp.models import RecipeItem
 from nutrition_mcp.registry import UnknownFood
 
 FIXTURE = Path(__file__).parent.parent / "fixtures" / "mini_dataset"
+
+# These tests are about the loader, so they run against the fixture alone. The bundled data
+# is checked in tests/integration/test_bundled_data.py.
+pytestmark = pytest.mark.usefixtures("no_bundled_data")
 
 
 def copy_fixture(tmp_path: Path, name: str = "dataset") -> Path:
@@ -387,12 +390,6 @@ def test_registry_get_unknown_food_raises() -> None:
     with pytest.raises(UnknownFood):
         build_registry([FIXTURE]).get("no_such_food")
     assert issubclass(UnknownFood, KeyError)
-
-
-def test_bundled_dataset_loads() -> None:
-    assert (bundled_dir() / "sources.yaml").is_file()
-    load_dataset(bundled_dir())
-    build_registry([])
 
 
 def test_data_dirs_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
