@@ -1,0 +1,40 @@
+id: palak_paneer
+name: Palak paneer
+aliases:
+  - saag paneer
+  - spinach paneer
+regions: [north]
+diet: veg
+servings: 5
+cooked_weight_g: 800
+ingredients:
+  - ingredient_id: spinach
+    grams: 500
+  - ingredient_id: paneer
+    grams: 200
+  - ingredient_id: onion
+    grams: 100
+  - ingredient_id: tomato
+    grams: 80
+  - ingredient_id: garlic
+    grams: 10
+  - ingredient_id: ginger
+    grams: 10
+  - ingredient_id: green_chilli
+    grams: 8
+  - ingredient_id: cumin_seeds
+    grams: 2
+  - ingredient_id: garam_masala
+    grams: 2
+  - ingredient_id: cream
+    grams: 30
+  - ingredient_id: ghee
+    grams: 20
+  - ingredient_id: salt
+    grams: 8
+measures:
+  katori: 150
+assumptions: >-
+  20 g ghee and 30 g cream, 4 g ghee and 6 g cream per serving. The spinach is blanched,
+  pureed and cooked down, and the dish loses about a sixth of its raw weight.
+source_id: recipes_cc_by

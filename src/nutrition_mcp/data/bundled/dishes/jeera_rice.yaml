@@ -1,0 +1,25 @@
+# Basmati is usual; the long-grain white rice row stands in for it.
+id: jeera_rice
+name: Jeera rice
+aliases:
+  - zeera rice
+  - cumin rice
+regions: [north]
+diet: veg
+servings: 4
+cooked_weight_g: 584
+ingredients:
+  - ingredient_id: white_rice
+    grams: 200
+  - ingredient_id: ghee
+    grams: 15
+  - ingredient_id: cumin_seeds
+    grams: 5
+  - ingredient_id: salt
+    grams: 4
+measures:
+  katori: 150
+assumptions: >-
+  15 g ghee, under 4 g per serving. The rice is cooked by absorption to 2.8 times its raw
+  weight.
+source_id: recipes_cc_by

@@ -1,0 +1,44 @@
+# Chole masala is modelled as garam masala; amchur is left out.
+id: chana_masala
+name: Chana masala
+aliases:
+  - chole
+  - chhole
+  - chickpea curry
+regions: [north]
+diet: vegan
+servings: 6
+cooked_weight_g: 1050
+ingredients:
+  - ingredient_id: kabuli_chana
+    grams: 200
+  - ingredient_id: onion
+    grams: 150
+  - ingredient_id: tomato
+    grams: 200
+  - ingredient_id: ginger
+    grams: 10
+  - ingredient_id: garlic
+    grams: 10
+  - ingredient_id: green_chilli
+    grams: 6
+  - ingredient_id: cumin_seeds
+    grams: 3
+  - ingredient_id: red_chilli_powder
+    grams: 5
+  - ingredient_id: turmeric
+    grams: 2
+  - ingredient_id: garam_masala
+    grams: 4
+  - ingredient_id: coriander_leaves
+    grams: 6
+  - ingredient_id: sunflower_oil
+    grams: 30
+  - ingredient_id: salt
+    grams: 10
+measures:
+  katori: 150
+assumptions: >-
+  30 g sunflower oil, 5 g per serving. Soaked chickpeas are pressure-cooked to about 2.3
+  times their dry weight and simmered in the masala to 1050 g.
+source_id: recipes_cc_by

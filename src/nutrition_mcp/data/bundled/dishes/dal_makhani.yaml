@@ -1,0 +1,44 @@
+# Kasuri methi is left out; the ingredient table has only fresh methi leaves.
+id: dal_makhani
+name: Dal makhani
+aliases:
+  - maa ki dal
+  - dal makhni
+regions: [north]
+diet: veg
+servings: 6
+cooked_weight_g: 1050
+ingredients:
+  - ingredient_id: whole_urad
+    grams: 150
+  - ingredient_id: rajma
+    grams: 30
+  - ingredient_id: tomato
+    grams: 200
+  - ingredient_id: onion
+    grams: 60
+  - ingredient_id: ginger
+    grams: 10
+  - ingredient_id: garlic
+    grams: 10
+  - ingredient_id: red_chilli_powder
+    grams: 4
+  - ingredient_id: garam_masala
+    grams: 2
+  - ingredient_id: cumin_seeds
+    grams: 2
+  - ingredient_id: ghee
+    grams: 15
+  - ingredient_id: butter
+    grams: 25
+  - ingredient_id: cream
+    grams: 50
+  - ingredient_id: salt
+    grams: 8
+measures:
+  katori: 150
+assumptions: >-
+  15 g ghee for the masala, 25 g butter and 50 g cream: 2.5 g ghee and about 4 g butter and
+  8 g cream per serving. The soaked urad and rajma are pressure-cooked and simmered to
+  1050 g, close to 6 times the raw pulses.
+source_id: recipes_cc_by

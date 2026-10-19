@@ -1,0 +1,47 @@
+# Methi seeds in the tempering are left out; the ingredient table has none.
+id: punjabi_kadhi
+name: Punjabi kadhi pakora
+aliases:
+  - kadhi pakora
+  - kadhi pakoda
+  - punjabi kadhi
+regions: [north]
+diet: veg
+servings: 6
+cooked_weight_g: 1080
+ingredients:
+  - ingredient_id: curd
+    grams: 400
+  - ingredient_id: besan
+    grams: 50  # kadhi
+  - ingredient_id: besan
+    grams: 80  # pakoras
+  - ingredient_id: onion
+    grams: 80  # pakoras
+  - ingredient_id: sunflower_oil
+    grams: 20  # taken up by the fried pakoras
+  - ingredient_id: ghee
+    grams: 10  # tempering
+  - ingredient_id: cumin_seeds
+    grams: 2
+  - ingredient_id: red_chilli_powder
+    grams: 3
+  - ingredient_id: turmeric
+    grams: 2
+  - ingredient_id: ginger
+    grams: 6
+  - ingredient_id: garlic
+    grams: 5
+  - ingredient_id: green_chilli
+    grams: 5
+  - ingredient_id: coriander_leaves
+    grams: 4
+  - ingredient_id: salt
+    grams: 10
+measures:
+  katori: 150
+assumptions: >-
+  About 20 g sunflower oil taken up by the fried pakoras and 10 g ghee for the tempering,
+  about 3.3 g oil and 1.7 g ghee per serving. The kadhi is simmered with about 600 g water
+  for a long time and ends at 1080 g.
+source_id: recipes_cc_by
