@@ -51,7 +51,7 @@ Out of scope for v1, and why:
 
 The server is a thin MCP layer over a small in-memory data layer. At startup it loads dataset folders (ingredients as CSV, dishes as YAML), validates every row, and computes each dish's nutrition per 100 g from its ingredients and cooked weight. The tools are plain Python functions over that data, exposed with typed inputs and structured outputs. The diagram and data flow are in [architecture.md](architecture.md).
 
-The data foundation is a table of 66 ingredients. Each one comes from a single USDA FoodData Central or CoFID 2021 record, checked by hand against the source's own description: raw, the part that is eaten, and split dal or whole seed as the recipe uses it. USDA comes first because its records carry the full nutrient set. CoFID fills what USDA lacks or has only in the wrong form, such as paneer, methi leaves, curry leaves, rohu and the split dals. The rules for choosing a record and mapping each source's nutrients are in [data.md](data.md) and [ADR 0002](decisions/0002-data-sources.md).
+The data foundation is a table of 66 ingredients. Each one comes from a single USDA FoodData Central or CoFID 2021 record, checked by hand against the source's own description: raw, the part that is eaten, and split dal or whole seed as the recipe uses it. USDA comes first because its records carry the full nutrient set. CoFID fills what USDA lacks or has only in the wrong form, such as paneer, methi leaves, curry leaves, rohu and four of the split dals. The rules for choosing a record and mapping each source's nutrients are in [data.md](data.md) and [ADR 0002](decisions/0002-data-sources.md).
 
 The decisions that mattered:
 
@@ -80,13 +80,13 @@ Not measured yet. These rows come from `evals/results/summary.md` once the evalu
 
 - **Dish values depend on my recipes.** Home cooking varies, and oil varies most of all: one extra spoon of ghee changes a meal more than most errors in the composition data. Every answer states its oil and portion assumptions so the user can adjust.
 - **Energy is on two bases.** USDA counts fibre as carbohydrate when it computes kcal, and CoFID gives fibre no energy. For the USDA pulses that fibre is 11% to 25% of their kcal, so a dish built from USDA pulses or atta reads high next to a CoFID reference dish even when the recipe is right. The data-accuracy evaluation has to show the energy basis of each side of a comparison.
-- **Split dals have no fibre value.** The four split dals come from CoFID records that report no fibre, so every dish made with them reports fibre as incomplete until a source with fibre for split dals is found.
-- **Some ingredients have no open source.** Jaggery, ragi and poha have no record in USDA or CoFID, so dishes that need them are dropped or replaced.
+- **Split dals have no fibre value.** Toor, moong, urad and chana dal come from CoFID records that report no fibre, so every dish made with them reports fibre as incomplete until a source with fibre for split dals is found.
+- **Some ingredients have no open source.** Jaggery, ragi and poha have no record in USDA or CoFID. A dish that needs one of them as a core ingredient is dropped or replaced with another dish. A dish that uses only a small, optional amount, such as the jaggery in bisi bele bath, leaves it out and says so in its assumptions.
 - **Micronutrients are rougher than macronutrients.** They vary with variety, soil and storage, and heat destroys much of the folate, vitamin C and B vitamins. In v1, dish micronutrients are totals of the raw ingredients, and they are labelled that way.
 - **What the body absorbs is not what is on paper.** Iron from plants is absorbed far less than iron from meat, and tea with a meal reduces it further. The server can say which foods are good sources; it can't measure absorption.
 - **Glycemic index values are averages from small studies,** and they shift with how a food is cooked and what it is eaten with.
 - **A deficiency is diagnosed with a blood test, not a food log.** The server and the planner take deficiencies as facts from the user's doctor.
-- **Forty dishes is a small set.** When a dish is missing, the server says so and returns the closest ingredients, so the assistant can build the dish from its parts instead of guessing.
+- **41 dishes is a small set.** When a dish is missing, the server says so and returns the closest ingredients, so the assistant can build the dish from its parts instead of guessing.
 - **Better data improves accuracy without code changes.** With a licensed IFCT copy or lab-tested recipes loaded, the data-accuracy evaluation would show how much.
 
 ## What I learned
