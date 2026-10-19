@@ -1,0 +1,64 @@
+id,name,aliases,diet,source,record,notes
+white_rice,"Chawal (white rice, raw)",rice|white rice|raw rice|arisi|akki,vegan,usda,169756,"Long-grain, unenriched. Most US white rice is enriched with iron and folic acid, and this record leaves those additions out"
+rava,Rava (semolina),sooji|suji|semolina|bombay rava|upma rava,vegan,usda,168933,Unenriched
+atta,Atta (whole-wheat flour),whole wheat flour|whole-wheat flour|chapati flour|gehun ka atta|wheat flour,vegan,usda,168893,
+maida,Maida (refined wheat flour),refined flour|refined wheat flour|all-purpose flour|plain flour|white flour,vegan,usda,169761,"Unenriched, as Indian maida is"
+besan,Besan (chickpea flour),gram flour|chickpea flour|chana flour|kadalai maavu,vegan,usda,174288,
+sabudana,Sabudana (tapioca pearls),sago|tapioca pearls|javvarisi,vegan,usda,169717,Dry pearls
+pav,Pav (soft white bread roll),pao|ladi pav|bread roll|soft bread roll|bun,vegan,cofid,11-1006,"USDA white breads and rolls are enriched with iron and folic acid. UK white flour is fortified with calcium and iron, so this record's calcium, and probably its iron, are higher than in Indian pav"
+toor_dal,Toor dal (split pigeon peas),arhar dal|tur dal|tuvar dal|togari bele|thuvaram paruppu|split pigeon peas|pigeon pea dal,vegan,cofid,13-104,"Split, no seed coat. USDA has only the whole seed"
+moong_dal,Moong dal (split yellow mung beans),mung dal|yellow moong dal|split moong|pasi paruppu|hesaru bele|split mung beans,vegan,cofid,13-098,"Split, no seed coat. USDA has only the whole bean"
+urad_dal,Urad dal (split skinned black gram),udad dal|white urad dal|dhuli urad dal|ulundu|uddina bele|split black gram,vegan,cofid,13-060,"Dhuli (washed) urad dal: split, no seed coat. USDA has only the whole bean"
+chana_dal,Chana dal (split chickpeas),bengal gram dal|split bengal gram|kadalai paruppu|kadale bele|split chickpeas,vegan,cofid,13-076,"Split, no seed coat. Chana dal is split desi chickpea; neither USDA nor CoFID has that, and CoFID's split record is the Kabuli type. USDA has only the whole seed"
+masoor_dal,Masoor dal (red lentils),masur dal|red lentils|split red lentils|red lentil dal,vegan,usda,174284,"Pink or red lentils are the dehulled lentils sold as masoor dal"
+rajma,Rajma (red kidney beans),kidney beans|red kidney beans|rajmah,vegan,usda,173744,"Dry, raw"
+kabuli_chana,Kabuli chana (chickpeas),chickpeas|chick peas|garbanzo beans|safed chana|white chickpeas,vegan,usda,173756,"Dry, raw, whole"
+whole_urad,Sabut urad (whole black gram),whole urad|sabut urad dal|black gram|whole black gram|black urad,vegan,usda,174259,USDA names Vigna mungo mungo beans
+moth_beans,Matki (moth beans),moth|moth beans|mat beans|matki beans,vegan,usda,172425,"Dry, raw, whole. The record has no fibre value, so available carbohydrate is missing too"
+ghee,Ghee (clarified butter),desi ghee|clarified butter|tup|toop|neyyi|butter ghee,veg,usda,173412,"Anhydrous butter oil is ghee by composition. USDA's record named ghee (171314) has no zinc, folate, vitamin A, B12 or vitamin D values and no portions"
+butter,Makkhan (salted butter),butter|salted butter|table butter|makhan,veg,usda,173410,Salted table butter
+cream,Fresh cream (24% fat),cream|fresh cream|cooking cream,veg,cofid,12-337,Indian fresh cream is about 25% fat. USDA's nearest creams are 19% and 31% fat
+curd,Dahi (curd),curd|yogurt|yoghurt|plain yogurt|thayir|mosaru|doi,veg,usda,171284,Plain whole-milk yogurt
+paneer,Paneer,panir|indian cottage cheese,veg,cofid,12-495,USDA has no paneer
+whole_milk,Doodh (whole milk),milk|whole milk|cow milk|paal|haalu|dudh,veg,usda,172217,"3.25% fat, without added vitamins A and D, because fortification of Indian milk varies by brand"
+sunflower_oil,Sunflower oil,refined oil|vegetable oil|cooking oil|surajmukhi tel,vegan,usda,171025,"Linoleic type, the common refined sunflower oil"
+mustard_oil,Sarson ka tel (mustard oil),mustard oil|sarson oil|sorsher tel|kadugu ennai,vegan,usda,172337,
+coconut_oil,Nariyal tel (coconut oil),coconut oil|thengai ennai|velichenna|kobbari enne,vegan,usda,171412,
+onion,Pyaz (onion),onion|pyaaz|kanda|eerulli|vengayam|piyaj,vegan,usda,170000,
+tomato,Tamatar (tomato),tomato|thakkali|tameta,vegan,usda,170457,"Red, ripe, year-round average"
+potato,"Aloo (potato, peeled)",potato|alu|batata|urulaikizhangu|aloo,vegan,cofid,13-489,"Flesh only, as Indian dishes use it. USDA SR Legacy has raw potato only with the skin or as skin alone, and the Foundation records without skin have no fibre value, so available carbohydrate would be missing"
+cauliflower,Phool gobi (cauliflower),cauliflower|gobi|phoolgobi|phulkopi,vegan,usda,169986,
+spinach,Palak (spinach),spinach|paalak|pasalai keerai|palong shak,vegan,usda,168462,
+brinjal,Baingan (brinjal),brinjal|eggplant|aubergine|begun|vangi|vangan|kathirikkai,vegan,usda,169228,
+bitter_gourd,Karela (bitter gourd),bitter gourd|bitter melon|karla|pavakkai|hagalakai|uchhe|korola,vegan,usda,168393,"Pods, not the leafy tips"
+drumstick,Drumstick (moringa pods),sahjan|saijan|shevga|murungakkai|nugge kai|moringa pods|sajne data,vegan,usda,170483,"Pods, not the leaves"
+bottle_gourd,Lauki (bottle gourd),bottle gourd|calabash|dudhi|ghiya|lau|sorakkai|sorekai,vegan,usda,169232,"White-flowered gourd (calabash), not dishcloth (towel) gourd"
+carrot,Gajar (carrot),carrot|carrots,vegan,usda,170393,
+green_peas,Matar (green peas),green peas|peas|mutter|hara matar|pattani,vegan,usda,170419,"Fresh green peas, not dried"
+capsicum,Shimla mirch (green capsicum),capsicum|green capsicum|bell pepper|green bell pepper|green pepper,vegan,usda,170427,
+cucumber,Kheera (cucumber),cucumber|kakdi|khira|southekayi|vellarikkai,vegan,usda,168409,With peel
+pumpkin,Kaddu (pumpkin),pumpkin|kashiphal|kumro|parangikai|lal bhopla|red pumpkin,vegan,usda,168448,
+green_beans,French beans (green beans),green beans|beans|farasbi|snap beans|fansi,vegan,usda,169961,
+raw_banana,"Kachcha kela (raw banana, green plantain)",raw banana|green banana|plantain|kachha kela|kanch kola|vazhakkai,vegan,usda,168215,
+methi_leaves,Methi (fenugreek leaves),fenugreek leaves|methi leaves|fresh methi|menthya soppu|vendhaya keerai,vegan,cofid,13-243,USDA has fenugreek seed only
+curry_leaves,Kadi patta (curry leaves),curry leaves|kadipatta|kariveppilai|karibevu|meetha neem,vegan,cofid,13-821,USDA has no curry leaves
+coriander_leaves,Hara dhania (coriander leaves),coriander leaves|cilantro|fresh coriander|kothimbir|kothamalli,vegan,usda,169997,
+green_chilli,Hari mirch (green chilli),green chilli|green chili|pachai milagai|kancha lanka,vegan,usda,170497,"Hot chilli, not green bell pepper"
+ginger,Adrak (fresh ginger),ginger|fresh ginger|allam|inji|shunti|ada,vegan,usda,169231,Fresh root
+garlic,Lahsun (garlic),garlic|lehsun|bellulli|poondu|rosun,vegan,usda,169230,
+lemon_juice,Nimbu ras (lemon juice),lemon juice|nimbu juice|lime juice|lemon,vegan,usda,167747,Fresh
+fresh_coconut,Nariyal (fresh coconut),fresh coconut|grated coconut|coconut|thengai|kobbari|narkel,vegan,usda,170169,"Fresh meat, not desiccated"
+coconut_milk,Nariyal doodh (coconut milk),coconut milk|thengai paal|kobbari haalu,vegan,usda,170172,"Liquid pressed from grated coconut and water, as made at home"
+tamarind,Imli (tamarind),tamarind|puli|hunase|chinch|tetul,vegan,usda,167763,Pulp
+poppy_seeds,Khus khus (poppy seeds),poppy seeds|posto|khaskhas|gasagase|kasakasa,vegan,usda,171330,
+peanuts,"Moongphali (peanuts, raw)",peanuts|groundnuts|mungfali|shengdana|verkadalai|kadlekai|singdana,vegan,usda,172430,
+mustard_seeds,Rai (mustard seeds),mustard seeds|rai dana|kadugu|sasive|shorshe|sarson,vegan,usda,170929,USDA lists the seed ground; grinding does not change its composition
+cumin_seeds,Jeera (cumin seeds),cumin|cumin seeds|zeera|jeeragam|jeerige|jira,vegan,usda,170923,
+turmeric,Haldi (turmeric powder),turmeric|turmeric powder|manjal|arishina|halud,vegan,usda,172231,Ground
+red_chilli_powder,Lal mirch powder (red chilli powder),red chilli powder|lal mirch|chilli powder|chili powder|mirchi powder|cayenne,vegan,usda,170932,"Ground red chilli (cayenne), not US chili powder, which is a blend with salt"
+garam_masala,Garam masala,garam masala powder,vegan,cofid,13-829,USDA has no garam masala
+sugar,Cheeni (sugar),sugar|white sugar|granulated sugar|chini,vegan,usda,169655,White granulated
+salt,Namak (table salt),salt|table salt|uppu|noon,vegan,usda,173468,
+egg,"Anda (egg, whole, raw)",egg|eggs|ande|dim|motte|muttai,egg,usda,171287,"Chicken egg, whole, without the shell"
+rohu,Rohu (freshwater carp),rui|rohu fish|rui maach|labeo rohita|indian carp|freshwater fish,non_veg,cofid,16-132,"USDA has no rohu. CoFID's rohu record comes from literature sources and does not report calcium, zinc, folate, saturated fat or fibre. USDA's common carp (171952) has 5.6 g fat per 100 g against 1.4 g here, so it was not used as a stand-in"
+baking_soda,Meetha soda (baking soda),baking soda|khane ka soda|cooking soda|soda bicarbonate|sodium bicarbonate,vegan,usda,175040,
