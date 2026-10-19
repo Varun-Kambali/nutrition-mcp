@@ -51,6 +51,8 @@ Out of scope for v1, and why:
 
 The server is a thin MCP layer over a small in-memory data layer. At startup it loads dataset folders (ingredients as CSV, dishes as YAML), validates every row, and computes each dish's nutrition per 100 g from its ingredients and cooked weight. The tools are plain Python functions over that data, exposed with typed inputs and structured outputs. The diagram and data flow are in [architecture.md](architecture.md).
 
+The data foundation is a table of 66 ingredients. Each one comes from a single USDA FoodData Central or CoFID 2021 record, checked by hand against the source's own description: raw, the part that is eaten, and split dal or whole seed as the recipe uses it. USDA comes first because its records carry the full nutrient set. CoFID fills what USDA lacks or has only in the wrong form, such as paneer, methi leaves, curry leaves, rohu and the split dals. The rules for choosing a record and mapping each source's nutrients are in [data.md](data.md) and [ADR 0002](decisions/0002-data-sources.md).
+
 The decisions that mattered:
 
 1. **Write our own recipes instead of copying a dish table.** The Indian tables can't be redistributed. Standard recipes computed from openly licensed ingredients mean every number traces back to a source row and a stated assumption. The alternatives were shipping IFCT values (not allowed) or typing in dish values from blogs (no traceable source).
@@ -58,6 +60,7 @@ The decisions that mattered:
 3. **Facts here, the person elsewhere.** The server knows foods, not people. Keeping health profiles out of it keeps it simple to trust and safe to reuse, and gives the planner agent a clean boundary.
 4. **Unknown is not zero.** When a source doesn't report a nutrient, the value is missing, and any dish that depends on it says which ingredient is missing instead of quietly under-counting.
 5. **Two evaluations, not one.** Grading the model against my own data would only show that it used the tool. A separate check compares my computed dish values with independently measured ones, such as CoFID's homemade sambar, saag and dals.
+6. **Keep each source's values as published.** USDA and CoFID define some nutrients differently. The mapping converts only what has a clear rule (USDA carbohydrate by difference minus fibre gives available carbohydrate) and does not recompute energy. data.md records each difference so a reader can judge a number.
 
 Each decision gets an ADR in [decisions/](decisions/) as it is built.
 
@@ -76,6 +79,9 @@ Not measured yet. These rows come from `evals/results/summary.md` once the evalu
 ## Limits, and what better inputs would change
 
 - **Dish values depend on my recipes.** Home cooking varies, and oil varies most of all: one extra spoon of ghee changes a meal more than most errors in the composition data. Every answer states its oil and portion assumptions so the user can adjust.
+- **Energy is on two bases.** USDA counts fibre as carbohydrate when it computes kcal, and CoFID gives fibre no energy. For the USDA pulses that fibre is 11% to 25% of their kcal, so a dish built from USDA pulses or atta reads high next to a CoFID reference dish even when the recipe is right. The data-accuracy evaluation has to show the energy basis of each side of a comparison.
+- **Split dals have no fibre value.** The four split dals come from CoFID records that report no fibre, so every dish made with them reports fibre as incomplete until a source with fibre for split dals is found.
+- **Some ingredients have no open source.** Jaggery, ragi and poha have no record in USDA or CoFID, so dishes that need them are dropped or replaced.
 - **Micronutrients are rougher than macronutrients.** They vary with variety, soil and storage, and heat destroys much of the folate, vitamin C and B vitamins. In v1, dish micronutrients are totals of the raw ingredients, and they are labelled that way.
 - **What the body absorbs is not what is on paper.** Iron from plants is absorbed far less than iron from meat, and tea with a meal reduces it further. The server can say which foods are good sources; it can't measure absorption.
 - **Glycemic index values are averages from small studies,** and they shift with how a food is cooked and what it is eaten with.
