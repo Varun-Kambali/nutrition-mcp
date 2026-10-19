@@ -135,7 +135,11 @@ def usda_density_g_per_ml(food: Mapping[str, Any]) -> float | None:
 
 
 def parse_cofid_value(raw: str | float | None) -> float | None:
-    """CoFID cell to a number: "Tr" (trace) is 0, "N" (not measured) and blanks are None."""
+    """CoFID cell to a number: "Tr" (trace) is 0; "N" and blanks are None.
+
+    "N" means the nutrient is present in significant amounts but CoFID has no reliable value,
+    so it is missing, not zero.
+    """
     if raw is None:
         return None
     if isinstance(raw, int | float):

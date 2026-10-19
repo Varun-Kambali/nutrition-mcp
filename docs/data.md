@@ -23,7 +23,7 @@ How the bundled ingredient table is built, how each source's values map onto the
 3. Maps each record onto the server's nutrients with `nutrition_mcp.source_mapping`, validates the row with the same model the loader uses, and writes `src/nutrition_mcp/data/bundled/ingredients.csv`.
 4. Prints a review table: our name, the source, the record and the source's own description, kcal, protein and the number of missing nutrients.
 
-Every row of the review table is checked by hand against the source description: the right food, raw and not cooked, the part that is eaten, and split dal or whole seed. Search results are not trusted: USDA's top hit for "bottle gourd" is towel gourd, and the right record is "Gourd, white-flowered (calabash), raw". `tests/integration/test_bundled_data.py` fails if `ingredients.csv` no longer matches the map, so a hand edit to the CSV or a map change without a rebuild is caught.
+Every row of the review table is checked by hand against the source description: the right food, raw and not cooked, the part that is eaten, and split dal or whole seed. Search results are not trusted: USDA's top hit for "bottle gourd" is towel gourd, and the right record is "Gourd, white-flowered (calabash), raw". `tests/integration/test_bundled_data.py` checks that each row's id, name, aliases, diet, source and record in `ingredients.csv` match the map, so a map change without a rebuild, or a hand edit to those columns, fails the tests. It cannot check nutrient values, because CI has no copy of the source records. To check those, run `make data` (it works offline from `.cache/`) and confirm that `git diff` shows no change to `ingredients.csv`; the build writes the same bytes from the same records.
 
 ## Choosing a record
 
@@ -32,7 +32,7 @@ Every row of the review table is checked by hand against the source description:
 3. **CoFID 2021 where USDA lacks the food or only has a poor match.**
 4. **Unenriched records where USDA has both.** Most US flour, rice and bread is enriched with iron and folic acid, and those additions should not be counted for an Indian kitchen.
 
-Twelve of the 63 ingredients come from CoFID:
+Twelve of the 66 ingredients come from CoFID; the other 54 are USDA SR Legacy:
 
 | Ingredient | CoFID record | Why not USDA |
 |---|---|---|
@@ -47,7 +47,7 @@ Twelve of the 63 ingredients come from CoFID:
 | `methi_leaves` | 13-243 Fenugreek leaves, raw | USDA has fenugreek seed only |
 | `curry_leaves` | 13-821 Curry leaves, fresh | Not in USDA |
 | `garam_masala` | 13-829 Garam masala | Not in USDA |
-| `rohu` | 16-132 Rohu, raw | Not in USDA. USDA's common carp has 5.6 g fat per 100 g against rohu's 1.4 g, so it is not a fair stand-in |
+| `rohu` | 16-132 Rohu, raw | Not in USDA. USDA's common carp has 5.6 g fat per 100 g against rohu's 1.4 g, so it is not a fair stand-in. The record's vitamin A and vitamin D cells are "Tr" (trace) and are stored as 0 |
 
 ### Left out
 
@@ -86,7 +86,16 @@ USDA values are matched on `foodNutrients[].nutrient.id`. When a list has more t
 
 **Vitamin A.** USDA's 1106 is retinol activity equivalents (RAE), which count 12 µg of beta-carotene as 1 µg of retinol. CoFID's retinol equivalent counts 6 µg of beta-carotene as 1 µg of retinol. For a plant food, where all the vitamin A comes from carotenes, the CoFID figure is about twice the RAE figure for the same carotene content. This affects the CoFID rows for methi leaves and curry leaves most. The values are stored as each source reports them.
 
-**Energy.** Both sources compute energy from the food's composition using their own conversion factors, so the same food can differ by a few percent between them.
+**Energy.** The two sources put different things into kcal, and the difference is largest for pulses and whole grains.
+
+- USDA SR Legacy multiplies protein, fat and carbohydrate by difference by Atwater factors, specific to the food where USDA has them (each record lists its factors). Carbohydrate by difference includes fibre, so fibre counts for energy at the carbohydrate factor. For the whole pulses in this table the factors are 3.47 kcal/g for protein, 8.37 kcal/g for fat and 4.07 kcal/g for carbohydrate.
+- CoFID computes kcal as 4 x protein + 9 x fat + 3.75 x available carbohydrate (in monosaccharide equivalents) + 7 x alcohol. Fibre counts for nothing. That formula reproduces the stated kcal of 2,617 of the 2,853 CoFID foods that have all the inputs, and of 8 of the 12 CoFID rows here. The other four (urad dal, methi leaves, curry leaves, garam masala) are literature values whose stated kcal does not follow it.
+
+The size of the gap is roughly the energy USDA gives fibre. In this table that is 11% of the kcal of besan, 12% of atta and masoor dal, 13% of kabuli chana, 18% of rajma, 22% of whole urad and 25% of dried split peas. It is under 5% for rice, maida, rava and sabudana, and zero for oils, ghee, dairy, fish and eggs. Vegetables show large shares (up to 59% for bitter gourd) but carry few kcal per serving.
+
+An example from this table: whole urad from USDA (174259) is 341 kcal per 100 g, of which 74.5 kcal is its 18.3 g of fibre at 4.07 kcal/g. Split urad dal from CoFID (13-060) is 298 kcal, with no energy from fibre. The two numbers are on different bases, so the 43 kcal between them says little about how the foods differ.
+
+The server stores kcal as each source publishes it and does not recompute energy. The data-accuracy evaluation has to account for this: a dish built mostly from USDA pulses or atta, compared with a CoFID reference dish, will read high on kcal by roughly the fibre energy of its ingredients even when the recipe is right. Its results need to show the energy basis of each side of a comparison, so that this gap is not read as a recipe error.
 
 **Folate.** USDA's 1177 is total folate in µg (food folate plus any folic acid), not dietary folate equivalents. CoFID's folate is also total folate in µg. The unenriched USDA records chosen here contain no folic acid.
 
@@ -118,5 +127,14 @@ USDA values are matched on `foodNutrients[].nutrient.id`. When a list has more t
 | `curry_leaves` | cofid_2021 | sat_fat_g, sugars_g, fibre_g, sodium_mg, zinc_mg |
 | `garam_masala` | cofid_2021 | sat_fat_g, sugars_g, fibre_g |
 | `rohu` | cofid_2021 | sat_fat_g, fibre_g, calcium_mg, zinc_mg, folate_ug |
+| `surmai` | usda_fdc | sugars_g, vit_d_ug |
 
-A dish that uses one of these ingredients reports the nutrient as incomplete and names the ingredient. The split dals are the gap that matters most: every dal dish will show fibre as incomplete until a source with fibre for split dals is found.
+A dish that uses one of these ingredients reports the nutrient as incomplete and names the ingredient.
+
+Other values to read with care, all kept as published and noted in the map:
+
+- `rohu`: vitamin A and vitamin D are "Tr" in CoFID and stored as 0.
+- `dried_peas`: folate is 15 µg per 100 g, far below what USDA's boiled split peas (172429, 65 µg per 100 g at 69.5% water) imply for the dry pea.
+- `raw_banana`: the record is USDA's green plantain. Indian raw bananas are cooking varieties that may hold more water, in which case kcal and carbohydrate read high.
+- `surmai`: USDA's king mackerel is the Atlantic species (Scomberomorus cavalla); surmai on Indian coasts is S. commerson, from the same genus.
+- `pav`: UK flour fortification raises calcium, and probably iron, above Indian pav. The split dals are the gap that matters most: every dal dish will show fibre as incomplete until a source with fibre for split dals is found.

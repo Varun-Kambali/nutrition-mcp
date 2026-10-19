@@ -6,7 +6,7 @@ Every ingredient value the server returns has to come from a source whose licens
 
 Two open sources cover raw ingredients. USDA FoodData Central is public domain and large, but it has no paneer, curry leaves or methi leaves, it has pigeon peas, mung beans and black gram only as whole seeds, and many of its flour, rice and bread records describe products enriched with iron and folic acid. CoFID 2021, the UK's composition dataset, is released under the Open Government Licence v3.0 and has some of what USDA lacks, including paneer, methi leaves, curry leaves, the split dals and rohu. Many of its Indian entries are older values taken from literature, with more gaps than USDA's records.
 
-The two sources define some nutrients differently. USDA gives carbohydrate by difference, which includes fibre; CoFID gives available carbohydrate. USDA gives vitamin A as retinol activity equivalents; CoFID uses retinol equivalents, which give carotenes twice the vitamin A value that RAE does.
+The two sources define some nutrients differently. USDA gives carbohydrate by difference, which includes fibre; CoFID gives available carbohydrate. USDA gives vitamin A as retinol activity equivalents; CoFID uses retinol equivalents, which give carotenes twice the vitamin A value that RAE does. Energy differs too: USDA SR Legacy counts fibre as carbohydrate when it computes kcal, at about 4 kcal/g for pulses, while CoFID gives fibre no energy.
 
 ## Decision
 For each ingredient, pick the record in this order:
@@ -30,8 +30,8 @@ Both sources are mapped onto one nutrient set by `nutrition_mcp.source_mapping`,
 ## Consequences
 Every ingredient value can be checked against a public record by its FDC ID or CoFID food code, and the attribution the OGL asks for ships with the data. Swapping a record is a one-line change to the map followed by `make data`.
 
-The table mixes two sets of definitions. CoFID carbohydrate is expressed as monosaccharide equivalents, and a CoFID vitamin A value for a plant food is about twice what an RAE figure would be. data.md lists these differences so a reader can judge a number.
+The table mixes two sets of definitions. CoFID carbohydrate is expressed as monosaccharide equivalents, and a CoFID vitamin A value for a plant food is about twice what an RAE figure would be. Energy is on two bases: the fibre USDA counts makes up 11% to 25% of the kcal of the USDA pulses and 12% of atta, so whole urad from USDA reads 341 kcal per 100 g next to split urad dal from CoFID at 298. Energy is not recomputed; values stay as each source publishes them. data.md lists these differences so a reader can judge a number.
 
 Some values are missing, and they stay missing. The four split dals from CoFID have no fibre value, so every dal dish will report fibre as incomplete until a better source turns up. Pav from CoFID carries UK flour fortification, so its calcium is higher than in Indian pav.
 
-Watch the data-accuracy evaluation. If a dish is far from its independent reference because of one ingredient, look at that ingredient's record before changing the recipe.
+Watch the data-accuracy evaluation. It has to report the energy basis of each comparison, because a dish built from USDA pulses or atta will read high on kcal against a CoFID reference even when the recipe is right. If a dish is far from its reference because of one ingredient, look at that ingredient's record before changing the recipe.

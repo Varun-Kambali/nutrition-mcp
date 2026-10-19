@@ -14,7 +14,7 @@ The code in this repository is MIT licensed (see `LICENSE` at the repository roo
 
 - Values are per 100 g of the food as described in the source record. Each row keeps the source record ID in `source_record`, so a value can be checked against the original.
 - USDA carbohydrate by difference has fibre subtracted, to give available carbohydrate.
-- CoFID "Tr" (trace) is stored as 0, and "N" (not measured) as an empty cell.
+- CoFID "Tr" (trace) is stored as 0. "N" (present in significant amounts, but CoFID has no reliable value) and blank cells are stored as empty cells.
 - Names, aliases and diet tags were added for this project.
 - `density_g_per_ml` is computed from a USDA cup or tablespoon portion weight.
 

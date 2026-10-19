@@ -17,7 +17,7 @@ from nutrition_mcp.source_mapping import (
 FIXTURES = Path(__file__).parent.parent / "fixtures"
 
 # CoFID 2021 food code 12-495, "Cheese, Paneer", as the spreadsheet stores it: strings, with
-# "Tr" for trace and "N" for not measured.
+# "Tr" for trace and "N" for present but with no reliable value.
 PANEER_ROW: dict[str, str | float | None] = {
     "Energy (kcal) (kcal)": "328",
     "Protein (g)": "26.0",
