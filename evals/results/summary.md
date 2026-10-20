@@ -11,8 +11,8 @@ in `evals/thresholds.toml`.
 
 | Suite | Measure | n | Value | Date | Commit | Dataset version | Results file |
 |---|---|---|---|---|---|---|---|
-| data accuracy | Energy (kcal) MAPE (%), gated | 19 | 18.9 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](2026-10-20_data-accuracy_41edc33.json) |
-| data accuracy | Protein (g) MAPE (%), gated | 19 | 25.0 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](2026-10-20_data-accuracy_41edc33.json) |
-| data accuracy | Available carbohydrate (g) MAPE (%), gated | 19 | 27.2 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](2026-10-20_data-accuracy_41edc33.json) |
-| data accuracy | Iron (mg) MAPE (%), reported | 19 | 42.2 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](2026-10-20_data-accuracy_41edc33.json) |
-| data accuracy | Calcium (mg) MAPE (%), reported | 18 | 46.1 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](2026-10-20_data-accuracy_41edc33.json) |
+| data accuracy | Energy (kcal) MAPE (%), gated | 18 | 18.7 | 2026-10-20 | 32aa03d | 24143edbb56e | [2026-10-20_data-accuracy_32aa03d.json](2026-10-20_data-accuracy_32aa03d.json) |
+| data accuracy | Protein (g) MAPE (%), gated | 18 | 24.8 | 2026-10-20 | 32aa03d | 24143edbb56e | [2026-10-20_data-accuracy_32aa03d.json](2026-10-20_data-accuracy_32aa03d.json) |
+| data accuracy | Available carbohydrate (g) MAPE (%), gated | 18 | 16.7 | 2026-10-20 | 32aa03d | 24143edbb56e | [2026-10-20_data-accuracy_32aa03d.json](2026-10-20_data-accuracy_32aa03d.json) |
+| data accuracy | Iron (mg) MAPE (%), reported | 18 | 44.2 | 2026-10-20 | 32aa03d | 24143edbb56e | [2026-10-20_data-accuracy_32aa03d.json](2026-10-20_data-accuracy_32aa03d.json) |
+| data accuracy | Calcium (mg) MAPE (%), reported | 18 | 46.1 | 2026-10-20 | 32aa03d | 24143edbb56e | [2026-10-20_data-accuracy_32aa03d.json](2026-10-20_data-accuracy_32aa03d.json) |

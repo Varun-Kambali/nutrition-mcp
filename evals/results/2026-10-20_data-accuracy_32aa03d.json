@@ -1,14 +1,14 @@
 {
   "suite": "data_accuracy",
   "date": "2026-10-20",
-  "generated_at": "2026-10-20T15:45:44+00:00",
-  "commit": "41edc33",
+  "generated_at": "2026-10-20T16:10:01+00:00",
+  "commit": "32aa03d",
   "dataset_version": "24143edbb56e",
-  "n": 19,
+  "n": 18,
   "per_nutrient": {
     "kcal": {
-      "n": 19,
-      "mape": 18.9,
+      "n": 18,
+      "mape": 18.7,
       "worst": [
         {
           "dish_id": "musur_dal",
@@ -31,8 +31,8 @@
       ]
     },
     "protein_g": {
-      "n": 19,
-      "mape": 25.0,
+      "n": 18,
+      "mape": 24.8,
       "worst": [
         {
           "dish_id": "rava_upma",
@@ -55,15 +55,9 @@
       ]
     },
     "carbs_available_g": {
-      "n": 19,
-      "mape": 27.2,
+      "n": 18,
+      "mape": 16.7,
       "worst": [
-        {
-          "dish_id": "machher_jhol",
-          "reference": 1.5,
-          "computed": 4.73,
-          "ape": 215.3
-        },
         {
           "dish_id": "musur_dal",
           "reference": 19.2,
@@ -75,12 +69,18 @@
           "reference": 27.3,
           "computed": 13.51,
           "ape": 50.5
+        },
+        {
+          "dish_id": "cholar_dal",
+          "reference": 17.8,
+          "computed": 11.77,
+          "ape": 33.9
         }
       ]
     },
     "iron_mg": {
-      "n": 19,
-      "mape": 42.2,
+      "n": 18,
+      "mape": 44.2,
       "worst": [
         {
           "dish_id": "palak_paneer",
@@ -372,33 +372,6 @@
       },
       "incomplete": [],
       "ingredient_source_ids": [
-        "usda_fdc"
-      ],
-      "same_source_ingredients": false
-    },
-    {
-      "dish_id": "machher_jhol",
-      "source_id": "cofid_2021",
-      "record": "16-446",
-      "reference": {
-        "kcal": 125.0,
-        "protein_g": 12.4,
-        "carbs_available_g": 1.5,
-        "iron_mg": 1.14,
-        "calcium_mg": null
-      },
-      "computed": {
-        "kcal": 97.26,
-        "protein_g": 8.92,
-        "carbs_available_g": 4.73,
-        "iron_mg": 1.06,
-        "calcium_mg": 6.94
-      },
-      "incomplete": [
-        "calcium_mg"
-      ],
-      "ingredient_source_ids": [
-        "cofid_2021",
         "usda_fdc"
       ],
       "same_source_ingredients": false
