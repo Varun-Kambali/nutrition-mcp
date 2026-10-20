@@ -17,6 +17,8 @@ jobs:
         with:
           # The cache is keyed on uv.lock, which this job does not follow.
           enable-cache: false
+      # --upgrade also moves ruff and mypy, so a new lint rule can fail this job with no real
+      # install problem; read the failing step before changing pins.
       - run: uv sync --upgrade --all-groups
       - run: make lint
       - run: make test
