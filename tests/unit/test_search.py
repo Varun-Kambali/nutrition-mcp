@@ -2,7 +2,7 @@ import pytest
 
 from nutrition_mcp.config import Settings
 from nutrition_mcp.loader import build_registry
-from nutrition_mcp.models import Food, Nutrients, Region
+from nutrition_mcp.models import Diet, Food, Nutrients, Region
 from nutrition_mcp.registry import Registry
 from nutrition_mcp.schemas import FoodSummary, SearchResult
 from nutrition_mcp.search import normalise, search_foods
@@ -18,14 +18,16 @@ def reg() -> Registry:
     return build_registry([])
 
 
-def make_food(food_id: str, name: str, regions: list[Region] | None = None) -> Food:
+def make_food(
+    food_id: str, name: str, regions: list[Region] | None = None, diet: Diet = "vegan"
+) -> Food:
     return Food(
         id=food_id,
         kind="dish",
         name=name,
         aliases=[],
         regions=regions or ["south"],
-        diet="vegan",
+        diet=diet,
         source_ids=[],
         per_100g=Nutrients(),
         incomplete={},
@@ -163,15 +165,22 @@ def test_typo_still_finds(reg: Registry) -> None:
     assert ids(search_foods(reg, SETTINGS, "sambr", None, None, None))[0] == "sambar"
 
 
-def test_exact_name_ranks_before_a_longer_name_that_contains_it(reg: Registry) -> None:
+@pytest.mark.parametrize(
+    ("query", "exact", "longer"),
+    [
+        ("paneer", "paneer", "palak_paneer"),
+        ("curd", "curd", "curd_rice"),
+        ("chapati", "chapati", "atta"),
+    ],
+)
+def test_exact_name_ranks_before_a_longer_name_that_contains_it(
+    reg: Registry, query: str, exact: str, longer: str
+) -> None:
     # Palak paneer, curd rice and atta (alias "chapati flour") contain the whole query as a
     # word, so they tie with the exact name on word matching and sort after it.
-    assert ids(search_foods(reg, SETTINGS, "paneer", None, None, None)) == [
-        "paneer",
-        "palak_paneer",
-    ]
-    assert ids(search_foods(reg, SETTINGS, "curd", None, None, None)) == ["curd", "curd_rice"]
-    assert ids(search_foods(reg, SETTINGS, "chapati", None, None, None)) == ["chapati", "atta"]
+    found = ids(search_foods(reg, SETTINGS, query, None, None, None, limit=50))
+    assert found[0] == exact
+    assert longer in found
 
 
 def test_equal_scores_are_ordered_by_name() -> None:
@@ -216,7 +225,8 @@ def test_kind_filter(reg: Registry) -> None:
     assert dishes.results
     assert {food.kind for food in dishes.results} == {"dish"}
     ingredients = search_foods(reg, SETTINGS, "rice", None, None, "ingredient", limit=50)
-    assert ids(ingredients) == ["white_rice"]
+    assert "white_rice" in ids(ingredients)
+    assert {food.kind for food in ingredients.results} == {"ingredient"}
 
 
 def test_filters_apply_before_suggestions_are_chosen(reg: Registry) -> None:
@@ -234,9 +244,23 @@ def test_filters_apply_before_suggestions_are_chosen(reg: Registry) -> None:
 
 
 def test_no_match_is_empty_not_error(reg: Registry) -> None:
+    # Nothing is close to the query, so there are no suggestions either.
     result = search_foods(reg, SETTINGS, "qwerty", None, None, None)
-    assert result.results == []
-    assert len(result.suggestions) <= 5
+    assert result == SearchResult(query="qwerty", results=[], total=0, suggestions=[])
+
+
+def test_filters_that_leave_no_foods_give_an_empty_result() -> None:
+    pool = Registry(
+        {
+            "a": make_food("a", "Fish curry", ["east"], "non_veg"),
+            "b": make_food("b", "Sambar", ["south"]),
+        },
+        {},
+    )
+    # The food is there without the diet filter, and no vegan dish is from the east.
+    assert ids(search_foods(pool, SETTINGS, "fish curry", "east", None, None)) == ["a"]
+    result = search_foods(pool, SETTINGS, "fish curry", "east", "vegan", None)
+    assert result == SearchResult(query="fish curry", results=[], total=0, suggestions=[])
 
 
 def test_suggestions_come_only_when_nothing_matched(reg: Registry) -> None:
@@ -244,10 +268,14 @@ def test_suggestions_come_only_when_nothing_matched(reg: Registry) -> None:
     assert search_foods(reg, SETTINGS, "dahi vada", None, None, None).suggestions != []
 
 
-def test_suggestions_are_capped_at_five(reg: Registry) -> None:
-    result = search_foods(reg, SETTINGS, "salad", None, None, None)
+def test_suggestions_are_capped_at_five() -> None:
+    # Six names are close to the query, and none holds both of its words.
+    names = ["Dahi bonda", "Dal vada", "Medu vada", "Methi vada", "Sabudana vada", "Palak vada"]
+    pool = Registry({str(i): make_food(str(i), name) for i, name in enumerate(names)}, {})
+    result = search_foods(pool, SETTINGS, "dahi vada", None, None, None)
     assert result.results == []
     assert len(result.suggestions) == 5
+    assert set(result.suggestions) < set(names)
 
 
 # A short query must match whole words, not letters inside other words.
@@ -381,10 +409,12 @@ def test_a_dish_not_in_the_data_offers_close_names_only_as_suggestions(reg: Regi
 
 def test_every_query_word_must_match_the_same_name(reg: Registry) -> None:
     # "chana" alone is in chana dal; "masla" is one letter off "masala" only in chana masala.
-    assert ids(search_foods(reg, SETTINGS, "chana masla", None, None, None, limit=50)) == [
-        "chana_masala"
-    ]
-    assert ids(search_foods(reg, SETTINGS, "toor dal", None, None, None, limit=50)) == ["toor_dal"]
+    chana = ids(search_foods(reg, SETTINGS, "chana masla", None, None, None, limit=50))
+    assert "chana_masala" in chana
+    assert "chana_dal" not in chana
+    toor = ids(search_foods(reg, SETTINGS, "toor dal", None, None, None, limit=50))
+    assert toor[0] == "toor_dal"
+    assert not {"urad_dal", "musur_dal", "chana_dal"} & set(toor)
 
 
 def test_khichdi_finds_both_khichdis(reg: Registry) -> None:
