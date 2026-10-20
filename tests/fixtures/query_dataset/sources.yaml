@@ -1,0 +1,21 @@
+- id: query_source
+  name: Query test values
+  url: https://example.org/query-test-values
+  license: CC0-1.0
+  version: "1"
+  retrieved: 2026-10-20
+  attribution: Synthetic values written for the query tests. They are not real food data.
+- id: query_recipes
+  name: Query test recipes
+  url: https://example.org/query-test-recipes
+  license: CC0-1.0
+  version: "1"
+  retrieved: 2026-10-20
+  attribution: Synthetic recipes written for the query tests.
+- id: query_gi
+  name: Query test GI values
+  url: https://example.org/query-test-gi
+  license: CC0-1.0
+  version: "1"
+  retrieved: 2026-10-20
+  attribution: Synthetic GI values written for the query tests.

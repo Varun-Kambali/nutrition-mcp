@@ -1,0 +1,5 @@
+id,name,aliases,diet,source_id,source_record,kcal,protein_g,fat_g,sat_fat_g,carbs_available_g,sugars_g,fibre_g,sodium_mg,iron_mg,calcium_mg,zinc_mg,folate_ug,vit_a_ug,vit_b12_ug,vit_c_mg,vit_d_ug,gi,gi_ref,density_g_per_ml
+masala_blend,Masala blend,,vegan,query_source,Q1,300,12,10,2,,2,25,50,,400,4,60,20,,5,,,,
+wheat_flour,Wheat flour,atta,vegan,query_source,Q2,340,12,2,0.4,70,1,11,2,3.5,34,2.6,40,0,,0,,,,
+egg_boiled,Egg (boiled),anda,egg,query_source,Q3,155,13,11,3.3,1.1,1.1,0,124,1.2,50,1.1,44,160,1.1,0,2.2,,,
+chicken_raw,Chicken breast (raw),,non_veg,query_source,Q4,165,31,3.6,1,0,0,0,74,1,15,1,4,6,0.3,0,0.1,,,
