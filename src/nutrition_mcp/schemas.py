@@ -1,13 +1,16 @@
 """Inputs and outputs of the query functions, which the MCP tools expose as structured output."""
 
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from nutrition_mcp.models import Diet, Food, Kind, Nutrients, Region
 
 Per = Literal["100kcal", "100g", "serving"]
 Order = Literal["desc", "asc"]
+Sex = Literal["male", "female"]
+Activity = Literal["sedentary", "light", "moderate", "active", "very_active"]
+Goal = Literal["lose", "maintain", "gain"]
 
 
 class FoodSummary(BaseModel):
@@ -84,3 +87,23 @@ class RankResult(BaseModel):
     results: list[RankedFood]
     # Foods left out because they have no usable value for what was ranked.
     skipped_missing: int
+
+
+class TargetsIn(BaseModel):
+    """A person's details for one targets calculation. Nothing is stored."""
+
+    sex: Sex
+    age: Annotated[int, Field(ge=18, le=100)]
+    height_cm: Annotated[float, Field(ge=120, le=230)]
+    weight_kg: Annotated[float, Field(ge=30, le=250)]
+    activity: Activity
+    goal: Goal
+
+
+class TargetsResult(BaseModel):
+    kcal: int
+    protein_g: int
+    bmr_kcal: int
+    formula: str
+    inputs: TargetsIn
+    notes: list[str]
