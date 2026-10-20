@@ -66,12 +66,18 @@ READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True, open_worl
 INSTRUCTIONS = (
     "Nutrition data for Indian dishes and ingredients, each value with its source and portion. "
     "Call search_food to get food ids, then get_nutrition for one food or compute_meal for "
-    "several. Take every number in an answer from a tool result instead of estimating it."
+    "several. Take every number in an answer from a tool result instead of estimating it. "
+    "The ids in each result's `sources` are listed with license and attribution in the "
+    f"{SOURCES_URI} resource."
 )
 
 ROUNDING = (
     "Values are rounded to 2 decimals, so 0.0 can be a small amount; a value the source does "
     "not report is null, never 0."
+)
+RAW_TOTALS = (
+    "A dish's folate, vitamin C and vitamin B12 are totals of its raw ingredients, with no "
+    "cooking losses applied"
 )
 
 SEARCH_FOOD = (
@@ -91,15 +97,17 @@ GET_NUTRITION = (
     "assumptions, glycemic load when the GI is known, and the sources. `unit` is g (always "
     "valid) or a household measure such as katori, piece or tbsp; search_food lists the units "
     "each food accepts, and an unknown unit returns them. A nutrient listed in `incomplete` "
-    "is a lower bound. For more "
-    "than one food, use compute_meal. " + ROUNDING
+    "is a lower bound. " + RAW_TOTALS + "; `raw_ingredient_totals` names them. For more than "
+    "one food, use compute_meal. " + ROUNDING
 )
 COMPUTE_MEAL = (
     "Per-item and total nutrients and glycemic load for a meal of 1 to 30 items, each a food "
     "id, amount and unit as in get_nutrition. Use this for any total instead of adding numbers "
     "yourself. If an item fails, the error names it and no totals are returned. Totals listed "
     "in `total_incomplete` are lower bounds, and `glycemic_load_missing` names the items the "
-    "meal's glycemic load leaves out. " + ROUNDING
+    "meal's glycemic load leaves out. " + RAW_TOTALS + "; each item names them in "
+    "`raw_ingredient_totals`, and a meal total that includes a dish carries the same caveat. "
+    + ROUNDING
 )
 FIND_FOODS = (
     "Rank foods by one nutrient or by glycemic load, per 100 kcal, per 100 g or per serving "
@@ -107,7 +115,9 @@ FIND_FOODS = (
     "Highest first, except lowest first for kcal, sugars, saturated fat, sodium and glycemic "
     "load; `order` says which. Foods with no value for the ranked nutrient are left out and "
     "counted in `skipped_missing`, and so is a dish with an incomplete value for the ranked "
-    "nutrient. Values are rounded to 2 decimals, so 0.0 can be a small amount."
+    "nutrient. Per 100 g or per 100 kcal, seasonings, fats and salt can top a ranking though "
+    'nobody eats 100 g of them; kind="dish" or per="serving" ranks foods eaten as a portion. '
+    "Values are rounded to 2 decimals, so 0.0 can be a small amount."
 )
 COMPUTE_TARGETS = (
     "Estimated daily calorie and protein targets for an adult, from the Mifflin-St Jeor "
@@ -118,7 +128,10 @@ COMPUTE_TARGETS = (
 
 RegionFilter = Annotated[
     Region | None,
-    Field(description="Keep dishes from this region. Ingredients have none: not with ingredient."),
+    Field(
+        description="Keep dishes from this region. Ingredients have none, so leave it out "
+        "with kind=ingredient."
+    ),
 ]
 DietFilter = Annotated[
     Diet | None, Field(description="Keep foods suitable for this diet: veg includes vegan.")
@@ -210,7 +223,12 @@ def _log_call(name: str, started: float, outcome: str, count: int) -> None:
 
 
 def build_server(reg: Registry, settings: Settings) -> MCPServer[Any]:
-    """The server with its five tools and the sources resource, over the given registry."""
+    """The server with its five tools and the sources resource, over the given registry.
+
+    A caller other than main() must call log.configure_logging first: it holds the SDK's own
+    logger at WARNING, and without that the SDK's INFO line for a failed call can quote the
+    tool inputs.
+    """
     server = NutritionServer("nutrition-mcp", version=__version__, instructions=INSTRUCTIONS)
 
     @server.tool(description=SEARCH_FOOD, annotations=READ_ONLY)

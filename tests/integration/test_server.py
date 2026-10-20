@@ -157,6 +157,18 @@ async def test_descriptions_point_to_the_right_tool_and_name_skipped_foods(clien
     assert "incomplete value for the ranked nutrient" in tools["find_foods"]
 
 
+async def test_descriptions_carry_the_caveats_a_model_needs(client: Client) -> None:
+    tools = {tool.name: tool.description or "" for tool in (await client.list_tools()).tools}
+    for name in ("get_nutrition", "compute_meal"):
+        assert "no cooking losses" in tools[name]
+        assert "raw_ingredient_totals" in tools[name]
+    assert "same caveat" in tools["compute_meal"]
+    # A spice or an oil can top a per-100 g ranking that nobody eats 100 g of.
+    assert "seasonings, fats and salt" in tools["find_foods"]
+    assert 'per="serving"' in tools["find_foods"]
+    assert SOURCES_URI in (client.instructions or "")
+
+
 async def test_search_description_says_to_check_the_result_is_the_food_asked_for(
     client: Client,
 ) -> None:
