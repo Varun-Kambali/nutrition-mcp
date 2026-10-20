@@ -21,6 +21,6 @@ The planner holds the person: the profile, the conditions, which nutrients matte
 ## Consequences
 The server stays testable: every tool is a function of food data and its arguments, and the fixtures in the tests are enough to check it. The planner has more to build, because condition-aware logic is its job, and it will need reference intakes from somewhere else.
 
-`compute_targets` inputs are still personal, and they pass through whatever model the client uses before they reach the server. The server cannot control that, and the README should say so.
+`compute_targets` inputs are still personal, and they pass through whatever model the client uses before they reach the server. The server cannot control that, and the README says so in its "Use it" section.
 
 If a later feature seems to need the server to know the person, such as flagging a food as unsafe for someone, it belongs in the planner, or this decision has to be reopened first.
