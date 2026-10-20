@@ -12,14 +12,16 @@ from mcp import Client
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, TextContent, TextResourceContents
+from pydantic import ValidationError
 
 from nutrition_mcp import __version__
+from nutrition_mcp import queries as queries_module
 from nutrition_mcp import server as server_module
 from nutrition_mcp.config import Settings
 from nutrition_mcp.loader import build_registry
 from nutrition_mcp.log import configure_logging
 from nutrition_mcp.registry import Registry
-from nutrition_mcp.schemas import TargetsIn
+from nutrition_mcp.schemas import SearchResult, TargetsIn
 from nutrition_mcp.server import SOURCES_URI, TOOL_NAMES, _count, build_server
 from nutrition_mcp.targets import compute_targets
 
@@ -494,6 +496,67 @@ async def test_a_crash_is_logged_with_its_cause_but_no_message(
     assert [link["type"] for link in chain] == ["RuntimeError", "UnexpectedToolError"]
     assert "nutrition_mcp/server.py" in chain[0]["stack"]
     assert "broken_search" in chain[0]["stack"]
+
+
+def a_validation_error(value: str) -> ValidationError:
+    """The error pydantic raises for a bad result; its message quotes the bad value."""
+    bad = {"query": "x", "results": [], "total": value, "suggestions": []}
+    try:
+        SearchResult.model_validate(bad)
+    except ValidationError as err:
+        return err
+    raise AssertionError("the result should not have validated")
+
+
+@pytest.mark.usefixtures("restore_logging")
+@pytest.mark.parametrize(
+    ("tool", "arguments", "patched", "chain"),
+    [
+        # The query raises it directly.
+        (
+            "search_food",
+            {"query": "roti"},
+            (server_module, "search_foods"),
+            ["ValidationError", "UnexpectedToolError"],
+        ),
+        # meal_totals wraps a ValueError from an item in a ValueError that names the item.
+        (
+            "compute_meal",
+            {"items": [{"food_id": "test_dal", "amount": 1, "unit": "g"}]},
+            (queries_module, "_portion"),
+            ["ValidationError", "ValueError", "UnexpectedToolError"],
+        ),
+    ],
+)
+async def test_a_validation_error_building_a_result_is_a_crash_not_a_tool_error(
+    client: Client,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tool: str,
+    arguments: dict[str, Any],
+    patched: tuple[Any, str],
+    chain: list[str],
+) -> None:
+    # A ValidationError is a ValueError, but here it means the server built a malformed
+    # result. The caller cannot fix that, and the message quotes the value that failed.
+    detail = "".join(["sec", "ret"])
+    problem = a_validation_error(detail)
+
+    def malformed_result(*args: Any) -> None:
+        raise problem
+
+    monkeypatch.setattr(*patched, malformed_result)
+    configure_logging("INFO")
+    result = await client.call_tool(tool, arguments)
+
+    assert error_text(result) == f"Error executing tool {tool}"
+    err = capsys.readouterr().err
+    assert detail not in err
+    entries = [json.loads(line) for line in err.splitlines()]
+    call = next(entry for entry in entries if "tool" in entry)
+    assert (call["tool"], call["outcome"]) == (tool, "error")
+    crash = next(entry for entry in entries if "exceptions" in entry)
+    assert [link["type"] for link in crash["exceptions"]] == chain
 
 
 async def test_call_tool_passes_on_arguments_a_newer_sdk_adds(

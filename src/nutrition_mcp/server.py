@@ -173,6 +173,12 @@ def _answer[T](reg: Registry, settings: Settings, query: Callable[[], T]) -> T:
     try:
         return query()
     except (UnknownFood, ValueError) as err:
+        # A ValidationError is a ValueError, but one raised while building a result means the
+        # server is at fault, and its message quotes the value that failed. meal_totals wraps
+        # an item's error in a plain ValueError, so the cause is checked too. Both go on to
+        # the crash path, which logs the chain without the message.
+        if isinstance(err, ValidationError) or isinstance(err.__cause__, ValidationError):
+            raise
         raise ToolError(_explain(reg, settings, err)) from err
 
 
