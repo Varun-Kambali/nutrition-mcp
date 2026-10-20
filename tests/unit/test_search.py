@@ -344,6 +344,12 @@ def test_every_query_word_must_match_the_same_name(reg: Registry) -> None:
     assert ids(search_foods(reg, SETTINGS, "toor dal", None, None, None, limit=50)) == ["toor_dal"]
 
 
+def test_khichdi_finds_both_khichdis(reg: Registry) -> None:
+    # Bengali khichuri is the same family of dish, so it carries "khichdi" as an alias.
+    found = ids(search_foods(reg, SETTINGS, "khichdi", None, None, None, limit=50))
+    assert {"bengali_khichuri", "sabudana_khichdi"} <= set(found)
+
+
 def test_a_one_letter_slip_still_needs_a_close_name(reg: Registry) -> None:
     # "butter" folds to "buter", one letter off "biter" in "bitter gourd", but the names as a
     # whole are far apart, so bitter gourd is not a result.
