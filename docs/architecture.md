@@ -37,7 +37,7 @@ The server makes no network calls at runtime. Only the build script talks to USD
 | `models.py` | Pydantic models for dataset files and the registry: `Source`, `Ingredient`, `Dish`, `RecipeItem`, `Nutrients` (the 16 nutrients, each optional so missing stays missing) and `Food` (an ingredient or a dish as the queries see it). Also the `Diet`, `Region` and `Kind` types and `DIET_SUITABLE_FOR`, which says which diet tags a diet filter keeps |
 | `config.py` | Settings from the environment through `pydantic-settings`: extra data folders, default katori size, log level |
 | `loader.py` | Reads dataset folders, validates rows, resolves dish ingredients, computes dish nutrients per 100 g, and fails loudly with file and row |
-| `registry.py` | In-memory store keyed by food ID and source ID. Search scans the foods on each call, because about 100 foods score in a couple of milliseconds |
+| `registry.py` | In-memory store keyed by food ID and source ID. Search scans the foods on each call, because there are only about 100 of them |
 | `search.py` | `search_foods`: the shared filters from `queries.py` first, then name normalisation (case, accents, common transliteration variants such as "bh"/"b" and doubled vowels) and fuzzy scoring with `rapidfuzz` over each food's name, aliases and ID. Close names come back as suggestions only when nothing matches |
 | `units.py` | Turns an amount and unit into grams for a given food, using the food's own measures first and the defaults second |
 | `nutrition.py` | Arithmetic on nutrients: scaling per-100 g values to an amount, summing nutrients while naming the parts that lack a value, and glycemic load |
