@@ -24,6 +24,7 @@ import csv
 import hashlib
 import json
 import logging
+import math
 import subprocess
 import sys
 import tomllib
@@ -258,9 +259,17 @@ def load_thresholds(path: Path) -> dict[str, dict[str, float]]:
         if not isinstance(limit, dict) or set(limit) != {"max_mape", "min_n"}:
             raise EvalError(f"{path}: [data_accuracy.{key}] needs max_mape and min_n, only")
         max_mape, min_n = limit["max_mape"], limit["min_n"]
-        # bool is an int in Python, and `true` would otherwise pass as min_n = 1.
-        if isinstance(max_mape, bool) or not isinstance(max_mape, int | float) or max_mape < 0:
-            raise EvalError(f"{path}: [data_accuracy.{key}] max_mape must be a number, 0 or more")
+        # bool is an int in Python, and `true` would otherwise pass as min_n = 1. TOML also
+        # reads nan and inf, and either one would let every MAPE through.
+        if (
+            isinstance(max_mape, bool)
+            or not isinstance(max_mape, int | float)
+            or not math.isfinite(max_mape)
+            or max_mape < 0
+        ):
+            raise EvalError(
+                f"{path}: [data_accuracy.{key}] max_mape must be a finite number, 0 or more"
+            )
         if isinstance(min_n, bool) or not isinstance(min_n, int) or min_n < 0:
             raise EvalError(
                 f"{path}: [data_accuracy.{key}] min_n must be a whole number, 0 or more"

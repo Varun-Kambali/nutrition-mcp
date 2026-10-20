@@ -7,6 +7,7 @@ import pytest
 import run_evals
 
 from nutrition_mcp import loader
+from nutrition_mcp.nutrients import NUTRIENT_KEYS, REFERENCE_NUTRIENTS
 
 NUTRIENTS = ("kcal", "protein_g", "carbs_available_g", "iron_mg", "calcium_mg")
 NOW = datetime(2026, 10, 20, 9, 0, tzinfo=UTC)
@@ -100,6 +101,12 @@ def references_csv(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return path
+
+
+def test_reference_nutrients_are_nutrients_the_server_stores() -> None:
+    # A key outside NUTRIENT_KEYS would read as missing on every dish and drop out of the
+    # comparison without an error.
+    assert set(REFERENCE_NUTRIENTS) <= set(NUTRIENT_KEYS)
 
 
 def test_mape() -> None:
@@ -361,6 +368,10 @@ def test_summary_names_a_data_accuracy_file_without_scores(
         "max_mape = 30.0\nmin_n = 2.5",
         "max_mape = 30.0\nmin_n = true",
         "max_mape = -1.0\nmin_n = 2",
+        # nan compares false with every MAPE, and inf is above all of them, so either one
+        # would switch the gate off without failing.
+        "max_mape = nan\nmin_n = 2",
+        "max_mape = inf\nmin_n = 2",
     ],
 )
 def test_thresholds_must_be_numbers(tmp_path: Path, entry: str) -> None:
