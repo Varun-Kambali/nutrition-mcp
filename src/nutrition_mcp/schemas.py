@@ -64,7 +64,7 @@ class NutritionResult(BaseModel):
     unit: str
     grams: float
     measure_assumption: str
-    nutrients: Nutrients
+    nutrients: Nutrients = Field(description="Nutrient amounts in `grams` of this food.")
     # For each nutrient, the ingredients with no value for it. The nutrient is then a floor.
     incomplete: dict[str, list[str]]
     # Nutrients whose dish value is a raw-ingredient total, because v1 applies no cooking losses.
@@ -78,7 +78,7 @@ class NutritionResult(BaseModel):
 
 class MealResult(BaseModel):
     items: list[NutritionResult]
-    total: Nutrients
+    total: Nutrients = Field(description="Nutrient amounts, the sum over the items.")
     total_incomplete: dict[str, list[str]]
     glycemic_load: float | None
     # Foods with no glycemic load, so the meal's load covers only the other items.

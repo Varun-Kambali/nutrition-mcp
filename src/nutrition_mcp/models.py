@@ -66,7 +66,7 @@ class Source(DatasetModel):
 
 
 class Nutrients(DatasetModel):
-    """Per-100 g amounts. None means the source did not report it, which is not the same as 0."""
+    """Amounts of the 16 nutrients; null means not reported, which is not 0."""
 
     kcal: Amount = None
     protein_g: Amount = None
@@ -170,7 +170,7 @@ class Food(BaseModel):
     regions: list[Region]
     diet: Diet
     source_ids: list[str]
-    per_100g: Nutrients
+    per_100g: Nutrients = Field(description="Nutrient amounts per 100 g of the food.")
     incomplete: dict[str, list[str]]
     gi: float | None
     gi_ref: str | None

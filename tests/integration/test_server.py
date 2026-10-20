@@ -106,6 +106,20 @@ async def test_schemas_show_the_bounds(client: Client) -> None:
     assert set(person["sex"]["enum"]) == {"male", "female"}
 
 
+async def test_output_schemas_describe_nutrients_by_their_basis(client: Client) -> None:
+    # The values are for the amount asked about or the meal, not per 100 g.
+    tools = {tool.name: tool for tool in (await client.list_tools()).tools}
+    nutrition = tools["get_nutrition"].output_schema
+    assert nutrition is not None
+    assert "Per-100 g" not in json.dumps(nutrition)
+    assert "null means not reported" in nutrition["$defs"]["Nutrients"]["description"]
+    assert "in `grams` of this food" in nutrition["properties"]["nutrients"]["description"]
+    meal = tools["compute_meal"].output_schema
+    assert meal is not None
+    assert "Per-100 g" not in json.dumps(meal)
+    assert "sum over the items" in meal["properties"]["total"]["description"]
+
+
 async def test_descriptions_say_values_are_rounded(client: Client) -> None:
     tools = {tool.name: tool for tool in (await client.list_tools()).tools}
     for name in ("get_nutrition", "compute_meal", "find_foods"):
