@@ -61,8 +61,11 @@ The decisions that mattered:
 4. **Unknown is not zero.** When a source doesn't report a nutrient, the value is missing, and any dish that depends on it says which ingredient is missing instead of quietly under-counting.
 5. **Two evaluations, not one.** Grading the model against my own data would only show that it used the tool. A separate check compares my computed dish values with independently measured ones, such as CoFID's homemade sambar, saag and dals.
 6. **Keep each source's values as published.** USDA and CoFID define some nutrients differently. The mapping converts only what has a clear rule (USDA carbohydrate by difference minus fibre gives available carbohydrate) and does not recompute energy. data.md records each difference so a reader can judge a number.
+7. **Search never swaps one food for another.** Search folds common spelling variants (sambhar, chapathi, daal) and then matches whole words, so a dish that isn't in the data gets no result and a few close names. An early version matched "chicken curry" to chana masala through its alias "chickpea curry", which is exactly the confident wrong answer this project exists to prevent. The tool description tells the model to report a missing dish as missing.
 
 Each decision gets an ADR in [decisions/](decisions/) as it is built.
+
+The tools sit on top of that data. Every result carries the grams it used and how it got them ("1 katori = 150 g (default katori)"), the sources behind the numbers, and which nutrients are incomplete and why. Search results list every unit a food accepts with its grams, so the model never converts a glass of milk itself. Errors are written for the model to act on: an unknown unit lists the valid ones, an unknown food gets close matches, and a bad meal item is named by its position. The server logs one line per call with the tool, time taken and outcome, and never the inputs, so nothing a person asks is kept. Calorie and protein targets use the Mifflin-St Jeor equation with cited constants, and [ADR 0005](decisions/0005-targets-formula.md) says which ones are conventions with no primary source.
 
 ## Results
 
@@ -87,7 +90,10 @@ Not measured yet. These rows come from `evals/results/summary.md` once the evalu
 - **Glycemic index values are averages from small studies,** and they shift with how a food is cooked and what it is eaten with.
 - **Most dishes have no glycemic index.** The compendium has no row for any dal, curry or sabzi eaten on its own (they appear only inside mixed meals, such as flatbread with dhal curry), so only 7 of the 41 dishes carry a GI, and a meal that includes any other dish can only have a partial glycemic load. Three of the seven values come from one Kerala study. A dish the compendium doesn't name never borrows a similar dish's value, so ven pongal stays without khichdi's GI. Rows measured against white bread instead of glucose are left out, because the paper gives no factor to convert them; one of them is a rice dosa tested in India.
 - **A deficiency is diagnosed with a blood test, not a food log.** The server and the planner take deficiencies as facts from the user's doctor.
-- **41 dishes is a small set.** When a dish is missing, the server says so and returns the closest ingredients, so the assistant can build the dish from its parts instead of guessing.
+- **41 dishes is a small set.** When a dish is missing, search returns no result and a few close names, and the assistant is told to say the dish is missing instead of guessing.
+- **Search is literal about words.** A prefix doesn't match ("pan" doesn't find paneer), queries in Devanagari or other scripts aren't transliterated, and names from different languages can fold to similar spellings and collide. Every result shows its kind and regions, and the model is told to check the name.
+- **Rankings per 100 g favour seasonings.** Ranked per 100 g or per 100 kcal, spices, fats and salt can top a list, such as cumin for iron or ghee for low sugar. Ranking dishes, or ranking per serving, gives answers closer to what people eat.
+- **Targets are estimates for a population.** The Mifflin-St Jeor equation comes out below ICMR-NIN's reference energy figures for Indian adults, and protein per kg of actual body weight overstates needs at a high body weight. [ADR 0005](decisions/0005-targets-formula.md) gives the comparison.
 - **Better data improves accuracy without code changes.** With a licensed IFCT copy or lab-tested recipes loaded, the data-accuracy evaluation would show how much.
 
 ## What I learned
