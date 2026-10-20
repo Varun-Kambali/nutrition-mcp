@@ -1,0 +1,604 @@
+{
+  "suite": "data_accuracy",
+  "date": "2026-10-20",
+  "generated_at": "2026-10-20T15:45:44+00:00",
+  "commit": "41edc33",
+  "dataset_version": "24143edbb56e",
+  "n": 19,
+  "per_nutrient": {
+    "kcal": {
+      "n": 19,
+      "mape": 18.9,
+      "worst": [
+        {
+          "dish_id": "musur_dal",
+          "reference": 173.0,
+          "computed": 79.12,
+          "ape": 54.3
+        },
+        {
+          "dish_id": "bengali_khichuri",
+          "reference": 169.0,
+          "computed": 87.9,
+          "ape": 48.0
+        },
+        {
+          "dish_id": "sambar",
+          "reference": 49.0,
+          "computed": 67.88,
+          "ape": 38.5
+        }
+      ]
+    },
+    "protein_g": {
+      "n": 19,
+      "mape": 25.0,
+      "worst": [
+        {
+          "dish_id": "rava_upma",
+          "reference": 1.98,
+          "computed": 3.49,
+          "ape": 76.3
+        },
+        {
+          "dish_id": "palak_paneer",
+          "reference": 5.42,
+          "computed": 8.83,
+          "ape": 62.9
+        },
+        {
+          "dish_id": "musur_dal",
+          "reference": 7.6,
+          "computed": 4.17,
+          "ape": 45.1
+        }
+      ]
+    },
+    "carbs_available_g": {
+      "n": 19,
+      "mape": 27.2,
+      "worst": [
+        {
+          "dish_id": "machher_jhol",
+          "reference": 1.5,
+          "computed": 4.73,
+          "ape": 215.3
+        },
+        {
+          "dish_id": "musur_dal",
+          "reference": 19.2,
+          "computed": 9.41,
+          "ape": 51.0
+        },
+        {
+          "dish_id": "bengali_khichuri",
+          "reference": 27.3,
+          "computed": 13.51,
+          "ape": 50.5
+        }
+      ]
+    },
+    "iron_mg": {
+      "n": 19,
+      "mape": 42.2,
+      "worst": [
+        {
+          "dish_id": "palak_paneer",
+          "reference": 0.55,
+          "computed": 2.04,
+          "ape": 270.9
+        },
+        {
+          "dish_id": "rava_upma",
+          "reference": 4.06,
+          "computed": 0.5,
+          "ape": 87.7
+        },
+        {
+          "dish_id": "steamed_rice",
+          "reference": 1.19,
+          "computed": 0.27,
+          "ape": 77.3
+        }
+      ]
+    },
+    "calcium_mg": {
+      "n": 18,
+      "mape": 46.1,
+      "worst": [
+        {
+          "dish_id": "palak_paneer",
+          "reference": 60.0,
+          "computed": 210.77,
+          "ape": 251.3
+        },
+        {
+          "dish_id": "rava_upma",
+          "reference": 96.0,
+          "computed": 13.68,
+          "ape": 85.8
+        },
+        {
+          "dish_id": "chapati",
+          "reference": 60.0,
+          "computed": 22.31,
+          "ape": 62.8
+        }
+      ]
+    }
+  },
+  "rows": [
+    {
+      "dish_id": "aloo_gobi",
+      "source_id": "cofid_2021",
+      "record": "15-679",
+      "reference": {
+        "kcal": 106.0,
+        "protein_g": 3.3,
+        "carbs_available_g": 10.1,
+        "iron_mg": 2.07,
+        "calcium_mg": 39.0
+      },
+      "computed": {
+        "kcal": 99.06,
+        "protein_g": 2.27,
+        "carbs_available_g": 11.32,
+        "iron_mg": 0.98,
+        "calcium_mg": 27.31
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "bengali_khichuri",
+      "source_id": "cofid_2021",
+      "record": "15-528",
+      "reference": {
+        "kcal": 169.0,
+        "protein_g": 4.8,
+        "carbs_available_g": 27.3,
+        "iron_mg": 0.99,
+        "calcium_mg": 24.0
+      },
+      "computed": {
+        "kcal": 87.9,
+        "protein_g": 3.34,
+        "carbs_available_g": 13.51,
+        "iron_mg": 0.91,
+        "calcium_mg": 13.04
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "chana_masala",
+      "source_id": "cofid_2021",
+      "record": "15-108",
+      "reference": {
+        "kcal": 112.0,
+        "protein_g": 5.6,
+        "carbs_available_g": 12.4,
+        "iron_mg": 1.4,
+        "calcium_mg": 32.0
+      },
+      "computed": {
+        "kcal": 113.56,
+        "protein_g": 4.51,
+        "carbs_available_g": 12.26,
+        "iron_mg": 1.4,
+        "calcium_mg": 25.22
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "chapati",
+      "source_id": "cofid_2021",
+      "record": "11-459",
+      "reference": {
+        "kcal": 202.0,
+        "protein_g": 7.3,
+        "carbs_available_g": 43.7,
+        "iron_mg": 2.1,
+        "calcium_mg": 60.0
+      },
+      "computed": {
+        "kcal": 223.13,
+        "protein_g": 8.67,
+        "carbs_available_g": 40.21,
+        "iron_mg": 2.36,
+        "calcium_mg": 22.31
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "cholar_dal",
+      "source_id": "cofid_2021",
+      "record": "15-641",
+      "reference": {
+        "kcal": 152.0,
+        "protein_g": 7.9,
+        "carbs_available_g": 17.8,
+        "iron_mg": 1.99,
+        "calcium_mg": 24.0
+      },
+      "computed": {
+        "kcal": 110.77,
+        "protein_g": 4.83,
+        "carbs_available_g": 11.77,
+        "iron_mg": 1.59,
+        "calcium_mg": 16.26
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "dal_makhani",
+      "source_id": "cofid_2021",
+      "record": "15-735",
+      "reference": {
+        "kcal": 94.0,
+        "protein_g": 4.5,
+        "carbs_available_g": 8.4,
+        "iron_mg": 1.61,
+        "calcium_mg": 36.0
+      },
+      "computed": {
+        "kcal": 109.71,
+        "protein_g": 4.83,
+        "carbs_available_g": 8.95,
+        "iron_mg": 1.58,
+        "calcium_mg": 36.3
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "dal_tadka",
+      "source_id": "cofid_2021",
+      "record": "15-779",
+      "reference": {
+        "kcal": 108.0,
+        "protein_g": 4.6,
+        "carbs_available_g": 13.5,
+        "iron_mg": 0.98,
+        "calcium_mg": 17.0
+      },
+      "computed": {
+        "kcal": 83.24,
+        "protein_g": 4.02,
+        "carbs_available_g": 11.29,
+        "iron_mg": 0.92,
+        "calcium_mg": 15.82
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "dimer_dalna",
+      "source_id": "cofid_2021",
+      "record": "15-750",
+      "reference": {
+        "kcal": 138.0,
+        "protein_g": 7.5,
+        "carbs_available_g": 6.5,
+        "iron_mg": 1.79,
+        "calcium_mg": 43.0
+      },
+      "computed": {
+        "kcal": 115.56,
+        "protein_g": 5.23,
+        "carbs_available_g": 8.34,
+        "iron_mg": 1.24,
+        "calcium_mg": 32.68
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "gujarati_kadhi",
+      "source_id": "cofid_2021",
+      "record": "15-809",
+      "reference": {
+        "kcal": 63.0,
+        "protein_g": 3.4,
+        "carbs_available_g": 6.6,
+        "iron_mg": 0.66,
+        "calcium_mg": 97.0
+      },
+      "computed": {
+        "kcal": 63.63,
+        "protein_g": 2.5,
+        "carbs_available_g": 6.18,
+        "iron_mg": 0.51,
+        "calcium_mg": 58.58
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "jeera_rice",
+      "source_id": "cofid_2021",
+      "record": "11-968",
+      "reference": {
+        "kcal": 134.0,
+        "protein_g": 2.5,
+        "carbs_available_g": 24.3,
+        "iron_mg": 0.89,
+        "calcium_mg": 11.0
+      },
+      "computed": {
+        "kcal": 150.71,
+        "protein_g": 2.6,
+        "carbs_available_g": 27.22,
+        "iron_mg": 0.84,
+        "calcium_mg": 17.83
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "machher_jhol",
+      "source_id": "cofid_2021",
+      "record": "16-446",
+      "reference": {
+        "kcal": 125.0,
+        "protein_g": 12.4,
+        "carbs_available_g": 1.5,
+        "iron_mg": 1.14,
+        "calcium_mg": null
+      },
+      "computed": {
+        "kcal": 97.26,
+        "protein_g": 8.92,
+        "carbs_available_g": 4.73,
+        "iron_mg": 1.06,
+        "calcium_mg": 6.94
+      },
+      "incomplete": [
+        "calcium_mg"
+      ],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "musur_dal",
+      "source_id": "cofid_2021",
+      "record": "15-764",
+      "reference": {
+        "kcal": 173.0,
+        "protein_g": 7.6,
+        "carbs_available_g": 19.2,
+        "iron_mg": 2.6,
+        "calcium_mg": 25.0
+      },
+      "computed": {
+        "kcal": 79.12,
+        "protein_g": 4.17,
+        "carbs_available_g": 9.41,
+        "iron_mg": 1.47,
+        "calcium_mg": 11.61
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "palak_paneer",
+      "source_id": "usda_fdc",
+      "record": "2709631",
+      "reference": {
+        "kcal": 101.0,
+        "protein_g": 5.42,
+        "carbs_available_g": 3.38,
+        "iron_mg": 0.55,
+        "calcium_mg": 60.0
+      },
+      "computed": {
+        "kcal": 139.07,
+        "protein_g": 8.83,
+        "carbs_available_g": 3.33,
+        "iron_mg": 2.04,
+        "calcium_mg": 210.77
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "plain_dosa",
+      "source_id": "usda_fdc",
+      "record": "2708347",
+      "reference": {
+        "kcal": 210.0,
+        "protein_g": 5.7,
+        "carbs_available_g": 35.2,
+        "iron_mg": 2.19,
+        "calcium_mg": 16.0
+      },
+      "computed": {
+        "kcal": 218.33,
+        "protein_g": 6.07,
+        "carbs_available_g": 34.99,
+        "iron_mg": 1.09,
+        "calcium_mg": 19.75
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "plain_paratha",
+      "source_id": "cofid_2021",
+      "record": "11-1104",
+      "reference": {
+        "kcal": 333.0,
+        "protein_g": 7.8,
+        "carbs_available_g": 45.8,
+        "iron_mg": 1.5,
+        "calcium_mg": 21.0
+      },
+      "computed": {
+        "kcal": 331.27,
+        "protein_g": 9.5,
+        "carbs_available_g": 43.91,
+        "iron_mg": 2.58,
+        "calcium_mg": 25.01
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "rajma_masala",
+      "source_id": "cofid_2021",
+      "record": "15-146",
+      "reference": {
+        "kcal": 106.0,
+        "protein_g": 4.7,
+        "carbs_available_g": 10.1,
+        "iron_mg": 1.4,
+        "calcium_mg": 22.0
+      },
+      "computed": {
+        "kcal": 105.36,
+        "protein_g": 4.89,
+        "carbs_available_g": 11.32,
+        "iron_mg": 1.82,
+        "calcium_mg": 29.43
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "rava_upma",
+      "source_id": "usda_fdc",
+      "record": "2709128",
+      "reference": {
+        "kcal": 87.0,
+        "protein_g": 1.98,
+        "carbs_available_g": 12.5,
+        "iron_mg": 4.06,
+        "calcium_mg": 96.0
+      },
+      "computed": {
+        "kcal": 115.13,
+        "protein_g": 3.49,
+        "carbs_available_g": 16.57,
+        "iron_mg": 0.5,
+        "calcium_mg": 13.68
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "sambar",
+      "source_id": "cofid_2021",
+      "record": "12-467",
+      "reference": {
+        "kcal": 49.0,
+        "protein_g": 3.1,
+        "carbs_available_g": 7.7,
+        "iron_mg": 0.81,
+        "calcium_mg": 27.0
+      },
+      "computed": {
+        "kcal": 67.88,
+        "protein_g": 3.09,
+        "carbs_available_g": 9.18,
+        "iron_mg": 0.78,
+        "calcium_mg": 18.55
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "cofid_2021",
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    },
+    {
+      "dish_id": "steamed_rice",
+      "source_id": "usda_fdc",
+      "record": "2708408",
+      "reference": {
+        "kcal": 129.0,
+        "protein_g": 2.67,
+        "carbs_available_g": 27.6,
+        "iron_mg": 1.19,
+        "calcium_mg": 10.0
+      },
+      "computed": {
+        "kcal": 121.67,
+        "protein_g": 2.38,
+        "carbs_available_g": 26.22,
+        "iron_mg": 0.27,
+        "calcium_mg": 9.33
+      },
+      "incomplete": [],
+      "ingredient_source_ids": [
+        "usda_fdc"
+      ],
+      "same_source_ingredients": false
+    }
+  ]
+}
