@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PositiveFloat
 
 from nutrition_mcp.models import Diet, Food, Kind, Nutrients, Region
 
@@ -14,6 +14,12 @@ Order = Literal["desc", "asc"]
 Sex = Literal["male", "female"]
 Activity = Literal["sedentary", "light", "moderate", "active", "very_active"]
 Goal = Literal["lose", "maintain", "gain"]
+
+# Adults only. TargetsIn and the compute_targets tool share these, so the bounds the model
+# sees in the tool schema are the ones the calculation enforces.
+Age = Annotated[int, Field(ge=18, le=100)]
+HeightCm = Annotated[float, Field(ge=120, le=230)]
+WeightKg = Annotated[float, Field(ge=30, le=250)]
 
 
 class FoodSummary(BaseModel):
@@ -45,7 +51,8 @@ class FoodSummary(BaseModel):
 
 class MealItemIn(BaseModel):
     food_id: str
-    amount: float
+    # Above 0 here so the compute_meal schema shows the bound; to_grams checks it again.
+    amount: PositiveFloat
     unit: str
 
 
@@ -106,9 +113,9 @@ class TargetsIn(BaseModel):
     """A person's details for one targets calculation. Nothing is stored."""
 
     sex: Sex
-    age: Annotated[int, Field(ge=18, le=100)]
-    height_cm: Annotated[float, Field(ge=120, le=230)]
-    weight_kg: Annotated[float, Field(ge=30, le=250)]
+    age: Age
+    height_cm: HeightCm
+    weight_kg: WeightKg
     activity: Activity
     goal: Goal
 

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from nutrition_mcp.config import Settings
 from nutrition_mcp.loader import build_registry
@@ -233,8 +234,15 @@ def test_meal_bad_unit_named(reg: Registry) -> None:
 
 
 def test_meal_bad_amount_named(reg: Registry) -> None:
-    with pytest.raises(ValueError, match=r"item 2 \(toor_dal\): amount must be greater than 0"):
-        meal_totals(reg, SETTINGS, [item("test_dal", 1, "g"), item("toor_dal", 0, "g")])
+    with pytest.raises(ValueError, match=r"item 2 \(toor_dal\): 6000 g .* over the limit"):
+        meal_totals(reg, SETTINGS, [item("test_dal", 1, "g"), item("toor_dal", 6000, "g")])
+
+
+@pytest.mark.parametrize("amount", [0, -1])
+def test_meal_item_amount_must_be_positive(amount: float) -> None:
+    # The bound lives on the model so the compute_meal schema shows it.
+    with pytest.raises(ValidationError, match="greater than 0"):
+        item("toor_dal", amount, "g")
 
 
 def test_meal_reports_the_first_bad_item(reg: Registry) -> None:
