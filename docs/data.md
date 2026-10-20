@@ -21,7 +21,7 @@ How the bundled ingredient table is built, how each source's values map onto the
 1. Fetches each USDA record from `https://api.nal.usda.gov/fdc/v1/food/{fdcId}` and caches it in `.cache/usda/`. The API key is sent in the `X-Api-Key` header and is only needed for records that are not cached yet: `set -a; . ./.env; set +a; make data`.
 2. Downloads the CoFID 2021 spreadsheet once into `.cache/` and checks its SHA-256, so a replaced file on gov.uk stops the build instead of changing values silently. The sheets "1.3 Proximates", "1.4 Inorganics" and "1.5 Vitamins" are joined on the food code.
 3. Maps each record onto the server's nutrients with `nutrition_mcp.source_mapping`, validates the row with the same model the loader uses, and writes `src/nutrition_mcp/data/bundled/ingredients.csv`.
-4. Prints a review table: our name, the source, the record and the source's own description, kcal, protein and the number of missing nutrients.
+4. Prints a review table: the ingredient's name in the dataset, the source, the record and the source's own description, kcal, protein and the number of missing nutrients.
 
 Every row of the review table is checked by hand against the source description: the right food, raw and not cooked, the part that is eaten, and split dal or whole seed. Search results are not trusted: USDA's top hit for "bottle gourd" is towel gourd, and the right record is "Gourd, white-flowered (calabash), raw". `tests/integration/test_bundled_data.py` checks that each row's id, name, aliases, diet, source and record in `ingredients.csv` match the map, so a map change without a rebuild, or a hand edit to those columns, fails the tests. It cannot check nutrient values, because CI has no copy of the source records. To check those, run `make data` (it works offline from `.cache/`) and confirm that `git diff` shows no change to `ingredients.csv`; the build writes the same bytes from the same records.
 
@@ -183,7 +183,7 @@ A dish gets a GI only when a row is the same food with a similar preparation: th
 | `chapati` | T1-673 | Wheat chapatti | 48.37 | T1-711 (44.6), T1-673 (48.37), T1-691 (54.43), T1-657 (64), all in healthy participants; with four rows, the lower middle. T1-631 (83.92) was measured in type 2 diabetes and is not used |
 | `methi_thepla` | T1-699 | Thepla | 57.77 | The only plain thepla row. The paper does not say whether it had methi leaves |
 | `steamed_rice` | T1-666 | White rice | 79.2 | The only plain white rice row. Parboiled, basmati and high-fibre rice rows are other foods |
-| `bengali_khichuri` | T1-664 | Rice khichdi | 62.5 | The only rice khichdi row. The paper does not name the dal, and our recipe adds potato, cauliflower and peas |
+| `bengali_khichuri` | T1-664 | Rice khichdi | 62.5 | The only rice khichdi row. The paper does not name the dal, and the recipe in this dataset adds potato, cauliflower and peas |
 
 All seven rows were measured in healthy participants. Three of the seven values (idli, dosa and upma) come from one Kerala study, ref 142.
 

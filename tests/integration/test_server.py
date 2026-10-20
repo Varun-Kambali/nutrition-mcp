@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -11,14 +12,16 @@ from mcp import Client
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, TextContent, TextResourceContents
+from pydantic import ValidationError
 
 from nutrition_mcp import __version__
+from nutrition_mcp import queries as queries_module
 from nutrition_mcp import server as server_module
 from nutrition_mcp.config import Settings
 from nutrition_mcp.loader import build_registry
 from nutrition_mcp.log import configure_logging
 from nutrition_mcp.registry import Registry
-from nutrition_mcp.schemas import TargetsIn
+from nutrition_mcp.schemas import SearchResult, TargetsIn
 from nutrition_mcp.server import SOURCES_URI, TOOL_NAMES, _count, build_server
 from nutrition_mcp.targets import compute_targets
 
@@ -50,6 +53,16 @@ async def client(reg: Registry) -> Any:
         yield connected
 
 
+# The attributes every LogRecord has. `message` and `asctime` are added when a handler
+# formats the record, so a captured record can carry them too.
+STANDARD_RECORD_FIELDS = set(vars(logging.makeLogRecord({}))) | {"message", "asctime"}
+
+
+def extra_fields(record: logging.LogRecord) -> set[str]:
+    """The attributes a call to logger.info(..., extra=...) added to the record."""
+    return set(vars(record)) - STANDARD_RECORD_FIELDS
+
+
 def error_text(result: CallToolResult) -> str:
     assert result.is_error
     block = result.content[0]
@@ -70,6 +83,35 @@ async def test_server_names_itself_and_says_how_to_use_the_tools(client: Client)
     assert client.server_info is not None
     assert (client.server_info.name, client.server_info.version) == ("nutrition-mcp", __version__)
     assert "search_food" in (client.instructions or "")
+
+
+def field_names(schema: Any) -> set[str]:
+    """Every property name anywhere in a JSON Schema, nested models included."""
+    names: set[str] = set()
+    if isinstance(schema, dict):
+        properties = schema.get("properties")
+        if isinstance(properties, dict):
+            names.update(properties)
+        for value in schema.values():
+            names |= field_names(value)
+    elif isinstance(schema, list):
+        for value in schema:
+            names |= field_names(value)
+    return names
+
+
+async def test_instructions_name_the_source_field_each_tool_returns(client: Client) -> None:
+    tools = {tool.name: tool for tool in (await client.list_tools()).tools}
+    fields = {name: field_names(tool.output_schema) for name, tool in tools.items()}
+    mentioned = set(re.findall(r"`(\w+)`", client.instructions or ""))
+    # A field the instructions name must exist on some tool's output.
+    assert mentioned <= set().union(*fields.values())
+    # Search and ranking results list `source_ids`; get_nutrition and compute_meal items carry
+    # `sources`. Naming only one of them sends the model looking for a field that is absent.
+    assert "source_ids" in fields["search_food"] & fields["find_foods"]
+    assert "sources" not in fields["search_food"] | fields["find_foods"]
+    assert "sources" in fields["get_nutrition"] & fields["compute_meal"]
+    assert {"source_ids", "sources"} <= mentioned
 
 
 async def test_lists_five_tools_read_only(client: Client) -> None:
@@ -334,8 +376,9 @@ async def test_compute_meal_bad_unit_names_item_and_units(client: Client) -> Non
 
 async def test_compute_meal_item_count_is_bounded(client: Client) -> None:
     item = {"food_id": "water", "amount": 1, "unit": "g"}
-    assert (await client.call_tool("compute_meal", {"items": []})).is_error
-    assert (await client.call_tool("compute_meal", {"items": [item] * 31})).is_error
+    assert "at least 1 item" in error_text(await client.call_tool("compute_meal", {"items": []}))
+    too_many = await client.call_tool("compute_meal", {"items": [item] * 31})
+    assert "at most 30 items" in error_text(too_many)
 
 
 async def test_compute_meal_zero_amount_is_tool_error(client: Client) -> None:
@@ -427,6 +470,8 @@ async def test_each_call_logs_one_line_without_inputs(
     ]
     assert all(r.latency_ms >= 0 for r in calls)  # type: ignore[attr-defined]
     assert not any("secret_food" in r.getMessage() for r in calls)
+    # A call record carries these four fields and no others. A new one could hold tool input.
+    assert all(extra_fields(r) == {"tool", "latency_ms", "outcome", "count"} for r in calls)
     # stdout carries the protocol, so a tool never prints.
     assert capsys.readouterr().out == ""
 
@@ -435,7 +480,7 @@ async def test_an_unknown_tool_name_is_not_logged(
     client: Client, caplog: pytest.LogCaptureFixture
 ) -> None:
     caplog.set_level(logging.INFO, logger="nutrition_mcp.server")
-    assert (await client.call_tool("secret_tool", {})).is_error
+    assert "Unknown tool" in error_text(await client.call_tool("secret_tool", {}))
     calls = [r for r in caplog.records if r.name == "nutrition_mcp.server"]
     assert [(r.tool, r.outcome) for r in calls] == [("unknown", "error")]  # type: ignore[attr-defined]
 
@@ -464,6 +509,67 @@ async def test_a_crash_is_logged_with_its_cause_but_no_message(
     assert [link["type"] for link in chain] == ["RuntimeError", "UnexpectedToolError"]
     assert "nutrition_mcp/server.py" in chain[0]["stack"]
     assert "broken_search" in chain[0]["stack"]
+
+
+def a_validation_error(value: str) -> ValidationError:
+    """The error pydantic raises for a bad result; its message quotes the bad value."""
+    bad = {"query": "x", "results": [], "total": value, "suggestions": []}
+    try:
+        SearchResult.model_validate(bad)
+    except ValidationError as err:
+        return err
+    raise AssertionError("the result should not have validated")
+
+
+@pytest.mark.usefixtures("restore_logging")
+@pytest.mark.parametrize(
+    ("tool", "arguments", "patched", "chain"),
+    [
+        # The query raises it directly.
+        (
+            "search_food",
+            {"query": "roti"},
+            (server_module, "search_foods"),
+            ["ValidationError", "UnexpectedToolError"],
+        ),
+        # meal_totals wraps a ValueError from an item in a ValueError that names the item.
+        (
+            "compute_meal",
+            {"items": [{"food_id": "test_dal", "amount": 1, "unit": "g"}]},
+            (queries_module, "_portion"),
+            ["ValidationError", "ValueError", "UnexpectedToolError"],
+        ),
+    ],
+)
+async def test_a_validation_error_building_a_result_is_a_crash_not_a_tool_error(
+    client: Client,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tool: str,
+    arguments: dict[str, Any],
+    patched: tuple[Any, str],
+    chain: list[str],
+) -> None:
+    # A ValidationError is a ValueError, but here it means the server built a malformed
+    # result. The caller cannot fix that, and the message quotes the value that failed.
+    detail = "".join(["sec", "ret"])
+    problem = a_validation_error(detail)
+
+    def malformed_result(*args: Any) -> None:
+        raise problem
+
+    monkeypatch.setattr(*patched, malformed_result)
+    configure_logging("INFO")
+    result = await client.call_tool(tool, arguments)
+
+    assert error_text(result) == f"Error executing tool {tool}"
+    err = capsys.readouterr().err
+    assert detail not in err
+    entries = [json.loads(line) for line in err.splitlines()]
+    call = next(entry for entry in entries if "tool" in entry)
+    assert (call["tool"], call["outcome"]) == (tool, "error")
+    crash = next(entry for entry in entries if "exceptions" in entry)
+    assert [link["type"] for link in crash["exceptions"]] == chain
 
 
 async def test_call_tool_passes_on_arguments_a_newer_sdk_adds(

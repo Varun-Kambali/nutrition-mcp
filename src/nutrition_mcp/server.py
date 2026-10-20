@@ -67,8 +67,9 @@ INSTRUCTIONS = (
     "Nutrition data for Indian dishes and ingredients, each value with its source and portion. "
     "Call search_food to get food ids, then get_nutrition for one food or compute_meal for "
     "several. Take every number in an answer from a tool result instead of estimating it. "
-    "The ids in each result's `sources` are listed with license and attribution in the "
-    f"{SOURCES_URI} resource."
+    "The ids in `source_ids` (search_food and find_foods results) and in `sources` "
+    "(get_nutrition, and each compute_meal item) are listed with license and attribution in "
+    f"the {SOURCES_URI} resource."
 )
 
 ROUNDING = (
@@ -172,6 +173,12 @@ def _answer[T](reg: Registry, settings: Settings, query: Callable[[], T]) -> T:
     try:
         return query()
     except (UnknownFood, ValueError) as err:
+        # A ValidationError is a ValueError, but one raised while building a result means the
+        # server is at fault, and its message quotes the value that failed. meal_totals wraps
+        # an item's error in a plain ValueError, so the cause is checked too. Both go on to
+        # the crash path, which logs the chain without the message.
+        if isinstance(err, ValidationError) or isinstance(err.__cause__, ValidationError):
+            raise
         raise ToolError(_explain(reg, settings, err)) from err
 
 
