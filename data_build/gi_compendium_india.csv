@@ -1,177 +1,177 @@
-row_id,table,food,country,gi,reference,notes
-T1-046,1,Rice idli,Singapore,85,"ref 29, doi:10.1017/S0007114518000703",Reference food: Glucose/2 h.
-T1-047,1,Rice dosa,Singapore,76,"ref 29, doi:10.1017/S0007114518000703",Reference food: Glucose/2 h.
-T1-048,1,Upma,Singapore,71,"ref 29, doi:10.1017/S0007114518000703",Reference food: Glucose/2 h.
-T1-057,1,"Basmati rice (Dreamrice™, Singapore)",Singapore,55,"ref 31, doi:10.1007/s00394-016-1313-y",Reference food: Glucose/2 h.
-T1-077,1,Flatbread with dhal curry,Malaysia,69,"ref 36, doi:10.1159/000335224",Reference food: Glucose/2 h.
-T1-096,1,Basmati,Malaysia,50,"ref 42, doi:10.3390/nu8050308",Reference food: Glucose/2 h.
-T1-104,1,"Parboiled rice (Faiza Basmati, Malaysia",Malaysia,61,"ref 44, doi:10.1016/j.rsci.2017.06.001",Reference food: Glucose/2 h.
-T1-107,1,"Fried parboiled rice (Faiza Basmati, Malaysia",Malaysia,41,"ref 44, doi:10.1016/j.rsci.2017.06.001",Reference food: Glucose/2 h.
-T1-600,1,Biscuits (45% foxtail millet + 55% refined wheat flour),India,50.8,ref 115,Reference food: Glucose/2.5 h.
-T1-601,1,Biscuits (45% barnyard millet + 55% refined wheat flour),India,68,ref 115,Reference food: Glucose/2.5 h.
-T1-602,1,Biscuits (crude refined wheat flour),India,68,ref 115,Reference food: Glucose/2.5 h.
-T1-603,1,Papaya bar (control),India,65,ref 116,Reference food: Glucose/2 h.
-T1-604,1,Papaya bar (treated with inulin and fructooligosaccharides),India,54,ref 116,Reference food: Glucose/2 h.
-T1-605,1,Banana (yallakki),India,43,ref 117,Reference food: Glucose/2 h.
-T1-606,1,Mango (Raspuri),India,35,ref 117,Reference food: Glucose/2 h.
-T1-607,1,Papaya,India,19,ref 117,Reference food: Glucose/2 h.
-T1-608,1,Orange,India,52,ref 117,Reference food: Glucose/2 h.
-T1-609,1,Guava,India,78,ref 117,Reference food: Glucose/2 h.
-T1-610,1,Chikku,India,73,ref 117,Reference food: Glucose/2 h.
-T1-611,1,Jackfruit,India,63,ref 117,Reference food: Glucose/2 h.
-T1-612,1,Watermelon,India,37,ref 117,Reference food: Glucose/2 h.
-T1-613,1,Pineapple,India,19,ref 117,Reference food: Glucose/2 h.
-T1-614,1,Apple,India,45,ref 117,Reference food: Glucose/2 h.
-T1-615,1,Roasted Amaranth Grains flour chapatti,India,84.83,ref 118,Reference food: Glucose/2 h.
-T1-616,1,Boiled Amaranth Grains flour chapatti,India,111.83,ref 118,Reference food: Glucose/2 h.
-T1-617,1,Popped Amaranth Grains flour chapatti,India,44,ref 118,Reference food: Glucose/2 h.
-T1-618,1,Raw Amaranth Grains flour chapatti,India,102.3,ref 118,Reference food: Glucose/2 h.
-T1-619,1,Sona Masuri (parboiled rice),India,72,"ref 119, doi:10.3109/09637486.2011.615300",Reference food: Glucose/2 h.
-T1-620,1,Ponni (parboiled rice),India,70.2,"ref 119, doi:10.3109/09637486.2011.615300",Reference food: Glucose/2 h.
-T1-621,1,Surti Kolam (parboiled rice),India,77,"ref 119, doi:10.3109/09637486.2011.615300",Reference food: Glucose/2 h.
-T1-622,1,"Burfi (made with 43% foxtail millet, 57% bengal gram flour)",India,37.5,ref 120,Reference food: Glucose/2.5 h.
-T1-623,1,"Burfi (made with 43% barnyard millet, 57% bengal gram flour)",India,45,ref 120,Reference food: Glucose/2.5 h.
-T1-624,1,Burfi (made with 100% bengal gram flour),India,43,ref 120,Reference food: Glucose/2.5 h.
-T1-625,1,Namkeen sev (without dried bottle gourd pulp powder) [bengal gram flour + kidney bean flour (50:50)],India,32.82,ref 121,Reference food: Glucose/2 h.
-T1-626,1,Namkeen sev (with dried bottle gourd pulp powder) [bengal gram flour + kidney bean flour + DBPP (40:40:20)],India,21.83,ref 121,Reference food: Glucose/2 h.
-T1-627,1,Idli,India,67.11,ref 122,Reference food: Glucose/2 h.
-T1-628,1,Sewai upma,India,69.1,ref 122,Reference food: Glucose/2 h.
-T1-629,1,Idli (60% Kodo millet),India,58.53,ref 122,Reference food: Glucose/2 h.
-T1-630,1,Sewai upma (60% Kodo millet),India,65.49,ref 122,Reference food: Glucose/2 h.
-T1-631,1,Chapatti (whole wheat),India,83.92,ref 123,Reference food: Glucose/2 h.
-T1-632,1,Chapatti (whole wheat + rice bran-based),India,68.34,ref 123,Reference food: Glucose/2 h.
-T1-633,1,Indian branded basmati rice,India,54.93,ref 124,Reference food: Glucose/2 hr.
-T1-634,1,Misi parantha,India,40.41,ref 125,Reference food: Glucose/2.5 h.
-T1-635,1,Misi parantha (15% green gram husk),India,32.54,ref 125,Reference food: Glucose/2.5 h.
-T1-636,1,Dal samosa (added 10% Ficus religiosa leaves),India,35,ref 126,Reference food: Glucose/2 h.
-T1-637,1,Bati (added 5% Ficus religiosa bark),India,53,ref 126,Reference food: Glucose/2 h.
-T1-638,1,Noodles (30% finger millet flour + refined wheat flour),India,45.1,"ref 127, doi:10.1007/s13197-011-0530-x",Reference food: Glucose/2.5 h.
-T1-639,1,Noodles (refined wheat flour),India,62.6,"ref 127, doi:10.1007/s13197-011-0530-x",Reference food: Glucose/2.5 h.
-T1-640,1,Refined wheat noodles,India,66.43,ref 128,Reference food: Glucose/2 h.
-T1-641,1,Refined wheat noodles (added bengal gram seed coat + broken rice),India,56.13,ref 128,Reference food: Glucose/2 h.
-T1-642,1,Refined wheat noodles (added bengal gram broken + broken rice),India,45.78,ref 128,Reference food: Glucose/2 h.
-T1-643,1,Biscuit (refined wheat flour),India,68.7,"ref 129, doi:10.18805/ajdfr.v34i4.6883",Reference food: Glucose/2.5 h.
-T1-644,1,Biscuit (refined wheat flour with 12% green gram husk),India,46.26,"ref 129, doi:10.18805/ajdfr.v34i4.6883",Reference food: Glucose/2.5 h.
-T1-645,1,Banana (Nendran),India,87.29,ref 130,Reference food: Glucose/2 h.
-T1-646,1,Banana (Robusta),India,81.55,ref 130,Reference food: Glucose/2 h.
-T1-647,1,Banana (Poovan),India,83.36,ref 130,Reference food: Glucose/2 h.
-T1-648,1,Banana (Chenkadali),India,82.23,ref 130,Reference food: Glucose/2 h.
-T1-649,1,Banana (Njalipoovan),India,95.98,ref 130,Reference food: Glucose/2 h.
-T1-650,1,Little millet flakes (ready to cook),India,52.11,"ref 131, doi:10.1007/s13197-014-1663-5",Reference food: Glucose/2.5 h.
-T1-651,1,Sorghum multigrain roti,India,68,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
-T1-652,1,Sorghum coarse semolina upma,India,53,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
-T1-653,1,Sorghum fine semolina upma,India,56,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
-T1-654,1,Sorghum flakes poha,India,45,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
-T1-655,1,Sorghum pasta,India,46,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
-T1-656,1,Sorghum biscuits,India,54,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
-T1-657,1,Wheat roti,India,64,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
-T1-658,1,Wheat coarse semolina upma,India,58,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
-T1-659,1,Wheat fine semolina upma,India,67,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
-T1-660,1,Rice flakes poha,India,74,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
-T1-661,1,Wheat pasta,India,72,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
-T1-662,1,Wheat biscuits,India,57,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
-T1-663,1,Khichdi (barnyard millet),India,34.96,ref 133,Reference food: Glucose/2.5 h.
-T1-664,1,Rice khichdi,India,62.5,ref 133,"Reference food: Glucose/2.5 h. Used for bengali_khichuri. Only candidate: T1-664; T1-663 is barnyard millet khichdi, a different grain. Khichuri is the Bengali name for khichdi: rice and dal cooked soft together. The compendium does not name the dal, and our recipe adds potato, cauliflower and peas."
-T1-665,1,High fibre white rice,India,61.3,"ref 134, doi:10.1089/dia.2015.0313",Reference food: Glucose/2 h.
-T1-666,1,White rice,India,79.2,"ref 134, doi:10.1089/dia.2015.0313","Reference food: Glucose/2 h. Used for steamed_rice. Only candidate: T1-666, white rice cooked with water at 1:2 (the serving column). Not used: T1-619 to T1-621 are parboiled varieties, T1-683 to T1-685 are one parboiled variety at three degrees of polish (ref 141), T1-633 is basmati and T1-665 a high-fibre variety."
-T1-669,1,Brown ragi roti,India,61,ref 136,Reference food: Glucose/2 h.
-T1-670,1,White ragi roti,India,67.3,ref 136,Reference food: Glucose/2 h.
-T1-671,1,Brown ragi roti + curry leaf powder (CLP),India,56.2,ref 136,Reference food: Glucose/2 h.
-T1-672,1,White ragi flour roti + curry leaf powder (CLP),India,62.5,ref 136,Reference food: Glucose/2 h.
-T1-673,1,Wheat chapatti,India,48.37,"ref 137, doi:10.5958/2249-5258.2016.00021.X",Reference food: Glucose/2 h.
-T1-674,1,Wheat chapatti enriched with carrot powder,India,53.48,"ref 137, doi:10.5958/2249-5258.2016.00021.X",Reference food: Glucose/2 h.
-T1-675,1,Dalia,India,38.05,"ref 137, doi:10.5958/2249-5258.2016.00021.X",Reference food: Glucose/2 h.
-T1-676,1,Salty enriched dalia (with carrot grits),India,49.81,"ref 137, doi:10.5958/2249-5258.2016.00021.X",Reference food: Glucose/2 h.
-T1-677,1,Chakli (added 5% kale powder),India,48.86,ref 138,Reference food: Glucose/2 h.
-T1-678,1,Twisters (added 10% kale powder),India,46.44,ref 138,Reference food: Glucose/2 h.
-T1-679,1,"Biscuits [(refined wheat flour, barley flour and soy flour (25:50:25)]",India,38.68,"ref 139, doi:10.9734/BJAST/2017/34139",Reference food: Glucose/2 h.
-T1-681,1,"Extruded snack (whole-wheat flour, barley and chickpea, 50:25:25)",India,48.77,ref 140,Reference food: Glucose/2 h.
-T1-682,1,Extruded snack (100% whole-wheat flour),India,69.68,ref 140,Reference food: Glucose/2 h.
-T1-683,1,Brown rice,India,57.6,"ref 141, doi:10.6133/apjcn.112016.08",Reference food: Glucose/2 h.
-T1-684,1,Minimally polished/under milled rice with 2.3% degree of polish (≈hand pounded rice),India,73,"ref 141, doi:10.6133/apjcn.112016.08",Reference food: Glucose/2 h.
-T1-685,1,Fully polished white rice (WR) with 9.7% degree of polish,India,79.6,"ref 141, doi:10.6133/apjcn.112016.08",Reference food: Glucose/2 h.
-T1-686,1,Uzhunnu vada,India,21.54,ref 142,Reference food: Glucose/2 h.
-T1-687,1,Tapioca,India,83.57,ref 142,Reference food: Glucose/2 h.
-T1-688,1,Dosa,India,55.8,ref 142,"Reference food: Glucose/2 h. Used for plain_dosa. Only Indian candidate on the glucose scale: T1-688. Not used: T1-667 (rice dosa, white bread scale, dropped), T1-719 (millet dosa), T1-047 (rice dosa tested in Singapore, used only when no Indian row exists)."
-T1-689,1,Puttu,India,62.68,ref 142,Reference food: Glucose/2 h.
-T1-690,1,Plaintain (unripe),India,73.9,ref 142,Reference food: Glucose/2 h.
-T1-691,1,Chapathi,India,54.43,ref 142,"Reference food: Glucose/2 h. Used for chapati. Candidates, each a plain wheat chapati or roti from an Indian study: T1-711 (44.6), T1-673 (48.37), T1-691 (54.43), T1-657 (64), T1-631 (83.92); this is the median. Not used: T1-615 to T1-618, T1-632, T1-651, T1-674 and T1-712 add amaranth, rice bran, sorghum, carrot or multigrain flour."
-T1-692,1,Poori,India,58.53,ref 142,Reference food: Glucose/2 h.
-T1-693,1,Idiyappam,India,59.41,ref 142,Reference food: Glucose/2 h.
-T1-694,1,Appam,India,59.94,ref 142,Reference food: Glucose/2 h.
-T1-695,1,Yam,India,55.53,ref 142,Reference food: Glucose/2 h.
-T1-696,1,Porotta,India,37.98,ref 142,Reference food: Glucose/2 h.
-T1-697,1,Semolina upma,India,62.37,ref 142,"Reference food: Glucose/2 h. Used for rava_upma. Candidates, each a semolina upma from an Indian study: T1-658 (58), T1-697 (62.37), T1-659 (67); this is the median. Not used: T1-628 and T1-630 are vermicelli (sewai) upma, T1-652 and T1-653 sorghum, T1-707 to T1-709 add finger millet, T1-048 was tested in Singapore."
-T1-698,1,Idli,India,62.45,ref 142,"Reference food: Glucose/2 h. Used for idli. Candidates, each a plain idli from an Indian study: T1-698 (62.45) and T1-627 (67.11); with two, the lower middle value is used. Not used: T1-629 (kodo millet idli), T1-046 (tested in Singapore), T1-842 to T1-847 (idli eaten with sambol or sampar)."
-T1-699,1,Thepla,India,57.77,ref 143,"Reference food: Glucose/2 h. Used for methi_thepla. Only candidate: T1-699; T1-700 adds ashwagandha. The compendium does not say whether this thepla had methi leaves; thepla is a wheat flatbread cooked on a tawa with oil, like our recipe."
-T1-700,1,Thepla (2% ashwagandha root powder),India,37.3,ref 143,Reference food: Glucose/2 h.
-T1-701,1,Maize,India,75.15,ref 144,Reference food: Glucose/2 h.
-T1-702,1,Boiled maize (with whole bengal gram),India,68.72,ref 144,Reference food: Glucose/2 h.
-T1-703,1,Alkali-treated maize (with whole bengal gram),India,69.01,ref 144,Reference food: Glucose/2 h.
-T1-704,1,Roasted maize (with whole bengal gram),India,72.15,ref 144,Reference food: Glucose/2 h.
-T1-705,1,DiaBliss herbal sugar (DHS),India,46.5,ref 145,Reference food: Glucose/2 h.
-T1-706,1,"Mixed mini meal: wheat, pearl barley and Bengal gram flour (besan) mix with chana whole (unhusked chana + curd)",India,71.9,"ref 146, doi:10.3746/pnf.2018.23.3.181",Reference food: Glucose/2 h.
-T1-707,1,Upma (added decorticated finger millet with lower degree of polish),India,84.7,"ref 147, doi:10.6133/apjcn.032017.18",Reference food: Glucose/2 h.
-T1-708,1,Upma (added finger millet flakes),India,82.3,"ref 147, doi:10.6133/apjcn.032017.18",Reference food: Glucose/2 h.
-T1-709,1,Upma (added finger millet vermicelli),India,65.5,"ref 147, doi:10.6133/apjcn.032017.18",Reference food: Glucose/2 h.
-T1-710,1,Finger millet extruded snack,India,65,"ref 147, doi:10.6133/apjcn.032017.18",Reference food: Glucose/2 h.
-T1-711,1,Roti (whole-wheat flour),India,44.6,ref 148,Reference food: Dextrose/2 h.
-T1-712,1,Chappati (multigrain flour),India,28.4,ref 148,Reference food: Dextrose/2 h.
-T1-714,1,Kashi 7 whole-grain ‘pilaf’,India,58.9,"ref 150, doi:10.1111/1750-3841.14945",Reference food: Glucose/2 h.
-T1-715,1,Uncle Ben’s whole-grain fast and natural instant brown rice,India,87.8,"ref 150, doi:10.1111/1750-3841.14945",Reference food: Glucose/2 h.
-T1-716,1,Refined maize ugali flour,India,71.4,"ref 150, doi:10.1111/1750-3841.14945",Reference food: Glucose/2 h.
-T1-717,1,Whole maize ugali flour,India,74.7,"ref 150, doi:10.1111/1750-3841.14945",Reference food: Glucose/2 h.
-T1-718,1,Millet-based roti,India,53,"ref 151, doi:10.1007/s13197-020-04309-5",Reference food: Glucose/2 h.
-T1-719,1,Millet-based dosa,India,37,"ref 151, doi:10.1007/s13197-020-04309-5",Reference food: Glucose/2 h.
-T1-720,1,Millet-based dumpling,India,48,"ref 151, doi:10.1007/s13197-020-04309-5",Reference food: Glucose/2 h.
-T1-721,1,Preserved coconut sugar,India,52.47,"ref 152, doi:10.1016/j.bcdf.2020.100217",Reference food: Glucose/2 h.
-T1-746,1,‘Kurakkan pittu’ with green curry,Sri Lanka,57.51,"ref 155, doi:10.4038/cmj.v55i4.2629",Reference food: Glucose/2 h.
-T1-747,1,‘Kurakkan pittu’ with gravy,Sri Lanka,63.25,"ref 155, doi:10.4038/cmj.v55i4.2629",Reference food: Glucose/2 h.
-T1-748,1,‘Kurakkan pittu’ with green curry and gravy,Sri Lanka,59.25,"ref 155, doi:10.4038/cmj.v55i4.2629",Reference food: Glucose/2 h.
-T1-749,1,‘Atta pittu’ with green curry,Sri Lanka,44.4,"ref 155, doi:10.4038/cmj.v55i4.2629",Reference food: Glucose/2 h.
-T1-750,1,‘Atta pittu’ with gravy,Sri Lanka,50.8,"ref 155, doi:10.4038/cmj.v55i4.2629",Reference food: Glucose/2 h.
-T1-751,1,‘Atta pittu’ with green curry and gravy,Sri Lanka,46.29,"ref 155, doi:10.4038/cmj.v55i4.2629",Reference food: Glucose/2 h.
-T1-766,1,Pittu (from cereal flour),Sri Lanka,43.74,ref 159,Reference food: Glucose/2.5 h.
-T1-767,1,‘String hopper’ (from cereal flour),Sri Lanka,50.01,ref 159,Reference food: Glucose/2.5 h.
-T1-792,1,Brown rice flour string hoppers + beans curry,Sri Lanka,39.93,ref 162,Reference food: Glucose/2 h.
-T1-793,1,White rice flour string hoppers + beans curry,Sri Lanka,41.96,ref 162,Reference food: Glucose/2 h.
-T1-794,1,Brown rice flour string hoppers + lentil curry,Sri Lanka,44.3,ref 162,Reference food: Glucose/2 h.
-T1-795,1,White rice flour string hoppers + lentil curry,Sri Lanka,53.46,ref 162,Reference food: Glucose/2 h.
-T1-796,1,Brown rice flour string hoppers + fish curry,Sri Lanka,45.26,ref 162,Reference food: Glucose/2 h.
-T1-797,1,White rice flour string hoppers + fish curry,Sri Lanka,56.13,ref 162,Reference food: Glucose/2 h.
-T1-798,1,Brown rice flour string hoppers + coconut gravy + polsambol,Sri Lanka,50.46,ref 162,Reference food: Glucose/2 h.
-T1-799,1,White rice flour string hoppers + coconut gravy + polsambol,Sri Lanka,69.2,ref 162,Reference food: Glucose/2 h.
-T1-800,1,Pittu (made with 25% soy flour and 75% rice flour),Sri Lanka,35.5,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
-T1-801,1,Pittu with vegetable curry,Sri Lanka,30.2,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
-T1-802,1,Rotti (made with 25% soy flour and 75% rice flour),Sri Lanka,36.04,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
-T1-803,1,Rotti with vegetable curry,Sri Lanka,31.15,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
-T1-806,1,Hopper (made with 25% soy flour and 75% rice flour),Sri Lanka,45.18,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
-T1-807,1,Hopper with vegetable curry,Sri Lanka,38.3,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
-T1-808,1,Thosai (made with 25% soy flour and 75% rice flour),Sri Lanka,47.34,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
-T1-809,1,Thosai and sambol,Sri Lanka,63.93,ref 164,Reference food: Glucose/2 h.
-T1-810,1,"Thosai, sambol and plantain",Sri Lanka,60.17,ref 164,Reference food: Glucose/2 h.
-T1-811,1,Thosai and Sampar,Sri Lanka,71.9,ref 164,Reference food: Glucose/2 h.
-T1-812,1,"Thosai, sampar and plantain",Sri Lanka,68.57,ref 164,Reference food: Glucose/2 h.
-T1-813,1,"Thosai, sambol and sampar",Sri Lanka,65.63,ref 164,Reference food: Glucose/2 h.
-T1-814,1,"Thosai, sambol, sampar and plantain",Sri Lanka,63.04,ref 164,Reference food: Glucose/2 h.
-T1-815,1,Pakistani Basmati rice (rice cooker) + 20 g coconut sambol,Sri Lanka,64,"ref 165, doi:10.4038/cmj.v60i2.7545",Reference food: Glucose/2 h.
-T1-816,1,Indian Basmati rice (rice cooker) + 20 g coconut sambol,Sri Lanka,54,"ref 165, doi:10.4038/cmj.v60i2.7545",Reference food: Glucose/2 h.
-T1-817,1,Pakistani Basmati rice (microwave) + 120 g coconut sambol,Sri Lanka,56,"ref 165, doi:10.4038/cmj.v60i2.7545",Reference food: Glucose/2 h.
-T1-818,1,Indian Basmati rice (microwave) + 0 g coconut sambol,Sri Lanka,43,"ref 165, doi:10.4038/cmj.v60i2.7545",Reference food: Glucose/2 h.
-T1-822,1,String hoppers,Sri Lanka,50.01,ref 166,Reference food: Glucose/2 h.
-T1-823,1,Pittu,Sri Lanka,43.74,ref 166,Reference food: Glucose/2 h.
-T1-827,1,Pittu (kurakan flour) + green leafy curry,Sri Lanka,57.5,ref 166,Reference food: Glucose/2 h.
-T1-828,1,Pittu (kurakan flour) + gravy,Sri Lanka,63.3,ref 166,Reference food: Glucose/2 h.
-T1-829,1,Pittu (kurakan flour) + green leafy curry + gravy,Sri Lanka,59.3,ref 166,Reference food: Glucose/2 h.
-T1-830,1,Pittu (atta flour) + green leafy curry,Sri Lanka,44.4,ref 166,Reference food: Glucose/2 h.
-T1-831,1,Pittu (atta flour) + gravy,Sri Lanka,50.8,ref 166,Reference food: Glucose/2 h.
-T1-832,1,Pittu (atta flour) +green leafy curry + gravy,Sri Lanka,46.3,ref 166,Reference food: Glucose/2 h.
-T1-842,1,Idli and sambol,Sri Lanka,56.85,ref 166,Reference food: Glucose/2 h.
-T1-843,1,"Idli, sambol and plantain",Sri Lanka,51.1,ref 166,Reference food: Glucose/2 h.
-T1-844,1,Idli and sampar,Sri Lanka,70.32,ref 166,Reference food: Glucose/2 h.
-T1-845,1,"Idli, sampar and plantain",Sri Lanka,67.45,ref 166,Reference food: Glucose/2 h.
-T1-846,1,"Idli, sambol and sampar",Sri Lanka,63.09,ref 166,Reference food: Glucose/2 h.
-T1-847,1,"Idli, sambol, sampar and plantain",Sri Lanka,61.3,ref 166,Reference food: Glucose/2 h.
-T1-886,1,Biryani (chicken),United Arab Emirates (UAE),52,"ref 173, doi:10.1017/S0007114517001027",Reference food: Glucose/2 h.
-T1-906,1,Sambosa vegetable with water,Oman,60.35,ref 175,Reference food: Glucose/2 h.
-T1-907,1,Sambosa vegetable with Omani coffee,Oman,57.25,ref 175,Reference food: Glucose/2 h.
+row_id,table,food,country,participants,gi,reference,notes
+T1-046,1,Rice idli,Singapore,healthy,85,"ref 29, doi:10.1017/S0007114518000703",Reference food: Glucose/2 h.
+T1-047,1,Rice dosa,Singapore,healthy,76,"ref 29, doi:10.1017/S0007114518000703",Reference food: Glucose/2 h.
+T1-048,1,Upma,Singapore,healthy,71,"ref 29, doi:10.1017/S0007114518000703",Reference food: Glucose/2 h.
+T1-057,1,"Basmati rice (Dreamrice™, Singapore)",Singapore,healthy,55,"ref 31, doi:10.1007/s00394-016-1313-y",Reference food: Glucose/2 h.
+T1-077,1,Flatbread with dhal curry,Malaysia,type 2 diabetes,69,"ref 36, doi:10.1159/000335224",Reference food: Glucose/2 h.
+T1-096,1,Basmati,Malaysia,healthy,50,"ref 42, doi:10.3390/nu8050308",Reference food: Glucose/2 h.
+T1-104,1,"Parboiled rice (Faiza Basmati, Malaysia",Malaysia,healthy,61,"ref 44, doi:10.1016/j.rsci.2017.06.001",Reference food: Glucose/2 h.
+T1-107,1,"Fried parboiled rice (Faiza Basmati, Malaysia",Malaysia,healthy,41,"ref 44, doi:10.1016/j.rsci.2017.06.001",Reference food: Glucose/2 h.
+T1-600,1,Biscuits (45% foxtail millet + 55% refined wheat flour),India,healthy,50.8,ref 115,Reference food: Glucose/2.5 h.
+T1-601,1,Biscuits (45% barnyard millet + 55% refined wheat flour),India,healthy,68,ref 115,Reference food: Glucose/2.5 h.
+T1-602,1,Biscuits (crude refined wheat flour),India,healthy,68,ref 115,Reference food: Glucose/2.5 h.
+T1-603,1,Papaya bar (control),India,healthy,65,ref 116,Reference food: Glucose/2 h.
+T1-604,1,Papaya bar (treated with inulin and fructooligosaccharides),India,healthy,54,ref 116,Reference food: Glucose/2 h.
+T1-605,1,Banana (yallakki),India,healthy,43,ref 117,Reference food: Glucose/2 h.
+T1-606,1,Mango (Raspuri),India,healthy,35,ref 117,Reference food: Glucose/2 h.
+T1-607,1,Papaya,India,healthy,19,ref 117,Reference food: Glucose/2 h.
+T1-608,1,Orange,India,healthy,52,ref 117,Reference food: Glucose/2 h.
+T1-609,1,Guava,India,healthy,78,ref 117,Reference food: Glucose/2 h.
+T1-610,1,Chikku,India,healthy,73,ref 117,Reference food: Glucose/2 h.
+T1-611,1,Jackfruit,India,healthy,63,ref 117,Reference food: Glucose/2 h.
+T1-612,1,Watermelon,India,healthy,37,ref 117,Reference food: Glucose/2 h.
+T1-613,1,Pineapple,India,healthy,19,ref 117,Reference food: Glucose/2 h.
+T1-614,1,Apple,India,healthy,45,ref 117,Reference food: Glucose/2 h.
+T1-615,1,Roasted Amaranth Grains flour chapatti,India,type 2 diabetes,84.83,ref 118,Reference food: Glucose/2 h.
+T1-616,1,Boiled Amaranth Grains flour chapatti,India,type 2 diabetes,111.83,ref 118,Reference food: Glucose/2 h.
+T1-617,1,Popped Amaranth Grains flour chapatti,India,type 2 diabetes,44,ref 118,Reference food: Glucose/2 h.
+T1-618,1,Raw Amaranth Grains flour chapatti,India,type 2 diabetes,102.3,ref 118,Reference food: Glucose/2 h.
+T1-619,1,Sona Masuri (parboiled rice),India,healthy,72,"ref 119, doi:10.3109/09637486.2011.615300",Reference food: Glucose/2 h.
+T1-620,1,Ponni (parboiled rice),India,healthy,70.2,"ref 119, doi:10.3109/09637486.2011.615300",Reference food: Glucose/2 h.
+T1-621,1,Surti Kolam (parboiled rice),India,healthy,77,"ref 119, doi:10.3109/09637486.2011.615300",Reference food: Glucose/2 h.
+T1-622,1,"Burfi (made with 43% foxtail millet, 57% bengal gram flour)",India,healthy,37.5,ref 120,Reference food: Glucose/2.5 h.
+T1-623,1,"Burfi (made with 43% barnyard millet, 57% bengal gram flour)",India,healthy,45,ref 120,Reference food: Glucose/2.5 h.
+T1-624,1,Burfi (made with 100% bengal gram flour),India,healthy,43,ref 120,Reference food: Glucose/2.5 h.
+T1-625,1,Namkeen sev (without dried bottle gourd pulp powder) [bengal gram flour + kidney bean flour (50:50)],India,healthy,32.82,ref 121,Reference food: Glucose/2 h.
+T1-626,1,Namkeen sev (with dried bottle gourd pulp powder) [bengal gram flour + kidney bean flour + DBPP (40:40:20)],India,healthy,21.83,ref 121,Reference food: Glucose/2 h.
+T1-627,1,Idli,India,healthy,67.11,ref 122,Reference food: Glucose/2 h.
+T1-628,1,Sewai upma,India,healthy,69.1,ref 122,Reference food: Glucose/2 h.
+T1-629,1,Idli (60% Kodo millet),India,healthy,58.53,ref 122,Reference food: Glucose/2 h.
+T1-630,1,Sewai upma (60% Kodo millet),India,healthy,65.49,ref 122,Reference food: Glucose/2 h.
+T1-631,1,Chapatti (whole wheat),India,type 2 diabetes,83.92,ref 123,Reference food: Glucose/2 h.
+T1-632,1,Chapatti (whole wheat + rice bran-based),India,type 2 diabetes,68.34,ref 123,Reference food: Glucose/2 h.
+T1-633,1,Indian branded basmati rice,India,healthy,54.93,ref 124,Reference food: Glucose/2 hr.
+T1-634,1,Misi parantha,India,healthy,40.41,ref 125,Reference food: Glucose/2.5 h.
+T1-635,1,Misi parantha (15% green gram husk),India,healthy,32.54,ref 125,Reference food: Glucose/2.5 h.
+T1-636,1,Dal samosa (added 10% Ficus religiosa leaves),India,healthy,35,ref 126,Reference food: Glucose/2 h.
+T1-637,1,Bati (added 5% Ficus religiosa bark),India,healthy,53,ref 126,Reference food: Glucose/2 h.
+T1-638,1,Noodles (30% finger millet flour + refined wheat flour),India,healthy,45.1,"ref 127, doi:10.1007/s13197-011-0530-x",Reference food: Glucose/2.5 h.
+T1-639,1,Noodles (refined wheat flour),India,healthy,62.6,"ref 127, doi:10.1007/s13197-011-0530-x",Reference food: Glucose/2.5 h.
+T1-640,1,Refined wheat noodles,India,healthy,66.43,ref 128,Reference food: Glucose/2 h.
+T1-641,1,Refined wheat noodles (added bengal gram seed coat + broken rice),India,healthy,56.13,ref 128,Reference food: Glucose/2 h.
+T1-642,1,Refined wheat noodles (added bengal gram broken + broken rice),India,healthy,45.78,ref 128,Reference food: Glucose/2 h.
+T1-643,1,Biscuit (refined wheat flour),India,healthy,68.7,"ref 129, doi:10.18805/ajdfr.v34i4.6883",Reference food: Glucose/2.5 h.
+T1-644,1,Biscuit (refined wheat flour with 12% green gram husk),India,healthy,46.26,"ref 129, doi:10.18805/ajdfr.v34i4.6883",Reference food: Glucose/2.5 h.
+T1-645,1,Banana (Nendran),India,healthy,87.29,ref 130,Reference food: Glucose/2 h.
+T1-646,1,Banana (Robusta),India,healthy,81.55,ref 130,Reference food: Glucose/2 h.
+T1-647,1,Banana (Poovan),India,healthy,83.36,ref 130,Reference food: Glucose/2 h.
+T1-648,1,Banana (Chenkadali),India,healthy,82.23,ref 130,Reference food: Glucose/2 h.
+T1-649,1,Banana (Njalipoovan),India,healthy,95.98,ref 130,Reference food: Glucose/2 h.
+T1-650,1,Little millet flakes (ready to cook),India,healthy,52.11,"ref 131, doi:10.1007/s13197-014-1663-5",Reference food: Glucose/2.5 h.
+T1-651,1,Sorghum multigrain roti,India,healthy,68,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
+T1-652,1,Sorghum coarse semolina upma,India,healthy,53,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
+T1-653,1,Sorghum fine semolina upma,India,healthy,56,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
+T1-654,1,Sorghum flakes poha,India,healthy,45,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
+T1-655,1,Sorghum pasta,India,healthy,46,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
+T1-656,1,Sorghum biscuits,India,healthy,54,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
+T1-657,1,Wheat roti,India,healthy,64,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
+T1-658,1,Wheat coarse semolina upma,India,healthy,58,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
+T1-659,1,Wheat fine semolina upma,India,healthy,67,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
+T1-660,1,Rice flakes poha,India,healthy,74,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
+T1-661,1,Wheat pasta,India,healthy,72,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
+T1-662,1,Wheat biscuits,India,healthy,57,"ref 132, doi:10.1002/jsfa.6861",Reference food: Glucose/2 h.
+T1-663,1,Khichdi (barnyard millet),India,healthy,34.96,ref 133,Reference food: Glucose/2.5 h.
+T1-664,1,Rice khichdi,India,healthy,62.5,ref 133,"Reference food: Glucose/2.5 h. Used for bengali_khichuri. Only candidate: T1-664 (healthy participants); T1-663 is barnyard millet khichdi, a different grain. Khichuri is the Bengali name for khichdi: rice and dal cooked soft together. The compendium does not name the dal, and our recipe adds potato, cauliflower and peas."
+T1-665,1,High fibre white rice,India,healthy,61.3,"ref 134, doi:10.1089/dia.2015.0313",Reference food: Glucose/2 h.
+T1-666,1,White rice,India,healthy,79.2,"ref 134, doi:10.1089/dia.2015.0313","Reference food: Glucose/2 h. Used for steamed_rice. Only candidate: T1-666 (healthy participants), white rice cooked with water at 1:2 (the serving column). Not used: T1-619 to T1-621 are parboiled varieties, T1-683 to T1-685 are one parboiled variety at three degrees of polish (ref 141), T1-633 is basmati and T1-665 a high-fibre variety."
+T1-669,1,Brown ragi roti,India,healthy,61,ref 136,Reference food: Glucose/2 h.
+T1-670,1,White ragi roti,India,healthy,67.3,ref 136,Reference food: Glucose/2 h.
+T1-671,1,Brown ragi roti + curry leaf powder (CLP),India,healthy,56.2,ref 136,Reference food: Glucose/2 h.
+T1-672,1,White ragi flour roti + curry leaf powder (CLP),India,healthy,62.5,ref 136,Reference food: Glucose/2 h.
+T1-673,1,Wheat chapatti,India,healthy,48.37,"ref 137, doi:10.5958/2249-5258.2016.00021.X","Reference food: Glucose/2 h. Used for chapati. Candidates, each a plain wheat chapati or roti from an Indian study in healthy participants: T1-711 (44.6), T1-673 (48.37), T1-691 (54.43), T1-657 (64); with four, the lower middle value is used. Not used: T1-631 (83.92) was measured in type 2 diabetes, and T1-615 to T1-618, T1-632, T1-651, T1-674 and T1-712 add amaranth, rice bran, sorghum, carrot or multigrain flour."
+T1-674,1,Wheat chapatti enriched with carrot powder,India,healthy,53.48,"ref 137, doi:10.5958/2249-5258.2016.00021.X",Reference food: Glucose/2 h.
+T1-675,1,Dalia,India,healthy,38.05,"ref 137, doi:10.5958/2249-5258.2016.00021.X",Reference food: Glucose/2 h.
+T1-676,1,Salty enriched dalia (with carrot grits),India,healthy,49.81,"ref 137, doi:10.5958/2249-5258.2016.00021.X",Reference food: Glucose/2 h.
+T1-677,1,Chakli (added 5% kale powder),India,healthy,48.86,ref 138,Reference food: Glucose/2 h.
+T1-678,1,Twisters (added 10% kale powder),India,healthy,46.44,ref 138,Reference food: Glucose/2 h.
+T1-679,1,"Biscuits [(refined wheat flour, barley flour and soy flour (25:50:25)]",India,healthy,38.68,"ref 139, doi:10.9734/BJAST/2017/34139",Reference food: Glucose/2 h.
+T1-681,1,"Extruded snack (whole-wheat flour, barley and chickpea, 50:25:25)",India,healthy,48.77,ref 140,Reference food: Glucose/2 h.
+T1-682,1,Extruded snack (100% whole-wheat flour),India,healthy,69.68,ref 140,Reference food: Glucose/2 h.
+T1-683,1,Brown rice,India,healthy,57.6,"ref 141, doi:10.6133/apjcn.112016.08",Reference food: Glucose/2 h.
+T1-684,1,Minimally polished/under milled rice with 2.3% degree of polish (≈hand pounded rice),India,healthy,73,"ref 141, doi:10.6133/apjcn.112016.08",Reference food: Glucose/2 h.
+T1-685,1,Fully polished white rice (WR) with 9.7% degree of polish,India,healthy,79.6,"ref 141, doi:10.6133/apjcn.112016.08",Reference food: Glucose/2 h.
+T1-686,1,Uzhunnu vada,India,healthy,21.54,ref 142,Reference food: Glucose/2 h.
+T1-687,1,Tapioca,India,healthy,83.57,ref 142,Reference food: Glucose/2 h.
+T1-688,1,Dosa,India,healthy,55.8,ref 142,"Reference food: Glucose/2 h. Used for plain_dosa. Only Indian candidate on the glucose scale: T1-688 (healthy participants). Not used: T1-667 (rice dosa, white bread scale, dropped), T1-719 (millet dosa), T1-047 (rice dosa tested in Singapore, used only when no Indian row exists)."
+T1-689,1,Puttu,India,healthy,62.68,ref 142,Reference food: Glucose/2 h.
+T1-690,1,Plaintain (unripe),India,healthy,73.9,ref 142,Reference food: Glucose/2 h.
+T1-691,1,Chapathi,India,healthy,54.43,ref 142,Reference food: Glucose/2 h.
+T1-692,1,Poori,India,healthy,58.53,ref 142,Reference food: Glucose/2 h.
+T1-693,1,Idiyappam,India,healthy,59.41,ref 142,Reference food: Glucose/2 h.
+T1-694,1,Appam,India,healthy,59.94,ref 142,Reference food: Glucose/2 h.
+T1-695,1,Yam,India,healthy,55.53,ref 142,Reference food: Glucose/2 h.
+T1-696,1,Porotta,India,healthy,37.98,ref 142,Reference food: Glucose/2 h.
+T1-697,1,Semolina upma,India,healthy,62.37,ref 142,"Reference food: Glucose/2 h. Used for rava_upma. Candidates, each a semolina upma from an Indian study in healthy participants: T1-658 (58), T1-697 (62.37), T1-659 (67); this is the median. Not used: T1-628 and T1-630 are vermicelli (sewai) upma, T1-652 and T1-653 sorghum, T1-707 to T1-709 add finger millet, T1-048 was tested in Singapore."
+T1-698,1,Idli,India,healthy,62.45,ref 142,"Reference food: Glucose/2 h. Used for idli. Candidates, each a plain idli from an Indian study in healthy participants: T1-698 (62.45) and T1-627 (67.11); with two, the lower middle value is used. Not used: T1-629 (kodo millet idli), T1-046 (tested in Singapore), T1-842 to T1-847 (idli eaten with sambol or sampar)."
+T1-699,1,Thepla,India,healthy,57.77,ref 143,"Reference food: Glucose/2 h. Used for methi_thepla. Only candidate: T1-699 (healthy participants); T1-700 adds ashwagandha. The compendium does not say whether this thepla had methi leaves; thepla is a wheat flatbread cooked on a tawa with oil, like our recipe."
+T1-700,1,Thepla (2% ashwagandha root powder),India,healthy,37.3,ref 143,Reference food: Glucose/2 h.
+T1-701,1,Maize,India,healthy,75.15,ref 144,Reference food: Glucose/2 h.
+T1-702,1,Boiled maize (with whole bengal gram),India,healthy,68.72,ref 144,Reference food: Glucose/2 h.
+T1-703,1,Alkali-treated maize (with whole bengal gram),India,healthy,69.01,ref 144,Reference food: Glucose/2 h.
+T1-704,1,Roasted maize (with whole bengal gram),India,healthy,72.15,ref 144,Reference food: Glucose/2 h.
+T1-705,1,DiaBliss herbal sugar (DHS),India,healthy,46.5,ref 145,Reference food: Glucose/2 h.
+T1-706,1,"Mixed mini meal: wheat, pearl barley and Bengal gram flour (besan) mix with chana whole (unhusked chana + curd)",India,healthy,71.9,"ref 146, doi:10.3746/pnf.2018.23.3.181",Reference food: Glucose/2 h.
+T1-707,1,Upma (added decorticated finger millet with lower degree of polish),India,healthy,84.7,"ref 147, doi:10.6133/apjcn.032017.18",Reference food: Glucose/2 h.
+T1-708,1,Upma (added finger millet flakes),India,healthy,82.3,"ref 147, doi:10.6133/apjcn.032017.18",Reference food: Glucose/2 h.
+T1-709,1,Upma (added finger millet vermicelli),India,healthy,65.5,"ref 147, doi:10.6133/apjcn.032017.18",Reference food: Glucose/2 h.
+T1-710,1,Finger millet extruded snack,India,healthy,65,"ref 147, doi:10.6133/apjcn.032017.18",Reference food: Glucose/2 h.
+T1-711,1,Roti (whole-wheat flour),India,healthy,44.6,ref 148,Reference food: Dextrose/2 h.
+T1-712,1,Chappati (multigrain flour),India,healthy,28.4,ref 148,Reference food: Dextrose/2 h.
+T1-714,1,Kashi 7 whole-grain ‘pilaf’,India,healthy,58.9,"ref 150, doi:10.1111/1750-3841.14945",Reference food: Glucose/2 h.
+T1-715,1,Uncle Ben’s whole-grain fast and natural instant brown rice,India,healthy,87.8,"ref 150, doi:10.1111/1750-3841.14945",Reference food: Glucose/2 h.
+T1-716,1,Refined maize ugali flour,India,healthy,71.4,"ref 150, doi:10.1111/1750-3841.14945",Reference food: Glucose/2 h.
+T1-717,1,Whole maize ugali flour,India,healthy,74.7,"ref 150, doi:10.1111/1750-3841.14945",Reference food: Glucose/2 h.
+T1-718,1,Millet-based roti,India,healthy,53,"ref 151, doi:10.1007/s13197-020-04309-5",Reference food: Glucose/2 h.
+T1-719,1,Millet-based dosa,India,healthy,37,"ref 151, doi:10.1007/s13197-020-04309-5",Reference food: Glucose/2 h.
+T1-720,1,Millet-based dumpling,India,healthy,48,"ref 151, doi:10.1007/s13197-020-04309-5",Reference food: Glucose/2 h.
+T1-721,1,Preserved coconut sugar,India,healthy,52.47,"ref 152, doi:10.1016/j.bcdf.2020.100217",Reference food: Glucose/2 h.
+T1-746,1,‘Kurakkan pittu’ with green curry,Sri Lanka,healthy,57.51,"ref 155, doi:10.4038/cmj.v55i4.2629",Reference food: Glucose/2 h.
+T1-747,1,‘Kurakkan pittu’ with gravy,Sri Lanka,healthy,63.25,"ref 155, doi:10.4038/cmj.v55i4.2629",Reference food: Glucose/2 h.
+T1-748,1,‘Kurakkan pittu’ with green curry and gravy,Sri Lanka,healthy,59.25,"ref 155, doi:10.4038/cmj.v55i4.2629",Reference food: Glucose/2 h.
+T1-749,1,‘Atta pittu’ with green curry,Sri Lanka,healthy,44.4,"ref 155, doi:10.4038/cmj.v55i4.2629",Reference food: Glucose/2 h.
+T1-750,1,‘Atta pittu’ with gravy,Sri Lanka,healthy,50.8,"ref 155, doi:10.4038/cmj.v55i4.2629",Reference food: Glucose/2 h.
+T1-751,1,‘Atta pittu’ with green curry and gravy,Sri Lanka,healthy,46.29,"ref 155, doi:10.4038/cmj.v55i4.2629",Reference food: Glucose/2 h.
+T1-766,1,Pittu (from cereal flour),Sri Lanka,healthy,43.74,ref 159,Reference food: Glucose/2.5 h.
+T1-767,1,‘String hopper’ (from cereal flour),Sri Lanka,healthy,50.01,ref 159,Reference food: Glucose/2.5 h.
+T1-792,1,Brown rice flour string hoppers + beans curry,Sri Lanka,healthy,39.93,ref 162,Reference food: Glucose/2 h.
+T1-793,1,White rice flour string hoppers + beans curry,Sri Lanka,healthy,41.96,ref 162,Reference food: Glucose/2 h.
+T1-794,1,Brown rice flour string hoppers + lentil curry,Sri Lanka,healthy,44.3,ref 162,Reference food: Glucose/2 h.
+T1-795,1,White rice flour string hoppers + lentil curry,Sri Lanka,healthy,53.46,ref 162,Reference food: Glucose/2 h.
+T1-796,1,Brown rice flour string hoppers + fish curry,Sri Lanka,healthy,45.26,ref 162,Reference food: Glucose/2 h.
+T1-797,1,White rice flour string hoppers + fish curry,Sri Lanka,healthy,56.13,ref 162,Reference food: Glucose/2 h.
+T1-798,1,Brown rice flour string hoppers + coconut gravy + polsambol,Sri Lanka,healthy,50.46,ref 162,Reference food: Glucose/2 h.
+T1-799,1,White rice flour string hoppers + coconut gravy + polsambol,Sri Lanka,healthy,69.2,ref 162,Reference food: Glucose/2 h.
+T1-800,1,Pittu (made with 25% soy flour and 75% rice flour),Sri Lanka,healthy,35.5,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
+T1-801,1,Pittu with vegetable curry,Sri Lanka,healthy,30.2,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
+T1-802,1,Rotti (made with 25% soy flour and 75% rice flour),Sri Lanka,healthy,36.04,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
+T1-803,1,Rotti with vegetable curry,Sri Lanka,healthy,31.15,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
+T1-806,1,Hopper (made with 25% soy flour and 75% rice flour),Sri Lanka,healthy,45.18,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
+T1-807,1,Hopper with vegetable curry,Sri Lanka,healthy,38.3,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
+T1-808,1,Thosai (made with 25% soy flour and 75% rice flour),Sri Lanka,healthy,47.34,"ref 163, doi:10.3923/pjn.2014.616.621",Reference food: Glucose/2 h.
+T1-809,1,Thosai and sambol,Sri Lanka,healthy,63.93,ref 164,Reference food: Glucose/2 h.
+T1-810,1,"Thosai, sambol and plantain",Sri Lanka,healthy,60.17,ref 164,Reference food: Glucose/2 h.
+T1-811,1,Thosai and Sampar,Sri Lanka,healthy,71.9,ref 164,Reference food: Glucose/2 h.
+T1-812,1,"Thosai, sampar and plantain",Sri Lanka,healthy,68.57,ref 164,Reference food: Glucose/2 h.
+T1-813,1,"Thosai, sambol and sampar",Sri Lanka,healthy,65.63,ref 164,Reference food: Glucose/2 h.
+T1-814,1,"Thosai, sambol, sampar and plantain",Sri Lanka,healthy,63.04,ref 164,Reference food: Glucose/2 h.
+T1-815,1,Pakistani Basmati rice (rice cooker) + 20 g coconut sambol,Sri Lanka,healthy,64,"ref 165, doi:10.4038/cmj.v60i2.7545",Reference food: Glucose/2 h.
+T1-816,1,Indian Basmati rice (rice cooker) + 20 g coconut sambol,Sri Lanka,healthy,54,"ref 165, doi:10.4038/cmj.v60i2.7545",Reference food: Glucose/2 h.
+T1-817,1,Pakistani Basmati rice (microwave) + 120 g coconut sambol,Sri Lanka,healthy,56,"ref 165, doi:10.4038/cmj.v60i2.7545",Reference food: Glucose/2 h.
+T1-818,1,Indian Basmati rice (microwave) + 0 g coconut sambol,Sri Lanka,healthy,43,"ref 165, doi:10.4038/cmj.v60i2.7545",Reference food: Glucose/2 h.
+T1-822,1,String hoppers,Sri Lanka,healthy,50.01,ref 166,Reference food: Glucose/2 h.
+T1-823,1,Pittu,Sri Lanka,healthy,43.74,ref 166,Reference food: Glucose/2 h.
+T1-827,1,Pittu (kurakan flour) + green leafy curry,Sri Lanka,healthy,57.5,ref 166,Reference food: Glucose/2 h.
+T1-828,1,Pittu (kurakan flour) + gravy,Sri Lanka,healthy,63.3,ref 166,Reference food: Glucose/2 h.
+T1-829,1,Pittu (kurakan flour) + green leafy curry + gravy,Sri Lanka,healthy,59.3,ref 166,Reference food: Glucose/2 h.
+T1-830,1,Pittu (atta flour) + green leafy curry,Sri Lanka,healthy,44.4,ref 166,Reference food: Glucose/2 h.
+T1-831,1,Pittu (atta flour) + gravy,Sri Lanka,healthy,50.8,ref 166,Reference food: Glucose/2 h.
+T1-832,1,Pittu (atta flour) +green leafy curry + gravy,Sri Lanka,healthy,46.3,ref 166,Reference food: Glucose/2 h.
+T1-842,1,Idli and sambol,Sri Lanka,healthy,56.85,ref 166,Reference food: Glucose/2 h.
+T1-843,1,"Idli, sambol and plantain",Sri Lanka,healthy,51.1,ref 166,Reference food: Glucose/2 h.
+T1-844,1,Idli and sampar,Sri Lanka,healthy,70.32,ref 166,Reference food: Glucose/2 h.
+T1-845,1,"Idli, sampar and plantain",Sri Lanka,healthy,67.45,ref 166,Reference food: Glucose/2 h.
+T1-846,1,"Idli, sambol and sampar",Sri Lanka,healthy,63.09,ref 166,Reference food: Glucose/2 h.
+T1-847,1,"Idli, sambol, sampar and plantain",Sri Lanka,healthy,61.3,ref 166,Reference food: Glucose/2 h.
+T1-886,1,Biryani (chicken),United Arab Emirates (UAE),healthy,52,"ref 173, doi:10.1017/S0007114517001027",Reference food: Glucose/2 h.
+T1-906,1,Sambosa vegetable with water,Oman,healthy,60.35,ref 175,Reference food: Glucose/2 h.
+T1-907,1,Sambosa vegetable with Omani coffee,Oman,healthy,57.25,ref 175,Reference food: Glucose/2 h.

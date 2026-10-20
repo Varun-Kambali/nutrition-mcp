@@ -12,8 +12,10 @@ paper's only table) and keeps a row when:
 3. its GI cell holds one number.
 
 Rows that pass step 1 but fail step 2 or 3 are printed with the reason, so the drops can be
-reviewed. Rows a bundled dish or ingredient uses carry the matching notes from MATCH_NOTES;
-edit those notes whenever a gi_ref changes, then run `make gi` again.
+reviewed. Each kept row records whether it was measured in healthy participants, in type 2
+diabetes, or does not say, because the matching rule prefers healthy participants. Rows a
+bundled dish or ingredient uses carry the matching notes from MATCH_NOTES; edit those notes
+whenever a gi_ref changes, then run `make gi` again.
 """
 
 import csv
@@ -50,7 +52,7 @@ HEADER = [
     "Participants (type and number)",
     "Reference food and time period",
 ]
-CSV_COLUMNS = ["row_id", "table", "food", "country", "gi", "reference", "notes"]
+CSV_COLUMNS = ["row_id", "table", "food", "country", "participants", "gi", "reference", "notes"]
 
 # Exact match: "West India" in the table is the West Indies (ref 114 is a study of
 # Caribbean foods), not western India.
@@ -74,48 +76,60 @@ INDIAN_FOODS = re.compile(
 # Dextrose is glucose under another name.
 GLUCOSE_REFERENCES = frozenset({"glucose", "dextrose"})
 
+# The participants cell reads like "10 Healthy participants" or "20 NIDDM participants"
+# (non-insulin-dependent diabetes mellitus, the older name for type 2 diabetes). A cell with
+# a count and no type is "not stated". Any other wording stops the run, so a type this map
+# does not know is never filed under the wrong one.
+PARTICIPANTS = (
+    (re.compile(r"\bhealthy\b", re.IGNORECASE), "healthy"),
+    (re.compile(r"\b(?:T2DM|NIDDM)\b"), "type 2 diabetes"),
+    (re.compile(r"^\d+(?: participants)?$"), "not stated"),
+)
+
 # Notes for the rows that bundled foods use: which food, the candidate rows considered and
 # why this row was chosen. The matching rule is in docs/data.md, "Glycemic index".
 MATCH_NOTES = {
     "T1-664": (
-        "Used for bengali_khichuri. Only candidate: T1-664; T1-663 is barnyard millet khichdi, "
-        "a different grain. Khichuri is the Bengali name for khichdi: rice and dal cooked soft "
-        "together. The compendium does not name the dal, and our recipe adds potato, "
-        "cauliflower and peas."
+        "Used for bengali_khichuri. Only candidate: T1-664 (healthy participants); T1-663 is "
+        "barnyard millet khichdi, a different grain. Khichuri is the Bengali name for "
+        "khichdi: rice and dal cooked soft together. The compendium does not name the dal, "
+        "and our recipe adds potato, cauliflower and peas."
     ),
     "T1-666": (
-        "Used for steamed_rice. Only candidate: T1-666, white rice cooked with water at 1:2 "
-        "(the serving column). Not used: T1-619 to T1-621 are parboiled varieties, T1-683 to "
-        "T1-685 are one parboiled variety at three degrees of polish (ref 141), T1-633 is "
-        "basmati and T1-665 a high-fibre variety."
+        "Used for steamed_rice. Only candidate: T1-666 (healthy participants), white rice "
+        "cooked with water at 1:2 (the serving column). Not used: T1-619 to T1-621 are "
+        "parboiled varieties, T1-683 to T1-685 are one parboiled variety at three degrees of "
+        "polish (ref 141), T1-633 is basmati and T1-665 a high-fibre variety."
+    ),
+    "T1-673": (
+        "Used for chapati. Candidates, each a plain wheat chapati or roti from an Indian "
+        "study in healthy participants: T1-711 (44.6), T1-673 (48.37), T1-691 (54.43), "
+        "T1-657 (64); with four, the lower middle value is used. Not used: T1-631 (83.92) was "
+        "measured in type 2 diabetes, and T1-615 to T1-618, T1-632, T1-651, T1-674 and "
+        "T1-712 add amaranth, rice bran, sorghum, carrot or multigrain flour."
     ),
     "T1-688": (
-        "Used for plain_dosa. Only Indian candidate on the glucose scale: T1-688. Not used: "
-        "T1-667 (rice dosa, white bread scale, dropped), T1-719 (millet dosa), T1-047 (rice "
-        "dosa tested in Singapore, used only when no Indian row exists)."
-    ),
-    "T1-691": (
-        "Used for chapati. Candidates, each a plain wheat chapati or roti from an Indian "
-        "study: T1-711 (44.6), T1-673 (48.37), T1-691 (54.43), T1-657 (64), T1-631 (83.92); "
-        "this is the median. Not used: T1-615 to T1-618, T1-632, T1-651, T1-674 and T1-712 "
-        "add amaranth, rice bran, sorghum, carrot or multigrain flour."
+        "Used for plain_dosa. Only Indian candidate on the glucose scale: T1-688 (healthy "
+        "participants). Not used: T1-667 (rice dosa, white bread scale, dropped), T1-719 "
+        "(millet dosa), T1-047 (rice dosa tested in Singapore, used only when no Indian row "
+        "exists)."
     ),
     "T1-697": (
-        "Used for rava_upma. Candidates, each a semolina upma from an Indian study: T1-658 "
-        "(58), T1-697 (62.37), T1-659 (67); this is the median. Not used: T1-628 and T1-630 "
-        "are vermicelli (sewai) upma, T1-652 and T1-653 sorghum, T1-707 to T1-709 add finger "
-        "millet, T1-048 was tested in Singapore."
+        "Used for rava_upma. Candidates, each a semolina upma from an Indian study in healthy "
+        "participants: T1-658 (58), T1-697 (62.37), T1-659 (67); this is the median. Not "
+        "used: T1-628 and T1-630 are vermicelli (sewai) upma, T1-652 and T1-653 sorghum, "
+        "T1-707 to T1-709 add finger millet, T1-048 was tested in Singapore."
     ),
     "T1-698": (
-        "Used for idli. Candidates, each a plain idli from an Indian study: T1-698 (62.45) "
-        "and T1-627 (67.11); with two, the lower middle value is used. Not used: T1-629 (kodo "
-        "millet idli), T1-046 (tested in Singapore), T1-842 to T1-847 (idli eaten with "
-        "sambol or sampar)."
+        "Used for idli. Candidates, each a plain idli from an Indian study in healthy "
+        "participants: T1-698 (62.45) and T1-627 (67.11); with two, the lower middle value "
+        "is used. Not used: T1-629 (kodo millet idli), T1-046 (tested in Singapore), T1-842 "
+        "to T1-847 (idli eaten with sambol or sampar)."
     ),
     "T1-699": (
-        "Used for methi_thepla. Only candidate: T1-699; T1-700 adds ashwagandha. The "
-        "compendium does not say whether this thepla had methi leaves; thepla is a wheat "
-        "flatbread cooked on a tawa with oil, like our recipe."
+        "Used for methi_thepla. Only candidate: T1-699 (healthy participants); T1-700 adds "
+        "ashwagandha. The compendium does not say whether this thepla had methi leaves; "
+        "thepla is a wheat flatbread cooked on a tawa with oil, like our recipe."
     ),
 }
 
@@ -129,6 +143,7 @@ class Row:
     row_id: str
     food: str
     country: str
+    participants: str
     gi_text: str
     reference: str
     reference_food: str
@@ -189,7 +204,7 @@ def read_table(path: Path) -> Iterator[Row]:
         cells = tr.findall("td")
         if len(cells) != 10:
             raise ExtractError(f"{path}: row {_text(cells[0])} has {len(cells)} cells")
-        number, ref_cell, country, food, gi, *_rest, reference_food = cells
+        number, ref_cell, country, food, gi, *_rest, participants, reference_food = cells
         # One row (561, Hong Kong) cites its study in plain text instead of a link.
         xref = ref_cell.find(".//xref")
         linked = citations.get(xref.get("rid", "")) if xref is not None else None
@@ -200,6 +215,7 @@ def read_table(path: Path) -> Iterator[Row]:
             row_id=f"T{TABLE_NUMBER}-{int(_text(number)):03d}",
             food=_text(food),
             country=_text(country),
+            participants=_text(participants),
             gi_text=_text(gi),
             reference=reference,
             reference_food=_text(reference_food),
@@ -223,6 +239,13 @@ def drop_reason(row: Row) -> str | None:
     return None
 
 
+def participant_type(row: Row) -> str:
+    for pattern, kind in PARTICIPANTS:
+        if pattern.search(row.participants):
+            return kind
+    raise ExtractError(f"{row.row_id}: unknown participants '{row.participants}'")
+
+
 def _number(text: str) -> str:
     # "68.70" -> "68.7", "45.0" -> "45": the same value, written one way.
     return f"{float(text):.2f}".rstrip("0").rstrip(".")
@@ -242,6 +265,7 @@ def write_csv(rows: list[Row], path: Path) -> None:
                     TABLE_NUMBER,
                     row.food,
                     row.country,
+                    participant_type(row),
                     _number(row.gi_text),
                     row.reference,
                     notes,

@@ -149,6 +149,19 @@ def test_gi_rows_in_use_carry_their_matching_notes() -> None:
     assert noted == used
 
 
+def test_gi_rows_state_their_participants() -> None:
+    # The matching rule prefers rows measured in healthy participants, so every row has to
+    # say who was tested.
+    rows = _gi_rows()
+    assert rows
+    allowed = {"healthy", "type 2 diabetes", "not stated"}
+    assert {
+        row_id: row["participants"]
+        for row_id, row in rows.items()
+        if row["participants"] not in allowed
+    } == {}
+
+
 def test_foods_with_gi_list_the_compendium_as_a_source() -> None:
     foods = [food for food in build_registry([]).foods() if food.gi is not None]
     assert foods

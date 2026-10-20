@@ -158,6 +158,7 @@ The script keeps 176 of the 940 rows: 118 tested in India and 58 tested elsewher
 | `row_id` | `T1-` and the row number printed in Table 1, so `T1-698` is row 698 |
 | `table` | The paper's table number, always 1 |
 | `food`, `country` | As printed |
+| `participants` | Who was tested, from the paper's participants column: `healthy`, `type 2 diabetes` (the paper writes T2DM or NIDDM) or `not stated` |
 | `gi` | The mean GI as printed, with trailing zeros dropped (68.70 is written 68.7) |
 | `reference` | The paper's reference number for the study, with the study's DOI where the paper gives one |
 | `notes` | The reference food and test period as printed. A row a bundled dish uses also names the dish, the candidate rows considered and why this one was chosen |
@@ -168,7 +169,7 @@ The notes for matched rows live in `MATCH_NOTES` in the script, so `make gi` wri
 
 GI belongs to food as it is eaten: dishes, and ingredients that are eaten as they are, such as pav, milk or curd, when the compendium lists the same food. Raw grains and dals never get one, because their GI says nothing about the cooked dish. The compendium has no Indian row for pav, milk or curd, so no ingredient has a GI.
 
-A dish gets a GI only when a row is the same food with a similar preparation: the same main ingredients and the same cooking method. A dish the compendium does not name is not given the value of a similar dish. When several rows qualify, rows from studies done in India come first, and among those the median row is used: an actual row, and with an even number of rows the lower of the two middle values. A dish with no such row keeps `gi` and `gi_ref` empty, and its glycemic load is missing.
+A dish gets a GI only when a row is the same food with a similar preparation: the same main ingredients and the same cooking method. A dish the compendium does not name is not given the value of a similar dish. When several rows qualify, they are narrowed in order. Rows measured in healthy participants come first, because the ISO 26642 method for measuring GI tests healthy participants, so a value from people with type 2 diabetes was not measured the standard way. Next, rows from studies done in India come first. Among the rows left, the median row is used: an actual row, and with an even number of rows the lower of the two middle values. A dish with no such row keeps `gi` and `gi_ref` empty, and its glycemic load is missing.
 
 `gi_ref` records the match as `"<source_id>: <compendium food> (Table <n>, <row_id>)"`, for example `"gi_compendium_2021: Idli (Table 1, T1-698)"`. The loader checks that the source ID names a loaded source and lists that source with the food's other sources. `tests/integration/test_bundled_dishes.py` checks that every bundled `gi_ref` names a row of the CSV with the same food, table and GI.
 
@@ -179,12 +180,12 @@ A dish gets a GI only when a row is the same food with a similar preparation: th
 | `idli` | T1-698 | Idli | 62.45 | T1-698 (62.45) and T1-627 (67.11); with two rows, the lower |
 | `plain_dosa` | T1-688 | Dosa | 55.8 | The only Indian dosa row on the glucose scale; T1-667 is on a white bread scale |
 | `rava_upma` | T1-697 | Semolina upma | 62.37 | T1-658 (58), T1-697 (62.37), T1-659 (67); the median |
-| `chapati` | T1-691 | Chapathi | 54.43 | T1-711 (44.6), T1-673 (48.37), T1-691 (54.43), T1-657 (64), T1-631 (83.92); the median |
+| `chapati` | T1-673 | Wheat chapatti | 48.37 | T1-711 (44.6), T1-673 (48.37), T1-691 (54.43), T1-657 (64), all in healthy participants; with four rows, the lower middle. T1-631 (83.92) was measured in type 2 diabetes and is not used |
 | `methi_thepla` | T1-699 | Thepla | 57.77 | The only plain thepla row. The paper does not say whether it had methi leaves |
 | `steamed_rice` | T1-666 | White rice | 79.2 | The only plain white rice row. Parboiled, basmati and high-fibre rice rows are other foods |
 | `bengali_khichuri` | T1-664 | Rice khichdi | 62.5 | The only rice khichdi row. The paper does not name the dal, and our recipe adds potato, cauliflower and peas |
 
-Four of the seven values (idli, dosa, upma and chapati) come from one Kerala study, ref 142.
+All seven rows were measured in healthy participants. Three of the seven values (idli, dosa and upma) come from one Kerala study, ref 142.
 
 The other 34 dishes have no GI:
 
