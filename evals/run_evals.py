@@ -222,8 +222,12 @@ def _ingredient_sources(
     }
 
 
-def data_accuracy(references_path: Path, *, date: str, commit: str) -> dict[str, Any]:
-    """Score the bundled dataset, the one the server loads, against the reference file."""
+def data_accuracy(references_path: Path, *, now: datetime, commit: str) -> dict[str, Any]:
+    """Score the bundled dataset, the one the server loads, against the reference file.
+
+    `date` and `generated_at` both come from `now` in UTC, so they always name the same day.
+    """
+    utc = now.astimezone(UTC)
     folder = loader.bundled_dir()
     registry = loader.build_registry([])
     _, ingredients, dishes = loader.load_dataset(folder)
@@ -232,8 +236,8 @@ def data_accuracy(references_path: Path, *, date: str, commit: str) -> dict[str,
     )
     return {
         "suite": "data_accuracy",
-        "date": date,
-        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "date": utc.date().isoformat(),
+        "generated_at": utc.isoformat(timespec="seconds"),
         "commit": commit,
         "dataset_version": dataset_version(folder),
         "n": len(rows),
@@ -253,6 +257,14 @@ def load_thresholds(path: Path) -> dict[str, dict[str, float]]:
     for key, limit in table.items():
         if not isinstance(limit, dict) or set(limit) != {"max_mape", "min_n"}:
             raise EvalError(f"{path}: [data_accuracy.{key}] needs max_mape and min_n, only")
+        max_mape, min_n = limit["max_mape"], limit["min_n"]
+        # bool is an int in Python, and `true` would otherwise pass as min_n = 1.
+        if isinstance(max_mape, bool) or not isinstance(max_mape, int | float) or max_mape < 0:
+            raise EvalError(f"{path}: [data_accuracy.{key}] max_mape must be a number, 0 or more")
+        if isinstance(min_n, bool) or not isinstance(min_n, int) or min_n < 0:
+            raise EvalError(
+                f"{path}: [data_accuracy.{key}] min_n must be a whole number, 0 or more"
+            )
     return table
 
 
@@ -310,15 +322,20 @@ def _cell(value: Any) -> str:
     return "n/a" if value is None else json.dumps(value)
 
 
-def _summary_rows(data: Mapping[str, Any]) -> list[tuple[str, Any, Any]]:
-    if data["suite"] != "data_accuracy":
-        return [(row["measure"], row["n"], row["value"]) for row in data["summary"]]
-    rows = []
-    for key in EVALUATED:
-        scored = data["per_nutrient"][key]
-        gate = "gated" if key in GATED else "reported"
-        rows.append((f"{LABELS[key]} MAPE (%), {gate}", scored["n"], scored["mape"]))
-    return rows
+def _summary_rows(path: Path, data: Mapping[str, Any]) -> list[tuple[str, Any, Any]]:
+    try:
+        if data["suite"] != "data_accuracy":
+            return [(row["measure"], row["n"], row["value"]) for row in data["summary"]]
+        rows = []
+        for key in EVALUATED:
+            scored = data["per_nutrient"][key]
+            gate = "gated" if key in GATED else "reported"
+            rows.append((f"{LABELS[key]} MAPE (%), {gate}", scored["n"], scored["mape"]))
+        return rows
+    except KeyError as err:
+        raise EvalError(f"{path}: missing {err.args[0]!r}, needed for summary.md") from None
+    except TypeError:
+        raise EvalError(f"{path}: summary data has the wrong shape for summary.md") from None
 
 
 def write_summary(out: Path) -> Path:
@@ -343,7 +360,7 @@ def write_summary(out: Path) -> Path:
         if suite not in latest:
             continue
         path, data = latest[suite]
-        for measure, n, value in _summary_rows(data):
+        for measure, n, value in _summary_rows(path, data):
             lines.append(
                 f"| {suite.replace('_', ' ')} | {measure} | {_cell(n)} | {_cell(value)} "
                 f"| {data['date']} | {data['commit']} | {data['dataset_version']} "
@@ -383,7 +400,7 @@ def print_report(result: Mapping[str, Any]) -> None:
         scored = result["per_nutrient"][key]
         worst = ", ".join(f"{entry['dish_id']} {entry['ape']}" for entry in scored["worst"])
         gate = "gated" if key in GATED else "reported"
-        print(f"{key:<20}{gate:<10}{scored['n']:>3}{_number(scored['mape']):>9}  {worst}")
+        print(f"{key:<20}{gate:<10}{scored['n']:>3}{_cell(scored['mape']):>9}  {worst}")
     print()
     print("Per 100 g, reference / computed. * marks a computed value flagged incomplete.")
     header = ("dish", "reference", *EVALUATED, "ingredient sources")
@@ -428,9 +445,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("--limit applies to the grounding suite only")
 
     try:
-        result = data_accuracy(
-            REFERENCES, date=datetime.now().date().isoformat(), commit=git_commit()
-        )
+        result = data_accuracy(REFERENCES, now=datetime.now(UTC), commit=git_commit())
         thresholds = load_thresholds(args.check) if args.check is not None else None
     except (EvalError, loader.DataError) as err:
         print(f"error: {err}", file=sys.stderr)

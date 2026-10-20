@@ -1,4 +1,5 @@
 import json
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +9,7 @@ import run_evals
 from nutrition_mcp import loader
 
 NUTRIENTS = ("kcal", "protein_g", "carbs_available_g", "iron_mg", "calcium_mg")
+NOW = datetime(2026, 10, 20, 9, 0, tzinfo=UTC)
 
 SOURCES_YAML = """\
 - id: cofid_2021
@@ -204,7 +206,7 @@ def test_dataset_version_is_stable_and_follows_the_data(tiny_dataset: Path) -> N
 
 
 def test_data_accuracy_results_shape(tiny_dataset: Path, references_csv: Path) -> None:
-    result = run_evals.data_accuracy(references_csv, date="2026-10-20", commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
 
     assert result["suite"] == "data_accuracy"
     assert result["date"] == "2026-10-20"
@@ -247,20 +249,20 @@ def test_a_reference_to_an_unknown_dish_is_an_error(tiny_dataset: Path, tmp_path
         encoding="utf-8",
     )
     with pytest.raises(run_evals.EvalError, match="no_such_dish"):
-        run_evals.data_accuracy(path, date="2026-10-20", commit="abc1234")
+        run_evals.data_accuracy(path, now=NOW, commit="abc1234")
 
 
 def test_references_need_the_expected_header(tiny_dataset: Path, tmp_path: Path) -> None:
     path = tmp_path / "references.csv"
     path.write_text("dish_id,kcal\ndal_a,100\n", encoding="utf-8")
     with pytest.raises(run_evals.EvalError, match="header"):
-        run_evals.data_accuracy(path, date="2026-10-20", commit="abc1234")
+        run_evals.data_accuracy(path, now=NOW, commit="abc1234")
 
 
 def test_results_file_is_named_by_date_suite_and_commit(
     tiny_dataset: Path, references_csv: Path, tmp_path: Path
 ) -> None:
-    result = run_evals.data_accuracy(references_csv, date="2026-10-20", commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
     path = run_evals.write_results(result, tmp_path / "results")
     assert path.name == "2026-10-20_data-accuracy_abc1234.json"
     assert json.loads(path.read_text(encoding="utf-8")) == result
@@ -284,7 +286,7 @@ def test_summary_keeps_the_grounding_rows_when_data_accuracy_rewrites_it(
 ) -> None:
     out = tmp_path / "results"
     _grounding_file(out)
-    result = run_evals.data_accuracy(references_csv, date="2026-10-20", commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
     run_evals.write_results(result, out)
 
     summary = run_evals.write_summary(out).read_text(encoding="utf-8")
@@ -305,10 +307,8 @@ def test_summary_uses_the_latest_results_file_of_a_suite(
     tiny_dataset: Path, references_csv: Path, tmp_path: Path
 ) -> None:
     out = tmp_path / "results"
-    older = run_evals.data_accuracy(references_csv, date="2026-10-20", commit="aaa1111")
-    older["generated_at"] = "2026-10-20T08:00:00+00:00"
-    newer = run_evals.data_accuracy(references_csv, date="2026-10-20", commit="bbb2222")
-    newer["generated_at"] = "2026-10-20T09:00:00+00:00"
+    older = run_evals.data_accuracy(references_csv, now=NOW - timedelta(hours=1), commit="aaa1111")
+    newer = run_evals.data_accuracy(references_csv, now=NOW, commit="bbb2222")
     run_evals.write_results(newer, out)
     run_evals.write_results(older, out)
 
@@ -322,6 +322,62 @@ def test_summary_names_a_results_file_it_cannot_use(tmp_path: Path) -> None:
     (out / "2026-10-20_broken.json").write_text('{"suite": "grounding"}', encoding="utf-8")
     with pytest.raises(run_evals.EvalError, match=r"2026-10-20_broken\.json: missing date"):
         run_evals.write_summary(out)
+
+
+def test_results_are_dated_in_utc(tiny_dataset: Path, references_csv: Path) -> None:
+    # 23:30 in UTC-5 is already the next day in UTC; date and generated_at have to agree.
+    evening = datetime(2026, 10, 20, 23, 30, tzinfo=timezone(timedelta(hours=-5)))
+    result = run_evals.data_accuracy(references_csv, now=evening, commit="abc1234")
+    assert result["date"] == "2026-10-21"
+    assert result["generated_at"] == "2026-10-21T04:30:00+00:00"
+
+
+def test_summary_names_a_grounding_file_without_summary_rows(tmp_path: Path) -> None:
+    out = tmp_path / "results"
+    _grounding_file(out)
+    path = out / "2026-10-19_test-model_fff0000.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    del data["summary"]
+    path.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(run_evals.EvalError, match=r"2026-10-19_test-model_fff0000\.json"):
+        run_evals.write_summary(out)
+
+
+def test_summary_names_a_data_accuracy_file_without_scores(
+    tiny_dataset: Path, references_csv: Path, tmp_path: Path
+) -> None:
+    out = tmp_path / "results"
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    del result["per_nutrient"]["kcal"]
+    run_evals.write_results(result, out)
+    with pytest.raises(run_evals.EvalError, match=r"data-accuracy_abc1234\.json"):
+        run_evals.write_summary(out)
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        'max_mape = "30"\nmin_n = 2',
+        "max_mape = 30.0\nmin_n = 2.5",
+        "max_mape = 30.0\nmin_n = true",
+        "max_mape = -1.0\nmin_n = 2",
+    ],
+)
+def test_thresholds_must_be_numbers(tmp_path: Path, entry: str) -> None:
+    path = tmp_path / "thresholds.toml"
+    path.write_text(f"[data_accuracy.kcal]\n{entry}\n", encoding="utf-8")
+    with pytest.raises(run_evals.EvalError, match="kcal"):
+        run_evals.load_thresholds(path)
+
+
+def test_the_report_prints_mape_to_one_decimal(
+    tiny_dataset: Path, references_csv: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    result["per_nutrient"]["kcal"]["mape"] = 25.0
+    run_evals.print_report(result)
+    kcal = next(line for line in capsys.readouterr().out.splitlines() if line.startswith("kcal "))
+    assert " 25.0 " in kcal
 
 
 def test_check_mode_writes_nothing_and_exits_by_the_thresholds(
