@@ -117,7 +117,8 @@ FoodId = Annotated[str, Field(description="A food id from search_food, such as t
 Amount = Annotated[PositiveFloat, Field(description="How many of `unit`; above 0.")]
 Unit = Annotated[str, Field(description="g, or a household measure such as katori or piece.")]
 RegionFilter = Annotated[
-    Region | None, Field(description="Keep dishes from this region; ingredients have none.")
+    Region | None,
+    Field(description="Keep dishes from this region. Ingredients have none: not with ingredient."),
 ]
 DietFilter = Annotated[
     Diet | None, Field(description="Keep foods suitable for this diet: veg includes vegan.")

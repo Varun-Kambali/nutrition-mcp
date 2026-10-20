@@ -50,11 +50,14 @@ def filter_foods(
     """Keep the foods that match every filter given; None means no filter.
 
     Region keeps dishes tagged with it, so it also leaves out ingredients, which have no
-    region. Diet means suitable for: "veg" keeps vegan and vegetarian foods.
+    region; asking for both raises ValueError instead of returning nothing. Diet means
+    suitable for: "veg" keeps vegan and vegetarian foods.
     """
     _require_one_of("region", region, get_args(Region))
     _require_one_of("diet", diet, DIET_SUITABLE_FOR)
     _require_one_of("kind", kind, get_args(Kind))
+    if region is not None and kind == "ingredient":
+        raise ValueError("ingredients have no region; drop region or use kind='dish'")
     suitable = DIET_SUITABLE_FOR[diet] if diet is not None else None
     return [
         food

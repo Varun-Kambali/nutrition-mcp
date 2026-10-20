@@ -432,6 +432,14 @@ def test_filters_combine(reg: Registry) -> None:
     assert filtered_ids(reg, "south", "veg", "dish") == {"test_dal"}
 
 
+def test_region_with_ingredients_is_rejected(reg: Registry) -> None:
+    # Ingredients have no region, so the pair could only ever return nothing.
+    with pytest.raises(
+        ValueError, match="ingredients have no region; drop region or use kind='dish'"
+    ):
+        filter_foods(reg.foods(), "north", None, "ingredient")
+
+
 @pytest.mark.parametrize(
     ("region", "diet", "kind", "valid"),
     [

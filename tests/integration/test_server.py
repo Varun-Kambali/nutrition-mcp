@@ -162,6 +162,15 @@ async def test_search_food_rejects_an_unknown_region(client: Client) -> None:
     assert "region" in error_text(result)
 
 
+async def test_region_with_ingredients_is_a_tool_error(client: Client) -> None:
+    for tool, arguments in (
+        ("search_food", {"query": "dal", "region": "north", "kind": "ingredient"}),
+        ("find_foods", {"rank_by": "iron_mg", "region": "north", "kind": "ingredient"}),
+    ):
+        text = error_text(await client.call_tool(tool, arguments))
+        assert "ingredients have no region; drop region or use kind='dish'" in text
+
+
 # get_nutrition
 
 
