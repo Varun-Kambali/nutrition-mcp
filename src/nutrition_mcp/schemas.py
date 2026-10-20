@@ -92,6 +92,14 @@ class RankResult(BaseModel):
     skipped_missing: int
 
 
+class SearchResult(BaseModel):
+    query: str
+    # Best match first. Each carries its kind and regions, so an ambiguous name stays a list.
+    results: list[FoodSummary]
+    # Close food names, given only when nothing matched well enough to be a result.
+    suggestions: list[str]
+
+
 class TargetsIn(BaseModel):
     """A person's details for one targets calculation. Nothing is stored."""
 
