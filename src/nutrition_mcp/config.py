@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import ValidationError, field_validator
+from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 ENV_PREFIX = "NUTRITION_MCP_"
@@ -18,7 +18,9 @@ class Settings(BaseSettings):
     # NoDecode stops pydantic-settings from parsing the variable as JSON, because the value is
     # a plain path list such as "/a:/b".
     data_dirs: Annotated[list[Path], NoDecode] = []
-    default_katori_g: float = 150.0
+    # Grams in a katori for a dish that defines none. Above 0 so a katori is never 0 g, and at
+    # most 1000 g so a typo cannot turn one katori into a whole pot.
+    default_katori_g: Annotated[float, Field(gt=0, le=1000)] = 150.0
     log_level: LogLevel = "INFO"
 
     @field_validator("data_dirs", mode="before")
