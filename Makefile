@@ -1,6 +1,6 @@
 COV_MIN ?= 80
 
-.PHONY: setup lint test eval eval-data run docker data
+.PHONY: setup lint test eval eval-data run docker data gi
 
 setup:
 	uv sync --all-groups
@@ -29,3 +29,6 @@ docker:
 
 data:
 	uv run --group build-data python scripts/build_ingredients.py
+
+gi:
+	uv run --group build-data python scripts/extract_gi.py
