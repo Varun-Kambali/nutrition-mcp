@@ -66,6 +66,11 @@ def valid_units(food: Food, default_katori_g: float) -> list[str]:
     return list(_unit_table(food, default_katori_g))
 
 
+def unit_grams(food: Food, default_katori_g: float) -> dict[str, float]:
+    """Grams in one of each unit the food accepts, in the order `valid_units` gives them."""
+    return {name: unit.grams for name, unit in _unit_table(food, default_katori_g).items()}
+
+
 def _find_unit(table: dict[str, _Unit], unit: str) -> str | None:
     # Try the word as given, then as a plural: "rotis", "pieces" and "glasses" all need a
     # different suffix removed, and a food that defines "pieces" itself should still win.

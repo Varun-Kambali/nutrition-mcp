@@ -54,6 +54,7 @@ import unicodedata
 from rapidfuzz import fuzz
 from rapidfuzz.distance import Levenshtein
 
+from nutrition_mcp.config import Settings
 from nutrition_mcp.models import Food
 from nutrition_mcp.queries import filter_foods
 from nutrition_mcp.registry import Registry
@@ -142,6 +143,7 @@ def _score(query: str, food: Food) -> tuple[float, float, bool]:
 
 def search_foods(
     reg: Registry,
+    settings: Settings,
     query: str,
     region: str | None,
     diet: str | None,
@@ -172,7 +174,9 @@ def search_foods(
     if matches:
         return SearchResult(
             query=query,
-            results=[FoodSummary.from_food(food) for food in matches[:limit]],
+            results=[
+                FoodSummary.from_food(food, settings.default_katori_g) for food in matches[:limit]
+            ],
             total=len(matches),
             suggestions=[],
         )

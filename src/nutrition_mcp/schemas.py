@@ -5,6 +5,7 @@ from typing import Annotated, Literal, Self
 from pydantic import BaseModel, Field, PositiveFloat
 
 from nutrition_mcp.models import Diet, Food, Kind, Nutrients, Region
+from nutrition_mcp.units import unit_grams
 
 # Decimal places of every nutrient value, gram amount and rank value in a result.
 DECIMALS = 2
@@ -32,11 +33,14 @@ class FoodSummary(BaseModel):
     regions: list[Region]
     diet: Diet
     source_ids: list[str]
-    # The food's own household measures in grams, so a client can choose a valid unit.
-    measures: dict[str, float]
+    units: dict[str, float] = Field(
+        description="Every unit get_nutrition and compute_meal accept for this food, with the "
+        "grams in one of each: g, the food's own measures, then the default katori for a dish "
+        "served by the bowl and the volume units for a liquid."
+    )
 
     @classmethod
-    def from_food(cls, food: Food) -> Self:
+    def from_food(cls, food: Food, default_katori_g: float) -> Self:
         return cls(
             id=food.id,
             kind=food.kind,
@@ -45,7 +49,10 @@ class FoodSummary(BaseModel):
             regions=food.regions,
             diet=food.diet,
             source_ids=food.source_ids,
-            measures={name: round(grams, DECIMALS) for name, grams in food.measures.items()},
+            units={
+                name: round(grams, DECIMALS)
+                for name, grams in unit_grams(food, default_katori_g).items()
+            },
         )
 
 

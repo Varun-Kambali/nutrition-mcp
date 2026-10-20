@@ -78,15 +78,17 @@ SEARCH_FOOD = (
     "5 close names as suggestions. Check that a result's name or one of its aliases is the "
     "food asked for; when no result is, report the dish as missing instead of using a "
     "suggestion or another result in its place. Each result has its kind (dish or "
-    "ingredient), regions, diet and own measures. `total` counts every match before `limit`; "
+    "ingredient), regions, diet and `units`: the units get_nutrition and compute_meal accept "
+    "for that food, with the grams in one of each. `total` counts every match before `limit`; "
     "when it is larger than the results shown, raise `limit` or narrow with region, diet or "
     "kind."
 )
 GET_NUTRITION = (
     "Nutrients for an amount of one food, with the grams used, the measure and oil "
     "assumptions, glycemic load when the GI is known, and the sources. `unit` is g (always "
-    "valid) or a household measure such as katori, piece or tbsp; an unknown unit returns the "
-    "valid ones for that food. A nutrient listed in `incomplete` is a lower bound. For more "
+    "valid) or a household measure such as katori, piece or tbsp; search_food lists the units "
+    "each food accepts, and an unknown unit returns them. A nutrient listed in `incomplete` "
+    "is a lower bound. For more "
     "than one food, use compute_meal. " + ROUNDING
 )
 COMPUTE_MEAL = (
@@ -123,11 +125,13 @@ DietFilter = Annotated[
 KindFilter = Annotated[Kind | None, Field(description="Keep only dishes or only ingredients.")]
 
 
-def _close_matches(reg: Registry, food_id: str) -> str:
+def _close_matches(reg: Registry, settings: Settings, food_id: str) -> str:
     """Foods with a name close to an unknown ID, worded for the error message."""
     fallback = "search_food finds food ids by name"
     try:
-        found = search_foods(reg, food_id.replace("_", " "), None, None, None, MAX_SUGGESTIONS)
+        found = search_foods(
+            reg, settings, food_id.replace("_", " "), None, None, None, MAX_SUGGESTIONS
+        )
     except ValueError:
         # An ID with no letters or digits, or one too long to search for.
         return fallback
@@ -138,23 +142,23 @@ def _close_matches(reg: Registry, food_id: str) -> str:
     return fallback
 
 
-def _explain(reg: Registry, err: Exception) -> str:
+def _explain(reg: Registry, settings: Settings, err: Exception) -> str:
     if isinstance(err, UnknownFood):
         food_id = str(err.args[0])
-        return f"unknown food id '{food_id}'; {_close_matches(reg, food_id)}"
+        return f"unknown food id '{food_id}'; {_close_matches(reg, settings, food_id)}"
     if isinstance(err.__cause__, UnknownFood):
         # meal_totals has already named the item; the close matches go after it.
-        return f"{err}; {_close_matches(reg, str(err.__cause__.args[0]))}"
+        return f"{err}; {_close_matches(reg, settings, str(err.__cause__.args[0]))}"
     # A UnitError lists the valid units, and any other ValueError names the bound it broke.
     return str(err)
 
 
-def _answer[T](reg: Registry, query: Callable[[], T]) -> T:
+def _answer[T](reg: Registry, settings: Settings, query: Callable[[], T]) -> T:
     """Run a query, turning the errors a caller can fix into tool errors."""
     try:
         return query()
     except (UnknownFood, ValueError) as err:
-        raise ToolError(_explain(reg, err)) from err
+        raise ToolError(_explain(reg, settings, err)) from err
 
 
 def _count(name: str, result: object) -> int:
@@ -216,17 +220,19 @@ def build_server(reg: Registry, settings: Settings) -> MCPServer[Any]:
         kind: KindFilter = None,
         limit: Annotated[int, Field(ge=1, le=MAX_SEARCH_LIMIT)] = 10,
     ) -> SearchResult:
-        return _answer(reg, lambda: search_foods(reg, query, region, diet, kind, limit))
+        return _answer(
+            reg, settings, lambda: search_foods(reg, settings, query, region, diet, kind, limit)
+        )
 
     @server.tool(description=GET_NUTRITION, annotations=READ_ONLY)
     def get_nutrition(food_id: FoodId, amount: Amount, unit: Unit) -> NutritionResult:
-        return _answer(reg, lambda: nutrition_for(reg, settings, food_id, amount, unit))
+        return _answer(reg, settings, lambda: nutrition_for(reg, settings, food_id, amount, unit))
 
     @server.tool(description=COMPUTE_MEAL, annotations=READ_ONLY)
     def compute_meal(
         items: Annotated[list[MealItemIn], Field(min_length=1, max_length=MAX_MEAL_ITEMS)],
     ) -> MealResult:
-        return _answer(reg, lambda: meal_totals(reg, settings, items))
+        return _answer(reg, settings, lambda: meal_totals(reg, settings, items))
 
     @server.tool(description=FIND_FOODS, annotations=READ_ONLY)
     def find_foods(
@@ -238,7 +244,11 @@ def build_server(reg: Registry, settings: Settings) -> MCPServer[Any]:
         kind: KindFilter = None,
         limit: Annotated[int, Field(ge=1, le=MAX_RANK_LIMIT)] = 10,
     ) -> RankResult:
-        return _answer(reg, lambda: rank_foods(reg, rank_by, per, region, diet, kind, limit))
+        return _answer(
+            reg,
+            settings,
+            lambda: rank_foods(reg, settings, rank_by, per, region, diet, kind, limit),
+        )
 
     @server.tool(description=COMPUTE_TARGETS, annotations=READ_ONLY)
     def compute_targets(
@@ -257,7 +267,7 @@ def build_server(reg: Registry, settings: Settings) -> MCPServer[Any]:
             activity=activity,
             goal=goal,
         )
-        return _answer(reg, lambda: targets.compute_targets(person))
+        return _answer(reg, settings, lambda: targets.compute_targets(person))
 
     @server.resource(
         SOURCES_URI,

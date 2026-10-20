@@ -146,6 +146,8 @@ async def test_search_description_says_to_check_the_result_is_the_food_asked_for
 async def test_search_food_returns_ids_and_total(client: Client) -> None:
     found = ok(await client.call_tool("search_food", {"query": "roti", "limit": 1}))
     assert [food["id"] for food in found["results"]] == ["test_roti"]
+    # The units get_nutrition accepts for the roti, with grams in one of each.
+    assert found["results"][0]["units"] == {"g": 1.0, "piece": 40.0, "roti": 40.0, "serving": 40.0}
     assert found["total"] >= 1
     assert found["suggestions"] == []
 

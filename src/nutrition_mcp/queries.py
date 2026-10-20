@@ -91,7 +91,7 @@ def _portion(reg: Registry, settings: Settings, food_id: str, amount: float, uni
         else glycemic_load(food.gi, exact.carbs_available_g)
     )
     result = NutritionResult(
-        food=FoodSummary.from_food(food),
+        food=FoodSummary.from_food(food, settings.default_katori_g),
         amount=amount,
         unit=unit,
         grams=round(grams, DECIMALS),
@@ -204,6 +204,7 @@ def _ranked_value(food: Food, rank_by: str, per: str) -> float | None:
 
 def rank_foods(
     reg: Registry,
+    settings: Settings,
     rank_by: str,
     per: str,
     region: str | None,
@@ -247,7 +248,10 @@ def rank_foods(
         per=cast(Per, per),
         order="asc" if ascending else "desc",
         results=[
-            RankedFood(food=FoodSummary.from_food(food), value=round(value, DECIMALS))
+            RankedFood(
+                food=FoodSummary.from_food(food, settings.default_katori_g),
+                value=round(value, DECIMALS),
+            )
             for food, value in ranked[:limit]
         ],
         skipped_missing=skipped,
