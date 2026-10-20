@@ -6,6 +6,9 @@ from pydantic import BaseModel, Field
 
 from nutrition_mcp.models import Diet, Food, Kind, Nutrients, Region
 
+# Decimal places of every nutrient value, gram amount and rank value in a result.
+DECIMALS = 2
+
 Per = Literal["100kcal", "100g", "serving"]
 Order = Literal["desc", "asc"]
 Sex = Literal["male", "female"]
@@ -36,7 +39,7 @@ class FoodSummary(BaseModel):
             regions=food.regions,
             diet=food.diet,
             source_ids=food.source_ids,
-            measures={name: round(grams, 2) for name, grams in food.measures.items()},
+            measures={name: round(grams, DECIMALS) for name, grams in food.measures.items()},
         )
 
 

@@ -14,6 +14,7 @@ from nutrition_mcp.nutrients import HEAT_SENSITIVE, NUTRIENT_KEYS, NUTRIENTS
 from nutrition_mcp.nutrition import glycemic_load, scale, sum_nutrients
 from nutrition_mcp.registry import Registry, UnknownFood
 from nutrition_mcp.schemas import (
+    DECIMALS,
     FoodSummary,
     MealItemIn,
     MealResult,
@@ -26,7 +27,6 @@ from nutrition_mcp.units import to_grams
 
 MAX_MEAL_ITEMS = 30
 MAX_RANK_LIMIT = 50
-DECIMALS = 2
 
 RANK_BY: tuple[str, ...] = (*NUTRIENT_KEYS, "glycemic_load")
 _LOWER_IS_BETTER = frozenset(spec.key for spec in NUTRIENTS if spec.lower_is_better)
