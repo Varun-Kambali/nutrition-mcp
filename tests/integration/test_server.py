@@ -53,6 +53,16 @@ async def client(reg: Registry) -> Any:
         yield connected
 
 
+# The attributes every LogRecord has. `message` and `asctime` are added when a handler
+# formats the record, so a captured record can carry them too.
+STANDARD_RECORD_FIELDS = set(vars(logging.makeLogRecord({}))) | {"message", "asctime"}
+
+
+def extra_fields(record: logging.LogRecord) -> set[str]:
+    """The attributes a call to logger.info(..., extra=...) added to the record."""
+    return set(vars(record)) - STANDARD_RECORD_FIELDS
+
+
 def error_text(result: CallToolResult) -> str:
     assert result.is_error
     block = result.content[0]
@@ -366,8 +376,9 @@ async def test_compute_meal_bad_unit_names_item_and_units(client: Client) -> Non
 
 async def test_compute_meal_item_count_is_bounded(client: Client) -> None:
     item = {"food_id": "water", "amount": 1, "unit": "g"}
-    assert (await client.call_tool("compute_meal", {"items": []})).is_error
-    assert (await client.call_tool("compute_meal", {"items": [item] * 31})).is_error
+    assert "at least 1 item" in error_text(await client.call_tool("compute_meal", {"items": []}))
+    too_many = await client.call_tool("compute_meal", {"items": [item] * 31})
+    assert "at most 30 items" in error_text(too_many)
 
 
 async def test_compute_meal_zero_amount_is_tool_error(client: Client) -> None:
@@ -459,6 +470,8 @@ async def test_each_call_logs_one_line_without_inputs(
     ]
     assert all(r.latency_ms >= 0 for r in calls)  # type: ignore[attr-defined]
     assert not any("secret_food" in r.getMessage() for r in calls)
+    # A call record carries these four fields and no others. A new one could hold tool input.
+    assert all(extra_fields(r) == {"tool", "latency_ms", "outcome", "count"} for r in calls)
     # stdout carries the protocol, so a tool never prints.
     assert capsys.readouterr().out == ""
 
@@ -467,7 +480,7 @@ async def test_an_unknown_tool_name_is_not_logged(
     client: Client, caplog: pytest.LogCaptureFixture
 ) -> None:
     caplog.set_level(logging.INFO, logger="nutrition_mcp.server")
-    assert (await client.call_tool("secret_tool", {})).is_error
+    assert "Unknown tool" in error_text(await client.call_tool("secret_tool", {}))
     calls = [r for r in caplog.records if r.name == "nutrition_mcp.server"]
     assert [(r.tool, r.outcome) for r in calls] == [("unknown", "error")]  # type: ignore[attr-defined]
 
