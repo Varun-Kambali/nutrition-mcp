@@ -107,10 +107,12 @@ def normalise(text: str) -> str:
     return _DOUBLED_LETTER.sub(r"\1", folded)
 
 
-def _same_word(query_word: str, name_word: str) -> bool:
-    """Equal, or one edit apart when both have TYPO_MIN_LETTERS or more and start alike."""
-    if query_word == name_word:
-        return True
+def _one_edit_apart(query_word: str, name_word: str) -> bool:
+    """Both words have TYPO_MIN_LETTERS or more, start alike and differ by one edit.
+
+    Equal words are not handled here: a query word that a searched food spells exactly only
+    matches an equal word, and any other query word equals no word of any searched food.
+    """
     return (
         len(query_word) >= TYPO_MIN_LETTERS
         and len(name_word) >= TYPO_MIN_LETTERS
@@ -130,7 +132,7 @@ def _has_every_word(
     return all(
         word in name_words
         if word in spelled_exactly
-        else any(_same_word(word, other) for other in name_words)
+        else any(_one_edit_apart(word, other) for other in name_words)
         for word in query_words
     )
 
