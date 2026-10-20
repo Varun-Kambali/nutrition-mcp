@@ -17,6 +17,6 @@ jobs:
         with:
           # The cache is keyed on uv.lock, which this job does not follow.
           enable-cache: false
-      - run: uv sync --upgrade
+      - run: uv sync --upgrade --all-groups
       - run: make lint
       - run: make test

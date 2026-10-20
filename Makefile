@@ -9,7 +9,7 @@ setup:
 lint:
 	uv run ruff check .
 	uv run ruff format --check .
-	uv run mypy src
+	uv run mypy
 
 test:
 	uv run pytest --cov=src --cov-fail-under=$(COV_MIN)
