@@ -452,15 +452,11 @@ async def test_stdio_server_logs_json_lines_without_inputs(tmp_path: Path) -> No
 # main()
 
 
-def test_main_exits_on_bad_data(tmp_path: Path) -> None:
-    broken = tmp_path / "broken"
-    broken.mkdir()
-    # A source with no name, URL, license or the rest.
-    (broken / "sources.yaml").write_text("- id: half_a_source\n", encoding="utf-8")
-    env = {**os.environ, "NUTRITION_MCP_DATA_DIRS": str(broken)}
+def run_main_expecting_exit_1(**env: str) -> dict[str, Any]:
+    """Run the entry point, check it exits 1 with nothing on stdout, and return its log line."""
     run = subprocess.run(
         [sys.executable, "-c", RUN_MAIN],
-        env=env,
+        env={**os.environ, **env},
         stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
@@ -470,7 +466,21 @@ def test_main_exits_on_bad_data(tmp_path: Path) -> None:
     assert run.returncode == 1
     assert run.stdout == ""
     lines = run.stderr.splitlines()
-    assert len(lines) == 1
-    entry = json.loads(lines[0])
+    assert len(lines) == 1, run.stderr
+    entry: dict[str, Any] = json.loads(lines[0])
     assert entry["level"] == "ERROR"
+    return entry
+
+
+def test_main_exits_on_bad_data(tmp_path: Path) -> None:
+    broken = tmp_path / "broken"
+    broken.mkdir()
+    # A source with no name, URL, license or the rest.
+    (broken / "sources.yaml").write_text("- id: half_a_source\n", encoding="utf-8")
+    entry = run_main_expecting_exit_1(NUTRITION_MCP_DATA_DIRS=str(broken))
     assert str(broken / "sources.yaml") in entry["msg"]
+
+
+def test_main_exits_on_a_bad_setting() -> None:
+    entry = run_main_expecting_exit_1(NUTRITION_MCP_LOG_LEVEL="LOUD")
+    assert "NUTRITION_MCP_LOG_LEVEL" in entry["msg"]

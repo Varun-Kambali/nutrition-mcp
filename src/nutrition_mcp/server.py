@@ -16,10 +16,10 @@ from typing import Annotated, Any
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import CallToolResult, InputRequiredResult, ToolAnnotations
-from pydantic import Field, PositiveFloat
+from pydantic import Field, PositiveFloat, ValidationError
 
 from nutrition_mcp import __version__, targets
-from nutrition_mcp.config import Settings
+from nutrition_mcp.config import Settings, describe_settings_error
 from nutrition_mcp.loader import DataError, build_registry
 from nutrition_mcp.log import configure_logging
 from nutrition_mcp.models import Diet, Kind, Region
@@ -269,8 +269,14 @@ def build_server(reg: Registry, settings: Settings) -> MCPServer[Any]:
 
 
 def main() -> None:
-    """Load the data and serve the tools on stdio, or exit 1 naming the bad dataset file."""
-    settings = Settings()
+    """Load the data and serve the tools on stdio, or exit 1 naming the bad setting or file."""
+    try:
+        settings = Settings()
+    except ValidationError as err:
+        # The log level is one of the settings, so the error goes out at the default level.
+        configure_logging("INFO")
+        logger.error("settings error: %s", describe_settings_error(err))
+        sys.exit(1)
     configure_logging(settings.log_level)
     try:
         reg = build_registry(settings.data_dirs)
