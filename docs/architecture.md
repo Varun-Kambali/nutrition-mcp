@@ -37,12 +37,12 @@ The server makes no network calls at runtime. Only the build script talks to USD
 | `models.py` | Pydantic models for dataset files and the registry: `Source`, `Ingredient`, `Dish`, `RecipeItem`, `Nutrients` (the 16 nutrients, each optional so missing stays missing) and `Food` (an ingredient or a dish as the queries see it). Also the `Diet`, `Region` and `Kind` types and `DIET_SUITABLE_FOR`, which says which diet tags a diet filter keeps |
 | `config.py` | Settings from the environment through `pydantic-settings`: extra data folders, default katori size, log level |
 | `loader.py` | Reads dataset folders, validates rows, resolves dish ingredients, computes dish nutrients per 100 g, and fails loudly with file and row |
-| `registry.py` | In-memory store keyed by food ID, plus the name index used by search |
-| `search.py` | Name normalisation (case, accents, common transliteration variants such as "bh"/"b" and doubled vowels) and fuzzy scoring with `rapidfuzz` over names and aliases, then the shared filters from `queries.py` |
+| `registry.py` | In-memory store keyed by food ID and source ID. Search scans the foods on each call, because there are only about 100 of them |
+| `search.py` | `search_foods`: the shared filters from `queries.py` first, then name normalisation (case, accents, common transliteration variants such as "bh"/"b" and doubled vowels) and fuzzy scoring with `rapidfuzz` over each food's name, aliases and ID. Close names come back as suggestions only when nothing matches |
 | `units.py` | Turns an amount and unit into grams for a given food, using the food's own measures first and the defaults second |
 | `nutrition.py` | Arithmetic on nutrients: scaling per-100 g values to an amount, summing nutrients while naming the parts that lack a value, and glycemic load |
 | `queries.py` | The functions behind the tools, which the evals call too: `nutrition_for` (one food and amount), `meal_totals` (per-item and total nutrients, incomplete values named), `rank_foods` (by any nutrient or glycemic load, per 100 kcal, 100 g or serving) and `filter_foods`, the region, diet and kind filters that search shares. Results are rounded to 2 decimals only when they are built |
-| `schemas.py` | The inputs and outputs of those functions, which the tools return as structured output: `FoodSummary`, `MealItemIn`, `NutritionResult`, `MealResult`, `RankedFood`, `RankResult`, `TargetsIn` and `TargetsResult` |
+| `schemas.py` | The inputs and outputs of those functions, which the tools return as structured output: `FoodSummary`, `MealItemIn`, `NutritionResult`, `MealResult`, `RankedFood`, `RankResult`, `SearchResult`, `TargetsIn` and `TargetsResult` |
 | `targets.py` | `compute_targets`: Mifflin-St Jeor, activity multipliers, goal adjustments, the calorie floor and protein per kg, each constant with its citation. A pure function that stores nothing |
 | `server.py` | The `MCPServer`, tool and resource registration, logging, and the `nutrition-mcp` entry point (`mcp.run()` on stdio) |
 
