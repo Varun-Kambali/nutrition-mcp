@@ -13,7 +13,7 @@ import time
 from collections.abc import Callable
 from typing import Annotated, Any
 
-from mcp.server.mcpserver import Context, MCPServer
+from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import CallToolResult, InputRequiredResult, ToolAnnotations
 from pydantic import Field, PositiveFloat
@@ -153,12 +153,16 @@ def _answer[T](reg: Registry, query: Callable[[], T]) -> T:
         raise ToolError(_explain(reg, err)) from err
 
 
-def _count(name: str, result: CallToolResult | InputRequiredResult) -> int:
+def _count(name: str, result: object) -> int:
+    """Results returned, for the log line. It cannot raise, so it cannot fail a good call."""
     content = result.structured_content if isinstance(result, CallToolResult) else None
-    if not content:
+    if not isinstance(content, dict) or not content:
         return 0
-    listed = _COUNTED_LIST.get(name)
-    return len(content[listed]) if listed else 1
+    key = _COUNTED_LIST.get(name)
+    if key is None:
+        return 1
+    listed = content.get(key)
+    return len(listed) if isinstance(listed, list) else 0
 
 
 class NutritionServer(MCPServer[Any]):
@@ -169,25 +173,31 @@ class NutritionServer(MCPServer[Any]):
     """
 
     async def call_tool(
-        self, name: str, arguments: dict[str, Any], context: Context[Any, Any] | None = None
+        self, name: str, arguments: dict[str, Any], *args: Any, **kwargs: Any
     ) -> CallToolResult | InputRequiredResult:
+        # Everything after the arguments goes through untouched: uvx installs the newest mcp
+        # 2.x, and a parameter added there must not break every call.
         started = time.perf_counter()
-        outcome, count = "error", 0
         try:
-            result = await super().call_tool(name, arguments, context)
-            outcome, count = "ok", _count(name, result)
-            return result
-        finally:
-            logger.info(
-                "tool call",
-                extra={
-                    # A name the client made up is not logged, since it is the caller's text.
-                    "tool": name if name in TOOL_NAMES else "unknown",
-                    "latency_ms": round((time.perf_counter() - started) * 1000, 2),
-                    "outcome": outcome,
-                    "count": count,
-                },
-            )
+            result = await super().call_tool(name, arguments, *args, **kwargs)
+        except BaseException:
+            _log_call(name, started, "error", 0)
+            raise
+        _log_call(name, started, "ok", _count(name, result))
+        return result
+
+
+def _log_call(name: str, started: float, outcome: str, count: int) -> None:
+    logger.info(
+        "tool call",
+        extra={
+            # A name the client made up is not logged, since it is the caller's text.
+            "tool": name if name in TOOL_NAMES else "unknown",
+            "latency_ms": round((time.perf_counter() - started) * 1000, 2),
+            "outcome": outcome,
+            "count": count,
+        },
+    )
 
 
 def build_server(reg: Registry, settings: Settings) -> MCPServer[Any]:

@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 from mcp import Client
 from mcp.client.stdio import StdioServerParameters, stdio_client
+from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, TextContent, TextResourceContents
 
 from nutrition_mcp import __version__
@@ -18,7 +19,7 @@ from nutrition_mcp.loader import build_registry
 from nutrition_mcp.log import configure_logging
 from nutrition_mcp.registry import Registry
 from nutrition_mcp.schemas import TargetsIn
-from nutrition_mcp.server import SOURCES_URI, TOOL_NAMES, build_server
+from nutrition_mcp.server import SOURCES_URI, TOOL_NAMES, _count, build_server
 from nutrition_mcp.targets import compute_targets
 
 pytestmark = pytest.mark.anyio
@@ -373,6 +374,46 @@ async def test_a_crash_is_logged_with_its_cause_but_no_message(
     assert [link["type"] for link in chain] == ["RuntimeError", "UnexpectedToolError"]
     assert "nutrition_mcp/server.py" in chain[0]["stack"]
     assert "broken_search" in chain[0]["stack"]
+
+
+async def test_call_tool_passes_on_arguments_a_newer_sdk_adds(
+    reg: Registry, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: dict[str, Any] = {}
+
+    async def sdk_call_tool(
+        self: MCPServer[Any], name: str, arguments: dict[str, Any], *args: Any, **kwargs: Any
+    ) -> CallToolResult:
+        seen.update(name=name, arguments=arguments, args=args, kwargs=kwargs)
+        return CallToolResult(content=[], structured_content={"results": [1, 2]})
+
+    monkeypatch.setattr(MCPServer, "call_tool", sdk_call_tool)
+    result = await build_server(reg, SETTINGS).call_tool("search_food", {}, None, new_option=1)
+    assert isinstance(result, CallToolResult)
+    assert seen == {
+        "name": "search_food",
+        "arguments": {},
+        "args": (None,),
+        "kwargs": {"new_option": 1},
+    }
+
+
+@pytest.mark.parametrize(
+    ("name", "structured", "expected"),
+    [
+        ("search_food", {"results": [{}, {}]}, 2),
+        ("compute_meal", {"items": [{}]}, 1),
+        ("get_nutrition", {"food": {}}, 1),
+        ("search_food", None, 0),
+        ("search_food", {}, 0),
+        ("search_food", {"results": "not a list"}, 0),
+        ("compute_meal", {"items": None}, 0),
+    ],
+)
+def test_count_never_raises(name: str, structured: dict[str, Any] | None, expected: int) -> None:
+    # A miscount must not turn a good result into a failed call.
+    assert _count(name, CallToolResult(content=[], structured_content=structured)) == expected
+    assert _count(name, object()) == 0
 
 
 async def test_stdio_server_logs_json_lines_without_inputs(tmp_path: Path) -> None:
