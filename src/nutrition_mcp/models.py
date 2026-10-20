@@ -1,4 +1,5 @@
 import re
+from collections.abc import Mapping
 from datetime import date
 from typing import Annotated, Literal
 
@@ -15,6 +16,16 @@ from nutrition_mcp.nutrients import NUTRIENT_KEYS
 
 Diet = Literal["veg", "egg", "non_veg", "vegan"]
 Region = Literal["north", "south", "east", "west"]
+Kind = Literal["ingredient", "dish"]
+
+# A diet filter means "suitable for": a vegetarian also eats vegan food, an egg-eater also
+# eats vegetarian food, and a non-vegetarian eats everything.
+DIET_SUITABLE_FOR: Mapping[str, frozenset[str]] = {
+    "vegan": frozenset({"vegan"}),
+    "veg": frozenset({"vegan", "veg"}),
+    "egg": frozenset({"vegan", "veg", "egg"}),
+    "non_veg": frozenset({"vegan", "veg", "egg", "non_veg"}),
+}
 
 SLUG = r"^[a-z0-9]+(_[a-z0-9]+)*$"
 Slug = Annotated[str, Field(pattern=SLUG)]
@@ -153,7 +164,7 @@ class Food(BaseModel):
     """An ingredient or a dish as the query functions see it, with dish nutrients computed."""
 
     id: str
-    kind: Literal["ingredient", "dish"]
+    kind: Kind
     name: str
     aliases: list[str]
     regions: list[Region]

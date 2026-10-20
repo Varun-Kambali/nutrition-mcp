@@ -1,0 +1,20 @@
+id: test_roti
+name: Test roti
+aliases:
+  - plain roti
+regions: [north]
+diet: vegan
+servings: 3
+cooked_weight_g: 120
+ingredients:
+  - ingredient_id: wheat_flour
+    grams: 100
+  - ingredient_id: water
+    grams: 60
+measures:
+  piece: 40
+  roti: 40
+assumptions: No added fat. Cooked dry on a griddle.
+gi: 50
+gi_ref: "query_gi: Test roti (Table 1, Q-002)"
+source_id: query_recipes
