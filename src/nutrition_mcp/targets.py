@@ -17,8 +17,8 @@ DISCLAIMER = "Estimate from the Mifflin-St Jeor equation, not medical advice."
 # and minus 161 for women. It says the simplification did not affect predictive value.
 _SEX_OFFSET = {"male": 5, "female": -161}
 
-# Multipliers on resting energy for a week's activity. No primary source found; this set is a
-# widely used convention. Compared with the FAO/WHO/UNU 2004 bands in the ADR.
+# Multipliers on resting energy for a week's activity. No primary source was located; this set
+# is a widely used convention. Compared with the FAO/WHO/UNU 2004 bands in the ADR.
 ACTIVITY_FACTORS = {
     "sedentary": 1.2,
     "light": 1.375,
@@ -33,7 +33,8 @@ ACTIVITY_FACTORS = {
 GOAL_FACTORS = {"lose": 0.80, "maintain": 1.00, "gain": 1.10}
 
 # Lowest calorie target given. The lower end of the 1200-1500 kcal/day (women) and
-# 1500-1800 kcal/day (men) diets in the same Jensen guideline, recommendation 3a.
+# 1500-1800 kcal/day (men) diets in the same Jensen guideline, recommendation 3a, which covers
+# weight-loss diets. Applying it to every goal is this project's extension.
 CALORIE_FLOORS = {"female": 1200, "male": 1500}
 
 # ICMR-NIN, Nutrient Requirements for Indians (2020): protein RDA for adults, 0.83 g/kg/day.

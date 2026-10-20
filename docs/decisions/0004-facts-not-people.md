@@ -2,7 +2,7 @@
 Date: 2026-10-20 · Status: accepted
 
 ## Context
-The people who most need this data are managing diabetes or a diagnosed deficiency. It is tempting to make the server smart about them: accept a health profile, flag a meal as unsuitable, suggest more iron. But a food database that decides what is right for a particular person is making a medical judgment, and the requirements list that as a failure of v1: the server must never infer a condition or deficiency, or suggest a medicine or a dose.
+The people who most need this data are managing diabetes or a diagnosed deficiency. One option is to make the server aware of them: accept a health profile, flag a meal as unsuitable, suggest more iron. A food database that decides what is right for a particular person is making a medical judgment, though, and the requirements count that as a failure of v1: the server must never infer a condition or deficiency, or suggest a medicine or a dose.
 
 The next project, the meal-planner agent, is where the person lives. It will know the user's profile and goals, and it needs the server for every food number it uses.
 
