@@ -104,7 +104,7 @@ claude mcp add nutrition -- uv --directory /path/to/nutrition-mcp run nutrition-
 
 Then ask, for example, "protein and carbs in 2 rotis and a katori of rajma?". The tool descriptions tell the model to find the food ids with `search_food` and take the totals from `compute_meal`.
 
-Every tool is read-only:
+The five tools, all read-only, and the sources resource:
 
 | Tool or resource | What it gives |
 |---|---|

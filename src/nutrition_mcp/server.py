@@ -57,7 +57,8 @@ TOOL_NAMES = ("search_food", "get_nutrition", "compute_meal", "find_foods", "com
 # The list a tool's logged count is taken from. The other tools return one result.
 _COUNTED_LIST = {"search_food": "results", "find_foods": "results", "compute_meal": "items"}
 
-READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True)
+# Closed world: the tools read in-memory data and make no network calls.
+READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True, open_world_hint=False)
 
 INSTRUCTIONS = (
     "Nutrition data for Indian dishes and ingredients, each value with its source and portion. "
@@ -83,7 +84,8 @@ GET_NUTRITION = (
     "Nutrients for an amount of one food, with the grams used, the measure and oil "
     "assumptions, glycemic load when the GI is known, and the sources. `unit` is g (always "
     "valid) or a household measure such as katori, piece or tbsp; an unknown unit returns the "
-    "valid ones for that food. A nutrient listed in `incomplete` is a lower bound. " + ROUNDING
+    "valid ones for that food. A nutrient listed in `incomplete` is a lower bound. For more "
+    "than one food, use compute_meal. " + ROUNDING
 )
 COMPUTE_MEAL = (
     "Per-item and total nutrients and glycemic load for a meal of 1 to 30 items, each a food "
@@ -97,8 +99,8 @@ FIND_FOODS = (
     "(dishes only), for questions such as high-protein vegetarian dishes or iron-rich foods. "
     "Highest first, except lowest first for kcal, sugars, saturated fat, sodium and glycemic "
     "load; `order` says which. Foods with no value for the ranked nutrient are left out and "
-    "counted in `skipped_missing`. Values are rounded to 2 decimals, so 0.0 can be a small "
-    "amount."
+    "counted in `skipped_missing`, and so is a dish with an incomplete value for the ranked "
+    "nutrient. Values are rounded to 2 decimals, so 0.0 can be a small amount."
 )
 COMPUTE_TARGETS = (
     "Estimated daily calorie and protein targets for an adult, from the Mifflin-St Jeor "

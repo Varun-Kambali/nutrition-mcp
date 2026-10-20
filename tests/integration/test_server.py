@@ -80,6 +80,7 @@ async def test_lists_five_tools_read_only(client: Client) -> None:
         assert tool.annotations is not None
         assert tool.annotations.read_only_hint is True
         assert tool.annotations.idempotent_hint is True
+        assert tool.annotations.open_world_hint is False
         assert tool.description
         assert tool.output_schema is not None
 
@@ -109,6 +110,12 @@ async def test_descriptions_say_values_are_rounded(client: Client) -> None:
     tools = {tool.name: tool for tool in (await client.list_tools()).tools}
     for name in ("get_nutrition", "compute_meal", "find_foods"):
         assert "2 decimals" in (tools[name].description or "")
+
+
+async def test_descriptions_point_to_the_right_tool_and_name_skipped_foods(client: Client) -> None:
+    tools = {tool.name: tool.description or "" for tool in (await client.list_tools()).tools}
+    assert "use compute_meal" in tools["get_nutrition"]
+    assert "incomplete value for the ranked nutrient" in tools["find_foods"]
 
 
 # search_food
