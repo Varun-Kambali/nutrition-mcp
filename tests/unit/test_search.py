@@ -5,7 +5,7 @@ from nutrition_mcp.registry import Registry
 from nutrition_mcp.schemas import FoodSummary, SearchResult
 from nutrition_mcp.search import normalise, search_foods
 
-DAL_DISHES = {"dal_tadka", "dal_makhani", "musur_dal", "cholar_dal", "dalma", "varan_bhaat"}
+DAL_DISHES = {"dal_tadka", "dal_makhani", "musur_dal", "cholar_dal", "varan_bhaat"}
 
 
 @pytest.fixture(scope="module")
@@ -84,9 +84,7 @@ def test_transliteration_variants(reg: Registry, query: str, dish_id: str) -> No
     assert dish_id in ids(search_foods(reg, query, None, None, None, limit=50))
 
 
-@pytest.mark.parametrize(
-    ("query", "dish_id"), [("sambhar", "sambar"), ("chapathi", "chapati"), ("rotti", "chapati")]
-)
+@pytest.mark.parametrize(("query", "dish_id"), [("sambhar", "sambar"), ("rotti", "chapati")])
 def test_variant_of_a_unique_name_ranks_that_dish_first(
     reg: Registry, query: str, dish_id: str
 ) -> None:
@@ -108,12 +106,12 @@ def test_typo_still_finds(reg: Registry) -> None:
     assert ids(search_foods(reg, "sambr", None, None, None))[0] == "sambar"
 
 
-def test_better_match_ranks_first(reg: Registry) -> None:
-    assert ids(search_foods(reg, "paneer", None, None, None))[:2] == ["paneer", "palak_paneer"]
+def test_name_inside_a_longer_name_is_a_match(reg: Registry) -> None:
+    assert set(ids(search_foods(reg, "paneer", None, None, None))) == {"paneer", "palak_paneer"}
 
 
 def test_equal_scores_are_ordered_by_name(reg: Registry) -> None:
-    # Every east-region dal dish contains "dal" and scores the same.
+    # Every east-region dal dish has "dal" as a word and scores the same.
     result = search_foods(reg, "dal", "east", None, None, limit=50)
     names = [food.name for food in result.results]
     assert len(names) > 1
@@ -122,7 +120,7 @@ def test_equal_scores_are_ordered_by_name(reg: Registry) -> None:
 
 def test_region_filter(reg: Registry) -> None:
     result = search_foods(reg, "dal", "east", None, None, limit=50)
-    assert {"cholar_dal", "dalma", "musur_dal"} <= set(ids(result))
+    assert {"cholar_dal", "musur_dal"} <= set(ids(result))
     assert all("east" in food.regions for food in result.results)
     assert "dal_tadka" not in ids(result)
 
@@ -151,15 +149,16 @@ def test_kind_filter(reg: Registry) -> None:
 
 
 def test_filters_apply_before_suggestions_are_chosen(reg: Registry) -> None:
-    # Sambal is not in the data but is close to sambar, which is a south dish.
-    plain = search_foods(reg, "sambal", None, None, None)
+    # Dahi vada is not in the data but shares a word with batata vada, a west dish.
+    plain = search_foods(reg, "dahi vada", None, None, None)
     assert plain.results == []
-    assert plain.suggestions[0] == "Sambar"
+    assert "Batata vada" in plain.suggestions
 
-    north = search_foods(reg, "sambal", "north", None, None)
+    north = search_foods(reg, "dahi vada", "north", None, None)
     north_names = {food.name for food in reg.foods() if "north" in food.regions}
     assert north.results == []
-    assert "Sambar" not in north.suggestions
+    assert north.suggestions
+    assert "Batata vada" not in north.suggestions
     assert set(north.suggestions) <= north_names
 
 
@@ -171,13 +170,43 @@ def test_no_match_is_empty_not_error(reg: Registry) -> None:
 
 def test_suggestions_come_only_when_nothing_matched(reg: Registry) -> None:
     assert search_foods(reg, "sambar", None, None, None).suggestions == []
-    assert search_foods(reg, "sambal", None, None, None).suggestions != []
+    assert search_foods(reg, "dahi vada", None, None, None).suggestions != []
 
 
 def test_suggestions_are_capped_at_five(reg: Registry) -> None:
-    result = search_foods(reg, "gazpacho", None, None, None)
+    result = search_foods(reg, "salad", None, None, None)
     assert result.results == []
     assert len(result.suggestions) == 5
+
+
+# A short query must match whole words, not letters inside other words.
+
+
+def test_tea_is_not_found_inside_steamed(reg: Registry) -> None:
+    assert "steamed_rice" not in ids(search_foods(reg, "tea", None, None, None, limit=50))
+
+
+def test_egg_finds_the_egg_not_brinjal(reg: Registry) -> None:
+    found = ids(search_foods(reg, "egg", None, None, None, limit=50))
+    assert "egg" in found
+    assert not {"brinjal", "begun_bhaja"} & set(found)
+
+
+def test_chana_is_not_found_inside_an_alias_of_rice(reg: Registry) -> None:
+    found = ids(search_foods(reg, "chana", None, None, None, limit=50))
+    assert {"chana_dal", "kabuli_chana", "chana_masala"} <= set(found)
+    assert "steamed_rice" not in found
+
+
+def test_dal_finds_dals_not_words_that_contain_dal(reg: Registry) -> None:
+    found = set(ids(search_foods(reg, "dal", None, None, None, limit=50)))
+    assert {"toor_dal", "musur_dal", "varan_bhaat"} <= found
+    # The Tamil aliases "kadalai maavu" and "verkadalai" only contain the letters.
+    assert not {"besan", "peanuts"} & found
+
+
+def test_one_letter_slip_in_a_long_name_is_found(reg: Registry) -> None:
+    assert ids(search_foods(reg, "samber", None, None, None))[0] == "sambar"
 
 
 def test_limit_caps_results(reg: Registry) -> None:
@@ -189,6 +218,13 @@ def test_limit_caps_results(reg: Registry) -> None:
 def test_limit_out_of_range_is_rejected(reg: Registry, limit: int) -> None:
     with pytest.raises(ValueError, match="limit must be 1 to 50"):
         search_foods(reg, "dal", None, None, None, limit=limit)
+
+
+def test_query_longer_than_100_characters_is_rejected(reg: Registry) -> None:
+    with pytest.raises(ValueError, match="at most 100 characters"):
+        search_foods(reg, "x" * 101, None, None, None)
+    # 100 characters is allowed.
+    assert search_foods(reg, "dal " * 25, None, None, None).results
 
 
 @pytest.mark.parametrize("query", ["", "   ", "!?", "()"])

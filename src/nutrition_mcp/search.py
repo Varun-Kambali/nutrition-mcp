@@ -1,18 +1,25 @@
 """Fuzzy food search over names, aliases and IDs, tolerant of Indian-language spellings.
 
 Indian food names have no single Roman spelling ("sambar", "sambhar", "sambaar"), so the
-query and every candidate are normalised the same way, then scored with rapidfuzz WRatio.
+query and every candidate are normalised the same way, then scored with rapidfuzz. A candidate
+scores the larger of `fuzz.ratio` (whole-string similarity, so a one-letter slip still counts)
+and `fuzz.token_set_ratio` (shared whole words, so "dal" is a full match for "dal tadka").
 Each food keeps its best score over its name, its aliases and its ID read as words.
 
+WRatio was the first scorer and was dropped: its partial match scores a query that sits
+inside a longer word at 90, so "tea" matched "steamed", "chana" matched the alias "anna" and
+"dal" matched the Tamil "kadalai". Both scorers used now compare whole words or whole strings.
+A query that is only the start of a longer word scores low ("dal" against "dalma" is 75, a
+suggestion and not a result); "dalma" itself is a full match.
+
 Filters (region, diet, kind) apply before scoring, so results and suggestions both respect
-them. Thresholds, on WRatio's 0 to 100 scale:
-- RESULT_MIN_SCORE 85: a food at or above it is a result. WRatio scores a name that contains
-  the whole query at 90, so "dal" finds every dish with "dal" in its name, and 85 still
-  leaves room for a one-letter slip in a long name ("sambr" scores 91). The same rule lets a
-  short query match inside an unrelated longer word, so the list is ranked, never a single
-  pick.
-- SUGGESTION_MIN_SCORE 60: when no food reaches 85, up to MAX_SUGGESTIONS names at or above
+them. Thresholds, on the 0 to 100 scale:
+- RESULT_MIN_SCORE 80: a food at or above it is a result. A one-letter slip in a six-letter
+  name scores 83 ("samber" for "sambar"), and one letter missing scores 91, so 80 keeps
+  those. 85, the first cutoff, would have dropped "samber".
+- SUGGESTION_MIN_SCORE 60: when no food reaches 80, up to MAX_SUGGESTIONS names at or above
   it come back as "did you mean" candidates, best first.
+- MAX_QUERY_LENGTH 100 characters, and a limit of 1 to MAX_SEARCH_LIMIT results.
 """
 
 import re
@@ -25,10 +32,11 @@ from nutrition_mcp.queries import filter_foods
 from nutrition_mcp.registry import Registry
 from nutrition_mcp.schemas import FoodSummary, SearchResult
 
-RESULT_MIN_SCORE = 85.0
+RESULT_MIN_SCORE = 80.0
 SUGGESTION_MIN_SCORE = 60.0
 MAX_SUGGESTIONS = 5
 MAX_SEARCH_LIMIT = 50
+MAX_QUERY_LENGTH = 100
 
 # Common transliteration variants, applied in this order. The long vowels fold before the
 # doubled letters collapse: collapsing first would turn "paneer" into "paner", while
@@ -67,7 +75,10 @@ def normalise(text: str) -> str:
 
 def _score(query: str, food: Food) -> float:
     names = {normalise(food.name), normalise(food.id), *(normalise(a) for a in food.aliases)}
-    return max((fuzz.WRatio(query, name) for name in names if name), default=0.0)
+    return max(
+        (max(fuzz.ratio(query, name), fuzz.token_set_ratio(query, name)) for name in names if name),
+        default=0.0,
+    )
 
 
 def search_foods(
@@ -82,11 +93,13 @@ def search_foods(
 
     A name that fits several foods returns all of them, so the caller can choose. When
     nothing scores high enough there are no results and up to 5 close names as suggestions.
-    Raises ValueError for a limit outside 1 to 50, a query with no letters or digits, or a
-    region, diet or kind that is not valid.
+    Raises ValueError for a limit outside 1 to 50, a query over 100 characters or with no
+    letters or digits, or a region, diet or kind that is not valid.
     """
     if not 1 <= limit <= MAX_SEARCH_LIMIT:
         raise ValueError(f"limit must be 1 to {MAX_SEARCH_LIMIT}, got {limit}")
+    if len(query) > MAX_QUERY_LENGTH:
+        raise ValueError(f"query must be at most {MAX_QUERY_LENGTH} characters, got {len(query)}")
     wanted = normalise(query)
     if not wanted:
         raise ValueError("query must contain at least one letter or digit")
