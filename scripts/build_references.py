@@ -16,9 +16,10 @@ import argparse
 import csv
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import httpx
 from build_ingredients import (
@@ -31,7 +32,7 @@ from build_ingredients import (
     usda_cache_path,
 )
 
-from nutrition_mcp.loader import build_registry, bundled_dir, load_dataset
+from nutrition_mcp.loader import DataError, build_registry, bundled_dir, load_dataset
 from nutrition_mcp.models import Dish, Ingredient, Nutrients
 from nutrition_mcp.nutrients import REFERENCE_NUTRIENTS
 from nutrition_mcp.registry import Registry
@@ -124,18 +125,28 @@ def print_review(references: list[Reference], registry: Registry) -> None:
         print("  ".join(cells).rstrip())
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else None)
-    parser.add_argument("--refresh", action="store_true", help="fetch USDA records again")
-    args = parser.parse_args(argv)
+def usda_reference(dish_id: str, record: str, food: Mapping[str, Any]) -> Reference:
+    """A USDA record as a reference. Only a survey food describes a dish as eaten."""
+    if food["dataType"] != USDA_SURVEY:
+        raise BuildError(f"{dish_id}: USDA {record} is {food['dataType']}, expected {USDA_SURVEY}")
+    description = f"{food['description']} [{food['dataType']}]"
+    return Reference(dish_id, SOURCE_IDS["usda"], record, description, usda_to_nutrients(food))
 
+
+def cofid_reference(dish_id: str, record: str, row: Mapping[str, Any]) -> Reference:
+    # The Description column says how the dish was made or sampled.
+    description = f"{row['Food Name']} ({row['Description']})"
+    return Reference(dish_id, SOURCE_IDS["cofid"], record, description, cofid_to_nutrients(row))
+
+
+def build(refresh: bool) -> int:
     _, ingredients, dishes = load_dataset(bundled_dir())
     rows = read_reference_map(MAP_PATH, dishes, ingredients)
     key = os.environ.get("USDA_FDC_API_KEY")
     uncached = [
         row["record"]
         for row in rows
-        if row["source"] == "usda" and (args.refresh or not usda_cache_path(row["record"]).exists())
+        if row["source"] == "usda" and (refresh or not usda_cache_path(row["record"]).exists())
     ]
     if uncached and not key:
         print(
@@ -151,26 +162,14 @@ def main(argv: list[str] | None = None) -> int:
     with httpx.Client(headers={"X-Api-Key": key or ""}, timeout=60) as client:
         for row in rows:
             if row["source"] == "usda":
-                food = fetch_usda(client, row["record"], args.refresh)
-                if food["dataType"] != USDA_SURVEY:
-                    raise BuildError(
-                        f"{row['dish_id']}: USDA {row['record']} is {food['dataType']}, "
-                        f"expected {USDA_SURVEY}"
-                    )
-                nutrients = usda_to_nutrients(food)
-                description = f"{food['description']} [{food['dataType']}]"
+                food = fetch_usda(client, row["record"], refresh)
+                references.append(usda_reference(row["dish_id"], row["record"], food))
             else:
                 if row["record"] not in cofid:
                     raise BuildError(f"{row['dish_id']}: CoFID code {row['record']} not found")
-                cofid_row = cofid[row["record"]]
-                nutrients = cofid_to_nutrients(cofid_row)
-                # The Description column says how the dish was made or sampled.
-                description = f"{cofid_row['Food Name']} ({cofid_row['Description']})"
-            references.append(
-                Reference(
-                    row["dish_id"], SOURCE_IDS[row["source"]], row["record"], description, nutrients
+                references.append(
+                    cofid_reference(row["dish_id"], row["record"], cofid[row["record"]])
                 )
-            )
 
     write_csv(references, OUT_PATH)
     print_review(references, build_registry([]))
@@ -178,9 +177,16 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else None)
+    parser.add_argument("--refresh", action="store_true", help="fetch USDA records again")
+    args = parser.parse_args(argv)
     try:
-        sys.exit(main())
-    except BuildError as err:
+        return build(args.refresh)
+    except (BuildError, DataError) as err:
         print(f"error: {err}", file=sys.stderr)
-        sys.exit(1)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
