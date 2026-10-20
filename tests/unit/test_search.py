@@ -268,6 +268,52 @@ def test_a_typo_inside_a_two_word_query_is_found(reg: Registry) -> None:
     assert ids(search_foods(reg, "chana masla", None, None, None))[0] == "chana_masala"
 
 
+# A food is a result only when one of its names holds every query word.
+
+
+@pytest.mark.parametrize(
+    ("query", "other_food"),
+    [
+        # Each wrong food has a name that scores 80 or more against the query as a whole
+        # string, through an alias one word or a few letters off.
+        ("chicken curry", "chana_masala"),  # alias "chickpea curry"
+        ("masala dosa", "plain_dosa"),  # alias "sada dosa"
+        ("pulao", "chapati"),  # alias "phulka"
+        ("kheer", "cucumber"),  # alias "khira"
+        ("saag", "sabudana"),  # alias "sago"
+        ("vada", "ginger"),  # alias "ada"
+        ("toor dal", "urad_dal"),
+        # "chole" and "whole" are one letter apart, but the first letters differ.
+        ("chole", "whole_milk"),
+    ],
+)
+def test_a_name_a_word_or_letter_off_is_not_a_result(
+    reg: Registry, query: str, other_food: str
+) -> None:
+    assert other_food not in ids(search_foods(reg, query, None, None, None, limit=50))
+
+
+def test_a_dish_not_in_the_data_offers_close_names_only_as_suggestions(reg: Registry) -> None:
+    result = search_foods(reg, "chicken curry", None, None, None)
+    assert result.results == []
+    assert result.total == 0
+    assert "Chana masala" in result.suggestions
+
+
+def test_every_query_word_must_match_the_same_name(reg: Registry) -> None:
+    # "chana" alone is in chana dal; "masla" is one letter off "masala" only in chana masala.
+    assert ids(search_foods(reg, "chana masla", None, None, None, limit=50)) == ["chana_masala"]
+    assert ids(search_foods(reg, "toor dal", None, None, None, limit=50)) == ["toor_dal"]
+
+
+def test_a_one_letter_slip_still_needs_a_close_name(reg: Registry) -> None:
+    # "butter" folds to "buter", one letter off "biter" in "bitter gourd", but the names as a
+    # whole are far apart, so bitter gourd is not a result.
+    found = ids(search_foods(reg, "butter", None, None, None, limit=50))
+    assert "butter" in found
+    assert "bitter_gourd" not in found
+
+
 def test_a_spelling_variant_of_a_dal_is_found(reg: Registry) -> None:
     assert "musur_dal" in ids(search_foods(reg, "masoor dal", None, None, None))
 

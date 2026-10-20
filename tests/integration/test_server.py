@@ -118,6 +118,14 @@ async def test_descriptions_point_to_the_right_tool_and_name_skipped_foods(clien
     assert "incomplete value for the ranked nutrient" in tools["find_foods"]
 
 
+async def test_search_description_says_to_check_the_result_is_the_food_asked_for(
+    client: Client,
+) -> None:
+    tools = {tool.name: tool.description or "" for tool in (await client.list_tools()).tools}
+    assert "name or one of its aliases is the food asked for" in tools["search_food"]
+    assert "report the dish as missing" in tools["search_food"]
+
+
 # search_food
 
 
@@ -202,6 +210,19 @@ async def test_unknown_food_with_only_close_names_gives_names(client: Client) ->
     )
     text = error_text(result)
     assert "close names: Chicken breast (raw) (search_food gives their ids)" in text
+
+
+async def test_a_missing_dish_is_not_matched_to_a_different_dish() -> None:
+    # On the bundled data, chana masala has the alias "chickpea curry", which scores 88
+    # against "chicken curry" as a whole string. It is a different dish, so it must not come
+    # back as a close match (an id to use); it can still be a close name.
+    async with Client(build_server(build_registry([]), SETTINGS)) as bundled:
+        result = await bundled.call_tool(
+            "get_nutrition", {"food_id": "chicken_curry", "amount": 1, "unit": "g"}
+        )
+    text = error_text(result)
+    assert "close matches" not in text
+    assert "chana_masala" not in text
 
 
 async def test_unknown_food_with_no_close_match_points_to_search(client: Client) -> None:

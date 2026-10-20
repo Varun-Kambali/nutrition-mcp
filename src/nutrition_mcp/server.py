@@ -73,12 +73,14 @@ ROUNDING = (
 
 SEARCH_FOOD = (
     "Find foods by name and get their ids. Call this first: the other food tools take ids "
-    "from it. Spelling variants match (sambar, sambhar), but whole words are needed, so a dish "
-    "that is not in the data returns no results and up to 5 close names as suggestions; then "
-    "report the dish as missing instead of using a suggestion in its place. Each result has "
-    "its kind (dish or ingredient), regions, diet and own measures. `total` counts every match "
-    "before `limit`; when it is larger than the results shown, raise `limit` or narrow with "
-    "region, diet or kind."
+    "from it. Spelling variants match (sambar, sambhar), but every word of the query has to "
+    "match a word of one name, so a dish that is not in the data returns no results and up to "
+    "5 close names as suggestions. Check that a result's name or one of its aliases is the "
+    "food asked for; when no result is, report the dish as missing instead of using a "
+    "suggestion or another result in its place. Each result has its kind (dish or "
+    "ingredient), regions, diet and own measures. `total` counts every match before `limit`; "
+    "when it is larger than the results shown, raise `limit` or narrow with region, diet or "
+    "kind."
 )
 GET_NUTRITION = (
     "Nutrients for an amount of one food, with the grams used, the measure and oil "
