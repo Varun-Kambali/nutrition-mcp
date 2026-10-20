@@ -24,6 +24,13 @@ _FAT_ASSUMPTION = re.compile(r"\b(?:oils?|ghee|no added fat)\b", re.IGNORECASE)
 
 Amount = Annotated[float | None, Field(ge=0)]
 
+GI_DESCRIPTION = "Glycemic index. Needs gi_ref."
+GI_REF_DESCRIPTION = (
+    "Where the GI came from: a source ID from a sources.yaml, a colon, then the source's "
+    "food name, table and row, as in 'gi_compendium_2021: Idli (Table 1, T1-698)'. "
+    "Needs gi."
+)
+
 
 class DatasetModel(BaseModel):
     """Base for models read from dataset files: unknown keys and inf/nan are load errors."""
@@ -88,8 +95,10 @@ class Ingredient(DatasetModel):
     source_id: str
     source_record: str
     per_100g: Nutrients
-    gi: Annotated[float, Field(ge=0, le=110)] | None = None
-    gi_ref: str | None = None
+    gi: Annotated[float, Field(ge=0, le=110)] | None = Field(
+        default=None, description=GI_DESCRIPTION
+    )
+    gi_ref: str | None = Field(default=None, description=GI_REF_DESCRIPTION)
     density_g_per_ml: PositiveFloat | None = None
 
     @model_validator(mode="after")
@@ -114,8 +123,10 @@ class Dish(DatasetModel):
     ingredients: Annotated[list[RecipeItem], Field(min_length=1)]
     measures: dict[str, PositiveFloat]
     assumptions: str
-    gi: Annotated[float, Field(ge=0, le=110)] | None = None
-    gi_ref: str | None = None
+    gi: Annotated[float, Field(ge=0, le=110)] | None = Field(
+        default=None, description=GI_DESCRIPTION
+    )
+    gi_ref: str | None = Field(default=None, description=GI_REF_DESCRIPTION)
     source_id: str
 
     @model_validator(mode="after")

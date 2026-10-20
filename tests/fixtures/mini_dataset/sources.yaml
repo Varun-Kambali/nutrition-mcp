@@ -12,3 +12,10 @@
   version: "1"
   retrieved: 2026-10-19
   attribution: Synthetic recipe written for the loader tests.
+- id: test_gi
+  name: Loader test GI values
+  url: https://example.org/loader-test-gi
+  license: CC0-1.0
+  version: "1"
+  retrieved: 2026-10-20
+  attribution: Synthetic GI values written for the loader tests.

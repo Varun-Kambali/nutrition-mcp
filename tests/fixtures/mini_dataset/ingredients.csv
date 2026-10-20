@@ -1,4 +1,4 @@
 id,name,aliases,diet,source_id,source_record,kcal,protein_g,fat_g,sat_fat_g,carbs_available_g,sugars_g,fibre_g,sodium_mg,iron_mg,calcium_mg,zinc_mg,folate_ug,vit_a_ug,vit_b12_ug,vit_c_mg,vit_d_ug,gi,gi_ref,density_g_per_ml
-toor_dal,Toor dal,arhar dal|tur dal,vegan,test_source,T1,343,22,1.5,0.3,47,3,15,17,5.2,130,2.8,456,0,,0,,28,Test compendium table 1,
+toor_dal,Toor dal,arhar dal|tur dal,vegan,test_source,T1,343,22,1.5,0.3,47,3,15,17,5.2,130,2.8,456,0,,0,,28,"test_gi: Toor dal (Table 1, T1-001)",
 water,Water,,vegan,test_source,W1,0,0,0,0,0,0,0,4,0,3,0,0,0,,0,0,,,1
 ghee,Ghee,clarified butter|desi ghee,veg,test_source,G1,900,0,100,62,0,0,0,0,0,0,0,0,840,0,0,1.5,,,0.91

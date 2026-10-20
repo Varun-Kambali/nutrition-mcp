@@ -215,6 +215,24 @@ def compute_dish(
     return Nutrients.model_validate(values), incomplete
 
 
+def _gi_source_id(gi_ref: str | None) -> str | None:
+    """The source ID a gi_ref starts with: "gi_compendium_2021: Idli (Table 1, T1-698)".
+
+    None when there is no gi_ref, or when it does not start with an ID and a colon.
+    """
+    if gi_ref is None:
+        return None
+    source_id, colon, _ = gi_ref.partition(":")
+    if not colon:
+        return None
+    return source_id.strip() or None
+
+
+def _source_ids(*ids: str | None) -> list[str]:
+    # Each source once, in the order given. A food without a GI passes None for it.
+    return list(dict.fromkeys(source_id for source_id in ids if source_id is not None))
+
+
 def _ingredient_food(ingredient: Ingredient) -> Food:
     return Food(
         id=ingredient.id,
@@ -223,7 +241,7 @@ def _ingredient_food(ingredient: Ingredient) -> Food:
         aliases=ingredient.aliases,
         regions=[],
         diet=ingredient.diet,
-        source_ids=[ingredient.source_id],
+        source_ids=_source_ids(ingredient.source_id, _gi_source_id(ingredient.gi_ref)),
         per_100g=ingredient.per_100g,
         incomplete={},
         gi=ingredient.gi,
@@ -252,7 +270,7 @@ def _dish_food(
         aliases=dish.aliases,
         regions=dish.regions,
         diet=dish.diet,
-        source_ids=list(dict.fromkeys([dish.source_id, *ingredient_sources])),
+        source_ids=_source_ids(dish.source_id, *ingredient_sources, _gi_source_id(dish.gi_ref)),
         per_100g=per_100g,
         incomplete=incomplete,
         gi=dish.gi,
@@ -293,6 +311,21 @@ def build_registry(folders: Sequence[Path]) -> Registry:
         if located.item.source_id not in sources:
             raise located.error(
                 f"unknown source_id '{located.item.source_id}': list it in a sources.yaml"
+            )
+        # The GI usually comes from another source than the nutrients, so gi_ref names it,
+        # and that source has to be loaded like any other.
+        gi_ref = located.item.gi_ref
+        if gi_ref is None:
+            continue
+        gi_source = _gi_source_id(gi_ref)
+        if gi_source is None:
+            raise located.error(
+                f"gi_ref '{gi_ref}' must start with a source id and a colon, as in "
+                "'gi_compendium_2021: Idli (Table 1, T1-698)'"
+            )
+        if gi_source not in sources:
+            raise located.error(
+                f"gi_ref names unknown source '{gi_source}': list it in a sources.yaml"
             )
 
     ingredients = {
