@@ -2,7 +2,7 @@ import pytest
 
 from nutrition_mcp.config import Settings
 from nutrition_mcp.loader import build_registry
-from nutrition_mcp.models import Food, Nutrients
+from nutrition_mcp.models import Food, Nutrients, Region
 from nutrition_mcp.registry import Registry
 from nutrition_mcp.schemas import FoodSummary, SearchResult
 from nutrition_mcp.search import normalise, search_foods
@@ -18,13 +18,13 @@ def reg() -> Registry:
     return build_registry([])
 
 
-def make_food(food_id: str, name: str) -> Food:
+def make_food(food_id: str, name: str, regions: list[Region] | None = None) -> Food:
     return Food(
         id=food_id,
         kind="dish",
         name=name,
         aliases=[],
-        regions=["south"],
+        regions=regions or ["south"],
         diet="vegan",
         source_ids=[],
         per_100g=Nutrients(),
@@ -302,6 +302,49 @@ def test_all_the_query_words_in_a_longer_name_is_a_match(reg: Registry) -> None:
 
 def test_a_typo_inside_a_two_word_query_is_found(reg: Registry) -> None:
     assert ids(search_foods(reg, SETTINGS, "chana masla", None, None, None))[0] == "chana_masala"
+
+
+# A word that is spelled exactly somewhere in the pool rules out one-edit matches for it.
+
+
+@pytest.mark.parametrize("query", ["chilli", "chili"])
+def test_an_exact_word_beats_a_one_edit_word(reg: Registry, query: str) -> None:
+    # Sugar's alias "cheeni" folds to "chini", one edit from "chili", and scores 80 as a whole.
+    found = ids(search_foods(reg, SETTINGS, query, None, None, None, limit=50))
+    assert {"green_chilli", "red_chilli_powder"} <= set(found)
+    assert "sugar" not in found
+
+
+def test_a_typo_is_found_when_no_food_has_the_typed_word() -> None:
+    pool = Registry({"a": make_food("a", "Sambar")}, {})
+    assert ids(search_foods(pool, SETTINGS, "samber", None, None, None)) == ["a"]
+
+
+def test_a_food_with_the_exact_word_is_the_only_result_for_it() -> None:
+    pool = Registry(
+        {"a": make_food("a", "Samber rice", ["north"]), "b": make_food("b", "Sambar")}, {}
+    )
+    assert ids(search_foods(pool, SETTINGS, "samber", None, None, None)) == ["a"]
+
+
+def test_the_exact_word_rule_is_per_query_word() -> None:
+    # "samber" is spelled exactly in one food, but "masla" is not spelled exactly anywhere.
+    pool = Registry(
+        {
+            "a": make_food("a", "Samber rice"),
+            "b": make_food("b", "Sambar masala"),
+            "c": make_food("c", "Samber masala"),
+        },
+        {},
+    )
+    assert ids(search_foods(pool, SETTINGS, "samber masla", None, None, None)) == ["c"]
+
+
+def test_a_food_a_filter_removes_does_not_rule_out_a_typo() -> None:
+    pool = Registry(
+        {"a": make_food("a", "Samber rice", ["north"]), "b": make_food("b", "Sambar")}, {}
+    )
+    assert ids(search_foods(pool, SETTINGS, "samber", "south", None, None)) == ["b"]
 
 
 # A food is a result only when one of its names holds every query word.

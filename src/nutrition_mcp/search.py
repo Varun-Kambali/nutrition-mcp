@@ -11,7 +11,11 @@ A food is a result only when one candidate passes two checks:
 - Every query word matches a word in that candidate. Two words match when they are equal,
   or when both have 5 or more letters, start with the same letter and are one edit apart
   (one letter inserted, deleted or changed): "masla" matches "masala", "samber" matches
-  "sambar".
+  "sambar". The one-edit match applies to a query word only when no food in the searched
+  foods spells it exactly in a name, ID or alias. "chilli" is spelled exactly by green
+  chilli, so it does not also match sugar through its alias "cheeni" ("chini", one edit
+  from "chili"). The check runs on the foods left after the filters, so a food a filter
+  removes cannot take a typo's match away.
 - That candidate scores at least RESULT_MIN_SCORE.
 
 The word check is what keeps a dish that is not in the data from returning a different one.
@@ -115,16 +119,30 @@ def _same_word(query_word: str, name_word: str) -> bool:
     )
 
 
-def _has_every_word(query_words: list[str], name_words: list[str]) -> bool:
-    return all(any(_same_word(word, other) for other in name_words) for word in query_words)
+def _names(food: Food) -> set[str]:
+    return {normalise(food.name), normalise(food.id), *(normalise(a) for a in food.aliases)}
 
 
-def _score(query: str, food: Food) -> tuple[float, float, bool]:
+def _has_every_word(
+    query_words: list[str], name_words: list[str], spelled_exactly: set[str]
+) -> bool:
+    """Whether every query word is in the name; a word in `spelled_exactly` must be equal."""
+    return all(
+        word in name_words
+        if word in spelled_exactly
+        else any(_same_word(word, other) for other in name_words)
+        for word in query_words
+    )
+
+
+def _score(query: str, food: Food, spelled_exactly: set[str]) -> tuple[float, float, bool]:
     """The food's score, how close its best name is as a whole, and whether it is a result.
 
     It is a result when one name holds every query word and scores RESULT_MIN_SCORE or more.
+    `spelled_exactly` holds the query words that some searched food spells exactly, which
+    only an equal word can match.
     """
-    names = {normalise(food.name), normalise(food.id), *(normalise(a) for a in food.aliases)}
+    names = _names(food)
     query_words = query.split()
     words = set(query_words)
     score = 0.0
@@ -136,7 +154,9 @@ def _score(query: str, food: Food) -> tuple[float, float, bool]:
         closest = max(closest, whole)
         name_score = fuzz.token_set_ratio(query, name) if words <= set(name_words) else whole
         score = max(score, name_score)
-        if name_score >= RESULT_MIN_SCORE and _has_every_word(query_words, name_words):
+        if name_score >= RESULT_MIN_SCORE and _has_every_word(
+            query_words, name_words, spelled_exactly
+        ):
             is_result = True
     return score, closest, is_result
 
@@ -167,7 +187,11 @@ def search_foods(
         raise ValueError("query must contain at least one letter or digit")
 
     candidates = filter_foods(reg.foods(), region, diet, kind)
-    scored = [(*_score(wanted, food), food) for food in candidates]
+    # Taken from the foods left after the filters: a word that only a filtered-out food spells
+    # exactly must not stop a typo from finding the food that is still in the pool.
+    pool_words = {word for food in candidates for name in _names(food) for word in name.split()}
+    spelled_exactly = pool_words.intersection(wanted.split())
+    scored = [(*_score(wanted, food, spelled_exactly), food) for food in candidates]
     scored.sort(key=lambda row: (-row[0], -row[1], row[3].name, row[3].id))
 
     matches = [food for _, _, is_result, food in scored if is_result]
