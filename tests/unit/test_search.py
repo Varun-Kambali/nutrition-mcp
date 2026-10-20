@@ -1,6 +1,7 @@
 import pytest
 
 from nutrition_mcp.loader import build_registry
+from nutrition_mcp.models import Food, Nutrients
 from nutrition_mcp.registry import Registry
 from nutrition_mcp.schemas import FoodSummary, SearchResult
 from nutrition_mcp.search import normalise, search_foods
@@ -12,6 +13,26 @@ DAL_DISHES = {"dal_tadka", "dal_makhani", "musur_dal", "cholar_dal", "varan_bhaa
 def reg() -> Registry:
     # The bundled dataset: the spellings under test are the ones real users will type.
     return build_registry([])
+
+
+def make_food(food_id: str, name: str) -> Food:
+    return Food(
+        id=food_id,
+        kind="dish",
+        name=name,
+        aliases=[],
+        regions=["south"],
+        diet="vegan",
+        source_ids=[],
+        per_100g=Nutrients(),
+        incomplete={},
+        gi=None,
+        gi_ref=None,
+        measures={},
+        serving_g=None,
+        assumptions=None,
+        density_g_per_ml=None,
+    )
 
 
 def ids(result: SearchResult) -> list[str]:
@@ -84,7 +105,10 @@ def test_transliteration_variants(reg: Registry, query: str, dish_id: str) -> No
     assert dish_id in ids(search_foods(reg, query, None, None, None, limit=50))
 
 
-@pytest.mark.parametrize(("query", "dish_id"), [("sambhar", "sambar"), ("rotti", "chapati")])
+@pytest.mark.parametrize(
+    ("query", "dish_id"),
+    [("sambhar", "sambar"), ("chapati", "chapati"), ("chapathi", "chapati"), ("rotti", "chapati")],
+)
 def test_variant_of_a_unique_name_ranks_that_dish_first(
     reg: Registry, query: str, dish_id: str
 ) -> None:
@@ -106,16 +130,21 @@ def test_typo_still_finds(reg: Registry) -> None:
     assert ids(search_foods(reg, "sambr", None, None, None))[0] == "sambar"
 
 
-def test_name_inside_a_longer_name_is_a_match(reg: Registry) -> None:
-    assert set(ids(search_foods(reg, "paneer", None, None, None))) == {"paneer", "palak_paneer"}
+def test_exact_name_ranks_before_a_longer_name_that_contains_it(reg: Registry) -> None:
+    # Palak paneer, curd rice and atta (alias "chapati flour") contain the whole query as a
+    # word, so they tie with the exact name on word matching and sort after it.
+    assert ids(search_foods(reg, "paneer", None, None, None)) == ["paneer", "palak_paneer"]
+    assert ids(search_foods(reg, "curd", None, None, None)) == ["curd", "curd_rice"]
+    assert ids(search_foods(reg, "chapati", None, None, None)) == ["chapati", "atta"]
 
 
-def test_equal_scores_are_ordered_by_name(reg: Registry) -> None:
-    # Every east-region dal dish has "dal" as a word and scores the same.
-    result = search_foods(reg, "dal", "east", None, None, limit=50)
-    names = [food.name for food in result.results]
-    assert len(names) > 1
-    assert names == sorted(names)
+def test_equal_scores_are_ordered_by_name() -> None:
+    # Same score and same closeness as a whole string, so only the name can decide.
+    pickles = Registry(
+        {"a": make_food("a", "Lemon pickle"), "b": make_food("b", "Green pickle")}, {}
+    )
+    result = search_foods(pickles, "pickle", None, None, None)
+    assert [food.name for food in result.results] == ["Green pickle", "Lemon pickle"]
 
 
 def test_region_filter(reg: Registry) -> None:

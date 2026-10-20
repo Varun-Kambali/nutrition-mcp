@@ -6,6 +6,11 @@ scores the larger of `fuzz.ratio` (whole-string similarity, so a one-letter slip
 and `fuzz.token_set_ratio` (shared whole words, so "dal" is a full match for "dal tadka").
 Each food keeps its best score over its name, its aliases and its ID read as words.
 
+Order is score, then how close the best name is as a whole string (plain `fuzz.ratio`), then
+name. The middle key matters because a food whose words contain every query word scores 100
+like the exact name: "paneer" ties Palak paneer, "chapati" ties atta (alias "chapati
+flour"), and the exact name has to come first.
+
 WRatio was the first scorer and was dropped: its partial match scores a query that sits
 inside a longer word at 90, so "tea" matched "steamed", "chana" matched the alias "anna" and
 "dal" matched the Tamil "kadalai". Both scorers used now compare whole words or whole strings.
@@ -73,12 +78,12 @@ def normalise(text: str) -> str:
     return _DOUBLED_LETTER.sub(r"\1", folded)
 
 
-def _score(query: str, food: Food) -> float:
+def _score(query: str, food: Food) -> tuple[float, float]:
+    """The food's match score and, as the tie-break, how close its best name is as a whole."""
     names = {normalise(food.name), normalise(food.id), *(normalise(a) for a in food.aliases)}
-    return max(
-        (max(fuzz.ratio(query, name), fuzz.token_set_ratio(query, name)) for name in names if name),
-        default=0.0,
-    )
+    whole = [fuzz.ratio(query, name) for name in names if name]
+    shared = [fuzz.token_set_ratio(query, name) for name in names if name]
+    return max([*whole, *shared], default=0.0), max(whole, default=0.0)
 
 
 def search_foods(
@@ -105,15 +110,15 @@ def search_foods(
         raise ValueError("query must contain at least one letter or digit")
 
     candidates = filter_foods(reg.foods(), region, diet, kind)
-    scored = [(_score(wanted, food), food) for food in candidates]
-    scored.sort(key=lambda pair: (-pair[0], pair[1].name, pair[1].id))
+    scored = [(*_score(wanted, food), food) for food in candidates]
+    scored.sort(key=lambda row: (-row[0], -row[1], row[2].name, row[2].id))
 
-    matches = [food for score, food in scored if score >= RESULT_MIN_SCORE]
+    matches = [food for score, _, food in scored if score >= RESULT_MIN_SCORE]
     if matches:
         return SearchResult(
             query=query,
             results=[FoodSummary.from_food(food) for food in matches[:limit]],
             suggestions=[],
         )
-    close = dict.fromkeys(food.name for score, food in scored if score >= SUGGESTION_MIN_SCORE)
+    close = dict.fromkeys(food.name for score, _, food in scored if score >= SUGGESTION_MIN_SCORE)
     return SearchResult(query=query, results=[], suggestions=list(close)[:MAX_SUGGESTIONS])
