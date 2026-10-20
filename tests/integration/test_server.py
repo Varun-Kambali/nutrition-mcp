@@ -106,6 +106,31 @@ async def test_schemas_show_the_bounds(client: Client) -> None:
     assert set(person["sex"]["enum"]) == {"male", "female"}
 
 
+async def test_food_id_and_unit_are_described_and_capped_at_64_characters(client: Client) -> None:
+    schemas = {tool.name: tool.input_schema for tool in (await client.list_tools()).tools}
+    meal_item = schemas["compute_meal"]["$defs"]["MealItemIn"]["properties"]
+    for fields in (schemas["get_nutrition"]["properties"], meal_item):
+        for name in ("food_id", "unit"):
+            assert fields[name]["maxLength"] == 64
+        for name in ("food_id", "amount", "unit"):
+            assert fields[name]["description"]
+    assert (
+        meal_item["food_id"]["description"]
+        == (schemas["get_nutrition"]["properties"]["food_id"]["description"])
+    )
+
+
+async def test_a_food_id_or_unit_over_64_characters_is_rejected(client: Client) -> None:
+    long = "x" * 65
+    nutrition = {"food_id": "test_dal", "amount": 1, "unit": "g"}
+    for arguments in ({**nutrition, "food_id": long}, {**nutrition, "unit": long}):
+        # Rejected against the schema before the tool runs, not as an unknown id or unit.
+        single = error_text(await client.call_tool("get_nutrition", arguments))
+        assert "at most 64 characters" in single
+        meal = error_text(await client.call_tool("compute_meal", {"items": [arguments]}))
+        assert "at most 64 characters" in meal
+
+
 async def test_output_schemas_describe_nutrients_by_their_basis(client: Client) -> None:
     # The values are for the amount asked about or the meal, not per 100 g.
     tools = {tool.name: tool for tool in (await client.list_tools()).tools}

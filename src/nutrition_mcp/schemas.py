@@ -16,6 +16,24 @@ Sex = Literal["male", "female"]
 Activity = Literal["sedentary", "light", "moderate", "active", "very_active"]
 Goal = Literal["lose", "maintain", "gain"]
 
+# get_nutrition and MealItemIn share these, so a food given alone or in a meal is described
+# and bounded the same way. 64 characters is well above any id or unit name, and keeps a long
+# string out of the tool before it runs.
+MAX_NAME_LENGTH = 64
+FoodId = Annotated[
+    str,
+    Field(max_length=MAX_NAME_LENGTH, description="A food id from search_food, such as toor_dal."),
+]
+# Above 0 so the schema shows the bound; to_grams checks it again.
+Amount = Annotated[PositiveFloat, Field(description="How many of `unit`; above 0.")]
+Unit = Annotated[
+    str,
+    Field(
+        max_length=MAX_NAME_LENGTH,
+        description="g, or a unit that search_food lists for the food, such as katori or piece.",
+    ),
+]
+
 # Adults only. TargetsIn and the compute_targets tool share these, so the bounds the model
 # sees in the tool schema are the ones the calculation enforces.
 Age = Annotated[int, Field(ge=18, le=100)]
@@ -57,10 +75,11 @@ class FoodSummary(BaseModel):
 
 
 class MealItemIn(BaseModel):
-    food_id: str
-    # Above 0 here so the compute_meal schema shows the bound; to_grams checks it again.
-    amount: PositiveFloat
-    unit: str
+    """One food in a meal, given the same way as to get_nutrition."""
+
+    food_id: FoodId
+    amount: Amount
+    unit: Unit
 
 
 class NutritionResult(BaseModel):

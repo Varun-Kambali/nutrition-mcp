@@ -246,6 +246,14 @@ def test_meal_item_amount_must_be_positive(amount: float) -> None:
         item("toor_dal", amount, "g")
 
 
+@pytest.mark.parametrize("field", ["food_id", "unit"])
+def test_meal_item_food_id_and_unit_are_at_most_64_characters(field: str) -> None:
+    fields = {"food_id": "toor_dal", "amount": 1, "unit": "g"}
+    MealItemIn.model_validate({**fields, field: "x" * 64})
+    with pytest.raises(ValidationError, match="at most 64 characters"):
+        MealItemIn.model_validate({**fields, field: "x" * 65})
+
+
 def test_meal_reports_the_first_bad_item(reg: Registry) -> None:
     with pytest.raises(ValueError, match=r"item 1 \(nope\)"):
         meal_totals(reg, SETTINGS, [item("nope", 1, "g"), item("also_nope", 1, "g")])

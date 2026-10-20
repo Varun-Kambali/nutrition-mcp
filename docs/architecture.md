@@ -96,7 +96,7 @@ The model chooses which foods and amounts to ask about. Every number in the answ
 
 ## Errors
 
-- Each tool's signature carries its bounds, so they appear in the JSON Schema the model sees and the SDK rejects a call that breaks them before the tool runs: `amount` above 0, `limit` 1 to 50, 1 to 30 meal items, a search query of at most 100 characters, ages 18 to 100 for targets, and fixed values for region, diet, kind, `per` and the targets fields. The schema lists the `rank_by` values too, and `rank_foods` is what checks them. The query functions check again, plus the 5,000 g limit on a converted amount, because the evals call them directly.
+- Each tool's signature carries its bounds, so they appear in the JSON Schema the model sees and the SDK rejects a call that breaks them before the tool runs: `amount` above 0, `limit` 1 to 50, 1 to 30 meal items, a search query of at most 100 characters, a food id or unit of at most 64 characters, ages 18 to 100 for targets, and fixed values for region, diet, kind, `per` and the targets fields. The schema lists the `rank_by` values too, and `rank_foods` is what checks them. The query functions check again, plus the 5,000 g limit on a converted amount, because the evals call them directly.
 - A bad request returns an MCP tool error (`isError`) with a message the model can act on: the valid units for a food, close name matches, or the failing meal item.
 - Startup validation errors name the dataset folder, file and row, then exit with code 1. A bad `NUTRITION_MCP_*` setting does the same and names the variable.
 

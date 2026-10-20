@@ -16,7 +16,7 @@ from typing import Annotated, Any
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import CallToolResult, InputRequiredResult, ToolAnnotations
-from pydantic import Field, PositiveFloat, ValidationError
+from pydantic import Field, ValidationError
 
 from nutrition_mcp import __version__, targets
 from nutrition_mcp.config import Settings, describe_settings_error
@@ -35,6 +35,8 @@ from nutrition_mcp.registry import Registry, UnknownFood
 from nutrition_mcp.schemas import (
     Activity,
     Age,
+    Amount,
+    FoodId,
     Goal,
     HeightCm,
     MealItemIn,
@@ -46,6 +48,7 @@ from nutrition_mcp.schemas import (
     Sex,
     TargetsIn,
     TargetsResult,
+    Unit,
     WeightKg,
 )
 from nutrition_mcp.search import MAX_QUERY_LENGTH, MAX_SEARCH_LIMIT, MAX_SUGGESTIONS, search_foods
@@ -113,9 +116,6 @@ COMPUTE_TARGETS = (
     "calorie floor, and is an estimate, not medical advice. Nothing is stored."
 )
 
-FoodId = Annotated[str, Field(description="A food id from search_food, such as toor_dal.")]
-Amount = Annotated[PositiveFloat, Field(description="How many of `unit`; above 0.")]
-Unit = Annotated[str, Field(description="g, or a household measure such as katori or piece.")]
 RegionFilter = Annotated[
     Region | None,
     Field(description="Keep dishes from this region. Ingredients have none: not with ingredient."),
