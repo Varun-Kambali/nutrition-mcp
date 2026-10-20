@@ -189,8 +189,8 @@ All seven rows were measured in healthy participants. Three of the seven values 
 
 The other 34 dishes have no GI:
 
-- **Rice cooked with fat, curd or a tempering** (jeera rice, lemon rice, curd rice, varan bhaat): the compendium has no row for these preparations, and fat and curd change how fast the rice is digested, so plain rice's value is not used.
-- **Rice and dal dishes with another name** (ven pongal, bisi bele bath): not listed. Pongal is close to khichdi, but a dish the compendium does not name gets no value; bisi bele bath also adds toor dal, tamarind and vegetables.
+- **Rice cooked with fat, curd or a tempering** (jeera rice, lemon rice, curd rice): the compendium has no row for these preparations, and fat and curd change how fast the rice is digested, so plain rice's value is not used.
+- **Rice and dal dishes the compendium does not list** (ven pongal, bisi bele bath, varan bhaat). Pongal is close to khichdi, but a dish the compendium does not name gets no value. Bisi bele bath also adds toor dal, tamarind and vegetables. Varan bhaat is plain rice served with a toor dal varan, a meal with no row.
 - **Plain paratha**: the nearest rows are porotta (layered maida, T1-696) and misi parantha (with gram flour, T1-634), which have other main ingredients.
 - **Sabudana khichdi**: the only tapioca row (T1-687) is the root, not sago pearls.
-- **Dals, curries, sabzis and snacks** (dal tadka, dal makhani, musur dal, cholar dal, dalma, rajma masala, chana masala, ghugni, sambar, rasam, both kadhis, palak paneer, aloo gobi, aloo posto, begun bhaja, shukto, zunka, dimer dalna, machher jhol, Goan fish curry, coconut chutney, dhokla, batata vada, misal pav and pav bhaji): the compendium has no row for any of them.
+- **Dals, curries, sabzis and snacks** (dal tadka, dal makhani, musur dal, cholar dal, dalma, rajma masala, chana masala, ghugni, sambar, rasam, both kadhis, palak paneer, aloo gobi, aloo posto, begun bhaja, shukto, zunka, dimer dalna, machher jhol, Goan fish curry, coconut chutney, dhokla, batata vada, misal pav and pav bhaji): the compendium has no row for any of them eaten on its own. Dal, sambar and curries appear only inside mixed meals, such as T1-077 (flatbread with dhal curry) and T1-811 (thosai and sampar), whose GI belongs to the whole meal.

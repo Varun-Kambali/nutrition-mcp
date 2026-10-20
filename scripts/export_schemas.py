@@ -22,12 +22,6 @@ COLUMN_NOTES = {
     "aliases": "Other names and spellings, separated by '|'. Leave empty for none.",
     "source_id": "ID of an entry in a sources.yaml.",
     "source_record": "Record ID in the source, such as a USDA FDC ID or a CoFID food code.",
-    "gi": "Glycemic index. Needs gi_ref.",
-    "gi_ref": (
-        "Where the GI came from: a source ID from a sources.yaml, a colon, then the source's "
-        "food name, table and row, as in 'gi_compendium_2021: Idli (Table 1, T1-698)'. "
-        "Needs gi."
-    ),
     "density_g_per_ml": "Grams per millilitre, for liquids.",
 }
 

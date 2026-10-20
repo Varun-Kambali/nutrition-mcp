@@ -108,6 +108,7 @@
         }
       ],
       "default": null,
+      "description": "Glycemic index. Needs gi_ref.",
       "title": "Gi"
     },
     "gi_ref": {
@@ -120,6 +121,7 @@
         }
       ],
       "default": null,
+      "description": "Where the GI came from: a source ID from a sources.yaml, a colon, then the source's food name, table and row, as in 'gi_compendium_2021: Idli (Table 1, T1-698)'. Needs gi.",
       "title": "Gi Ref"
     },
     "source_id": {
