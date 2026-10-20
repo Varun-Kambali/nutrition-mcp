@@ -1,6 +1,6 @@
 # nutrition-mcp
 
-Work in progress. The server and its five tools run over stdio; the evaluations and the demo come next. This README fills in as each part ships; the reasoning behind the project is in the [case study](docs/case-study.md).
+Work in progress. The server and its five tools run over stdio, and the data-accuracy evaluation runs in CI; the grounding evaluation and the demo come next. This README fills in as each part ships; the reasoning behind the project is in the [case study](docs/case-study.md).
 
 An MCP server that gives any assistant or agent sourced nutrition, glycemic load and micronutrient data for Indian dishes and ingredients, for any amount in grams or household measures.
 
@@ -24,7 +24,17 @@ The full list of planned features is in [docs/requirements.md](docs/requirements
 
 ## Results
 
-Not measured yet. The table will come from `evals/results/summary.md` once the evaluations have run.
+The data-accuracy evaluation compares the values the server computes for each dish, per 100 g, with an independent record of the same dish: a CoFID 2021 homemade dish or a USDA survey food ([ADR 0006](docs/decisions/0006-two-evaluations.md)). The value is the mean absolute percentage error (MAPE) against those records, and n is the number of dishes compared. A gated nutrient fails CI when it gets worse than `evals/thresholds.toml` allows. The rows are copied from [`evals/results/summary.md`](evals/results/summary.md):
+
+| Suite | Measure | n | Value | Date | Commit | Dataset version | Results file |
+|---|---|---|---|---|---|---|---|
+| data accuracy | Energy (kcal) MAPE (%), gated | 19 | 18.9 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](evals/results/2026-10-20_data-accuracy_41edc33.json) |
+| data accuracy | Protein (g) MAPE (%), gated | 19 | 25.0 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](evals/results/2026-10-20_data-accuracy_41edc33.json) |
+| data accuracy | Available carbohydrate (g) MAPE (%), gated | 19 | 27.2 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](evals/results/2026-10-20_data-accuracy_41edc33.json) |
+| data accuracy | Iron (mg) MAPE (%), reported | 19 | 42.2 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](evals/results/2026-10-20_data-accuracy_41edc33.json) |
+| data accuracy | Calcium (mg) MAPE (%), reported | 18 | 46.1 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](evals/results/2026-10-20_data-accuracy_41edc33.json) |
+
+The references are UK and US recipes, so part of each error is a difference in recipe (water, fat, an enriched grain) or in energy basis rather than wrong data; ADR 0006 names the largest cases. The grounding evaluation, a model's accuracy with and without the tools, has not run yet. Its numbers will come from its own results file.
 
 ## Architecture
 
@@ -119,11 +129,14 @@ Nutrient values are rounded to 2 decimals, so 0.0 can be a small amount; a value
 
 ## Evaluation
 
-Two evaluations are planned: computed dish values against independent reference tables, and a model's accuracy with and without the tools. Neither has been run.
+Two evaluations, kept apart because one checks the data and the other checks a model using it ([ADR 0006](docs/decisions/0006-two-evaluations.md)):
+
+- **Data accuracy** compares computed dish values with independent records of the same dishes (`evals/datasets/references.csv`, built from `data_build/reference_map.csv` by `scripts/build_references.py`). It needs no model and no API key. Run it with `make eval-data`; CI runs it on every pull request with `--check` against `evals/thresholds.toml`. The latest result is under Results.
+- **Grounding** asks a model the same questions with and without the server's tools and scores both against answers computed by the server's own query functions. It has not run yet.
 
 ## Testing
 
-`make test` and `make lint`. CI runs both and builds the Docker image.
+`make test` and `make lint`. CI runs both, checks data accuracy against `evals/thresholds.toml`, and builds the Docker image.
 
 ## Deployment
 
@@ -148,7 +161,7 @@ docs/                case study, requirements, architecture
 
 ## Limitations and next steps
 
-The evaluations have not run, so there are no measured results yet. Known limits of the design are in the case study.
+The grounding evaluation has not run, so the gain from the tools is not measured yet. The data-accuracy evaluation covers only the dishes that have an independent record (n under Results); ADR 0006 lists the others and why they have none. Known limits of the design are in the case study.
 
 ## What I learned
 
