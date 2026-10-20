@@ -132,7 +132,7 @@ Because `grounding` uses the bundled data as ground truth, it measures whether t
 ## Decided during the build
 
 - The exact list of 60 ingredients and 40 dishes, within the 10-per-region quota and the open-license rule, favouring dishes that have an independent reference or a GI value.
-- How each source's nutrient definitions map onto ours, written up in `docs/data.md`.
+- How each source's nutrient definitions map onto the server's, written up in `docs/data.md`.
 - Fuzzy-match thresholds and the transliteration rules, tuned against tests.
 - The activity multipliers, goal adjustments and calorie floor in `targets.py`, from widely cited sources and recorded in an ADR.
 - Which Gemini model the grounding evaluation uses, chosen from the free tier at run time and recorded in each results file.

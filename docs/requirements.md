@@ -95,7 +95,7 @@ All tools are read-only, return structured output from Pydantic models, and are 
 
 - A number goes out with no source or no stated portion.
 - A missing nutrient value is reported as zero.
-- A dish value is typed in by hand, or copied from a source we can't redistribute.
+- A dish value is typed in by hand, or copied from a source that cannot be redistributed.
 - A GI value is guessed for a food the compendium doesn't list.
 - Model arithmetic is presented as tool output.
 - The server infers a condition or deficiency, or suggests a medicine or a dose.

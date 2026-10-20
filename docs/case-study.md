@@ -55,7 +55,7 @@ The data foundation is a table of 66 ingredients. Each one comes from a single U
 
 The decisions that mattered:
 
-1. **Write our own recipes instead of copying a dish table.** The Indian tables can't be redistributed. Standard recipes computed from openly licensed ingredients mean every number traces back to a source row and a stated assumption. The alternatives were shipping IFCT values (not allowed) or typing in dish values from blogs (no traceable source).
+1. **Write the project's recipes instead of copying a dish table.** The Indian tables can't be redistributed. Standard recipes computed from openly licensed ingredients mean every number traces back to a source row and a stated assumption. The alternatives were shipping IFCT values (not allowed) or typing in dish values from blogs (no traceable source).
 2. **Arithmetic in code, never in the model.** Unit conversion, meal totals and glycemic load are deterministic functions. The model decides what to ask for, and the server does the maths.
 3. **Facts here, the person elsewhere.** The server knows foods, not people. Keeping health profiles out of it keeps it simple to trust and safe to reuse, and gives the planner agent a clean boundary.
 4. **Unknown is not zero.** When a source doesn't report a nutrient, the value is missing, and any dish that depends on it says which ingredient is missing instead of quietly under-counting.
