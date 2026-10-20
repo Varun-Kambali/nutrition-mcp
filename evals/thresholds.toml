@@ -1,6 +1,6 @@
 # Gate for the data-accuracy suite, checked in CI with
 #   uv run python evals/run_evals.py --suite data_accuracy --check evals/thresholds.toml
-# Set from the first run, evals/results/2026-10-20_data-accuracy_32aa03d.json (ADR 0006):
+# Set from the baseline run, evals/results/2026-10-20_data-accuracy_32aa03d.json (ADR 0006):
 # max_mape is that run's MAPE plus 5 points, rounded up to one decimal, and min_n is its n.
 # Iron and calcium are reported in the results but not gated.
 

@@ -28,13 +28,13 @@ The data-accuracy evaluation compares the values the server computes for each di
 
 | Suite | Measure | n | Value | Date | Commit | Dataset version | Results file |
 |---|---|---|---|---|---|---|---|
-| data accuracy | Energy (kcal) MAPE (%), gated | 19 | 18.9 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](evals/results/2026-10-20_data-accuracy_41edc33.json) |
-| data accuracy | Protein (g) MAPE (%), gated | 19 | 25.0 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](evals/results/2026-10-20_data-accuracy_41edc33.json) |
-| data accuracy | Available carbohydrate (g) MAPE (%), gated | 19 | 27.2 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](evals/results/2026-10-20_data-accuracy_41edc33.json) |
-| data accuracy | Iron (mg) MAPE (%), reported | 19 | 42.2 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](evals/results/2026-10-20_data-accuracy_41edc33.json) |
-| data accuracy | Calcium (mg) MAPE (%), reported | 18 | 46.1 | 2026-10-20 | 41edc33 | 24143edbb56e | [2026-10-20_data-accuracy_41edc33.json](evals/results/2026-10-20_data-accuracy_41edc33.json) |
+| data accuracy | Energy (kcal) MAPE (%), gated | 18 | 18.7 | 2026-10-20 | 32aa03d | 24143edbb56e | [2026-10-20_data-accuracy_32aa03d.json](evals/results/2026-10-20_data-accuracy_32aa03d.json) |
+| data accuracy | Protein (g) MAPE (%), gated | 18 | 24.8 | 2026-10-20 | 32aa03d | 24143edbb56e | [2026-10-20_data-accuracy_32aa03d.json](evals/results/2026-10-20_data-accuracy_32aa03d.json) |
+| data accuracy | Available carbohydrate (g) MAPE (%), gated | 18 | 16.7 | 2026-10-20 | 32aa03d | 24143edbb56e | [2026-10-20_data-accuracy_32aa03d.json](evals/results/2026-10-20_data-accuracy_32aa03d.json) |
+| data accuracy | Iron (mg) MAPE (%), reported | 18 | 44.2 | 2026-10-20 | 32aa03d | 24143edbb56e | [2026-10-20_data-accuracy_32aa03d.json](evals/results/2026-10-20_data-accuracy_32aa03d.json) |
+| data accuracy | Calcium (mg) MAPE (%), reported | 18 | 46.1 | 2026-10-20 | 32aa03d | 24143edbb56e | [2026-10-20_data-accuracy_32aa03d.json](evals/results/2026-10-20_data-accuracy_32aa03d.json) |
 
-The references are UK and US recipes, so part of each error is a difference in recipe (water, fat, an enriched grain) or in energy basis rather than wrong data; ADR 0006 names the largest cases. The grounding evaluation, a model's accuracy with and without the tools, has not run yet. Its numbers will come from its own results file.
+The references are UK and US records, so part of each error is a difference in recipe (water, fat, an enriched grain) or in energy basis rather than wrong data; ADR 0006 names the largest cases. The grounding evaluation, a model's accuracy with and without the tools, has not run yet. Its numbers will come from its own results file.
 
 ## Architecture
 
