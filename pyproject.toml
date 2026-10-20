@@ -58,4 +58,6 @@ plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# evals/run_evals.py is a script, not part of the package.
+pythonpath = ["evals"]
 addopts = "-ra --import-mode=importlib"
