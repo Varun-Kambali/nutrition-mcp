@@ -1,0 +1,25 @@
+# Idli rice is usually parboiled; the raw white rice row stands in for it.
+# A plate is 2 idlis, as served at a darshini.
+id: idli
+name: Idli
+aliases:
+  - idly
+  - idlis
+regions: [south]
+diet: vegan
+servings: 4
+cooked_weight_g: 480
+ingredients:
+  - ingredient_id: white_rice
+    grams: 150
+  - ingredient_id: urad_dal
+    grams: 50
+  - ingredient_id: salt
+    grams: 4
+measures:
+  piece: 40
+  plate: 80
+assumptions: >-
+  No added fat; the oil that greases the moulds is left out. The rice and dal are soaked,
+  ground with water and steamed, and make 12 idlis of about 40 g.
+source_id: recipes_cc_by

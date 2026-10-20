@@ -1,0 +1,37 @@
+# Sendha namak (rock salt), used on fast days, is modelled as table salt.
+id: sabudana_khichdi
+name: Sabudana khichdi
+aliases:
+  - sabudana khichadi
+  - sago khichdi
+regions: [west, north]
+diet: veg
+servings: 3
+cooked_weight_g: 540
+ingredients:
+  - ingredient_id: sabudana
+    grams: 200
+  - ingredient_id: peanuts
+    grams: 60  # roasted and crushed
+  - ingredient_id: potato
+    grams: 100
+  - ingredient_id: green_chilli
+    grams: 8
+  - ingredient_id: cumin_seeds
+    grams: 3
+  - ingredient_id: ghee
+    grams: 25
+  - ingredient_id: sugar
+    grams: 5
+  - ingredient_id: salt
+    grams: 5
+  - ingredient_id: lemon_juice
+    grams: 10
+  - ingredient_id: coriander_leaves
+    grams: 6
+measures:
+  katori: 150
+assumptions: >-
+  25 g ghee, about 8 g per serving. The soaked sabudana takes up about 70% of its dry weight
+  in water, and the khichdi weighs about 540 g.
+source_id: recipes_cc_by

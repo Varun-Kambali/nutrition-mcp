@@ -1,0 +1,28 @@
+# Kalonji (nigella) in the tempering is left out; the ingredient table has none.
+id: aloo_posto
+name: Aloo posto
+aliases:
+  - alu posto
+  - aloo posta
+  - posto aloo
+regions: [east]
+diet: vegan
+servings: 4
+cooked_weight_g: 600
+ingredients:
+  - ingredient_id: potato
+    grams: 500
+  - ingredient_id: poppy_seeds
+    grams: 50
+  - ingredient_id: mustard_oil
+    grams: 30
+  - ingredient_id: green_chilli
+    grams: 8
+  - ingredient_id: salt
+    grams: 7
+measures:
+  katori: 150
+assumptions: >-
+  30 g mustard oil, 7.5 g per serving. The poppy seed paste is ground with water and the
+  dish cooks back down to about its raw weight.
+source_id: recipes_cc_by

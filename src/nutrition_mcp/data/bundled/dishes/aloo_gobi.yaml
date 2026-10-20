@@ -1,0 +1,44 @@
+id: aloo_gobi
+name: Aloo gobi
+aliases:
+  - aloo gobhi
+  - alu gobi
+regions: [north]
+diet: vegan
+servings: 5
+cooked_weight_g: 770
+ingredients:
+  - ingredient_id: potato
+    grams: 300
+  - ingredient_id: cauliflower
+    grams: 400
+  - ingredient_id: onion
+    grams: 80
+  - ingredient_id: tomato
+    grams: 100
+  - ingredient_id: ginger
+    grams: 8
+  - ingredient_id: garlic
+    grams: 6
+  - ingredient_id: green_chilli
+    grams: 6
+  - ingredient_id: cumin_seeds
+    grams: 3
+  - ingredient_id: turmeric
+    grams: 2
+  - ingredient_id: red_chilli_powder
+    grams: 4
+  - ingredient_id: garam_masala
+    grams: 2
+  - ingredient_id: coriander_leaves
+    grams: 8
+  - ingredient_id: sunflower_oil
+    grams: 35
+  - ingredient_id: salt
+    grams: 8
+measures:
+  katori: 150
+assumptions: >-
+  35 g sunflower oil, 7 g per serving. The sabzi is cooked covered without added water and
+  loses about 20% of its raw weight to evaporation.
+source_id: recipes_cc_by

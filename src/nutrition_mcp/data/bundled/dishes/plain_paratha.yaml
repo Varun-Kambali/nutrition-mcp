@@ -1,0 +1,23 @@
+id: plain_paratha
+name: Plain paratha
+aliases:
+  - paratha
+  - parantha
+  - tawa paratha
+regions: [north]
+diet: veg
+servings: 3
+cooked_weight_g: 300
+ingredients:
+  - ingredient_id: atta
+    grams: 215  # includes dusting flour
+  - ingredient_id: ghee
+    grams: 30
+  - ingredient_id: salt
+    grams: 3
+measures:
+  piece: 50
+assumptions: >-
+  30 g ghee in the layers and on the tawa, 5 g per paratha and 10 g per serving of 2. 215 g
+  atta makes 6 parathas of about 50 g.
+source_id: recipes_cc_by

@@ -1,0 +1,39 @@
+id: zunka
+name: Zunka
+aliases:
+  - jhunka
+regions: [west]
+diet: vegan
+servings: 4
+cooked_weight_g: 520
+ingredients:
+  - ingredient_id: besan
+    grams: 150
+  - ingredient_id: onion
+    grams: 200
+  - ingredient_id: garlic
+    grams: 15
+  - ingredient_id: green_chilli
+    grams: 10
+  - ingredient_id: mustard_seeds
+    grams: 3
+  - ingredient_id: cumin_seeds
+    grams: 3
+  - ingredient_id: turmeric
+    grams: 2
+  - ingredient_id: red_chilli_powder
+    grams: 4
+  - ingredient_id: curry_leaves
+    grams: 4
+  - ingredient_id: sunflower_oil
+    grams: 35
+  - ingredient_id: salt
+    grams: 6
+  - ingredient_id: coriander_leaves
+    grams: 10
+measures:
+  katori: 150
+assumptions: >-
+  35 g sunflower oil, about 9 g per serving. The besan is stirred into the onion masala with
+  about 150 g water and cooked dry, ending at about 520 g.
+source_id: recipes_cc_by

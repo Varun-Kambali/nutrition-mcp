@@ -1,0 +1,24 @@
+id: steamed_rice
+name: Steamed rice
+aliases:
+  - plain rice
+  - cooked rice
+  - chawal
+  - bhaat
+  - bhat
+  - annam
+  - anna
+  - sadam
+regions: [north, south, east, west]
+diet: vegan
+servings: 4
+cooked_weight_g: 600
+ingredients:
+  - ingredient_id: white_rice
+    grams: 200
+measures:
+  katori: 150
+assumptions: >-
+  No added fat and no salt. The rice is cooked in a pressure cooker or in excess water to 3
+  times its raw weight.
+source_id: recipes_cc_by

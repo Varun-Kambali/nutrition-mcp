@@ -1,0 +1,46 @@
+# Eno fruit salt is modelled as baking soda with lemon juice. A plate is 4 pieces.
+id: dhokla
+name: Dhokla (khaman)
+aliases:
+  - khaman
+  - khaman dhokla
+  - besan dhokla
+regions: [west]
+diet: vegan
+servings: 4
+cooked_weight_g: 640
+ingredients:
+  - ingredient_id: besan
+    grams: 200
+  - ingredient_id: lemon_juice
+    grams: 20
+  - ingredient_id: sugar
+    grams: 15
+  - ingredient_id: salt
+    grams: 5
+  - ingredient_id: baking_soda
+    grams: 3
+  - ingredient_id: turmeric
+    grams: 1
+  - ingredient_id: ginger
+    grams: 8
+  - ingredient_id: green_chilli
+    grams: 8
+  - ingredient_id: sunflower_oil
+    grams: 25
+  - ingredient_id: mustard_seeds
+    grams: 4  # tempering
+  - ingredient_id: curry_leaves
+    grams: 4  # tempering
+  - ingredient_id: coriander_leaves
+    grams: 6
+  - ingredient_id: fresh_coconut
+    grams: 10
+measures:
+  piece: 40
+  plate: 160
+assumptions: >-
+  25 g sunflower oil, 10 g in the batter and 15 g for the tempering, about 6 g per serving.
+  Besan batter with about 250 g water is steamed and soaked with sweetened tempering water,
+  giving 16 pieces of 40 g.
+source_id: recipes_cc_by

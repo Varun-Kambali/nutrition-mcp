@@ -1,0 +1,43 @@
+id: dal_tadka
+name: Dal tadka
+aliases:
+  - tadka dal
+  - dal fry
+  - arhar dal tadka
+regions: [north]
+diet: veg
+servings: 6
+cooked_weight_g: 900
+ingredients:
+  - ingredient_id: toor_dal
+    grams: 150
+  - ingredient_id: onion
+    grams: 60
+  - ingredient_id: tomato
+    grams: 80
+  - ingredient_id: garlic
+    grams: 8
+  - ingredient_id: ginger
+    grams: 6
+  - ingredient_id: green_chilli
+    grams: 6
+  - ingredient_id: cumin_seeds
+    grams: 3
+  - ingredient_id: red_chilli_powder
+    grams: 3
+  - ingredient_id: turmeric
+    grams: 1.5
+  - ingredient_id: garam_masala
+    grams: 1
+  - ingredient_id: ghee
+    grams: 20  # tadka
+  - ingredient_id: coriander_leaves
+    grams: 5
+  - ingredient_id: salt
+    grams: 8
+measures:
+  katori: 150
+assumptions: >-
+  20 g ghee for the tadka, about 3.3 g per serving. The dal is pressure-cooked with water
+  and simmered with the masala to 900 g, 6 times the raw dal.
+source_id: recipes_cc_by

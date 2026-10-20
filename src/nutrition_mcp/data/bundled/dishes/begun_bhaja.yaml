@@ -1,0 +1,27 @@
+id: begun_bhaja
+name: Begun bhaja
+aliases:
+  - baingan bhaja
+  - fried brinjal slices
+regions: [east]
+diet: vegan
+servings: 4
+cooked_weight_g: 320
+ingredients:
+  - ingredient_id: brinjal
+    grams: 400
+  - ingredient_id: turmeric
+    grams: 3
+  - ingredient_id: red_chilli_powder
+    grams: 3
+  - ingredient_id: salt
+    grams: 5
+  - ingredient_id: mustard_oil
+    grams: 40  # taken up while shallow-frying
+measures:
+  piece: 40
+assumptions: >-
+  About 40 g mustard oil taken up while shallow-frying, 10 g per serving of 2 slices. The
+  slices lose about a third of their weight in the pan, so 400 g brinjal gives 8 slices of
+  about 40 g.
+source_id: recipes_cc_by

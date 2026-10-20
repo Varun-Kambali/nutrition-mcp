@@ -1,0 +1,51 @@
+# Sambar powder is modelled as red chilli powder, cumin and black pepper; the
+# ingredient table has no coriander seed or asafoetida.
+id: sambar
+name: Sambar
+aliases:
+  - sambhar
+  - huli
+regions: [south]
+diet: vegan
+servings: 6
+cooked_weight_g: 900
+ingredients:
+  - ingredient_id: toor_dal
+    grams: 100
+  - ingredient_id: drumstick
+    grams: 60
+  - ingredient_id: brinjal
+    grams: 60
+  - ingredient_id: pumpkin
+    grams: 60
+  - ingredient_id: onion
+    grams: 50
+  - ingredient_id: tomato
+    grams: 80
+  - ingredient_id: tamarind
+    grams: 10
+  - ingredient_id: red_chilli_powder
+    grams: 5  # sambar powder
+  - ingredient_id: cumin_seeds
+    grams: 2  # sambar powder
+  - ingredient_id: black_pepper
+    grams: 1  # sambar powder
+  - ingredient_id: turmeric
+    grams: 1
+  - ingredient_id: sunflower_oil
+    grams: 15  # tempering
+  - ingredient_id: mustard_seeds
+    grams: 2  # tempering
+  - ingredient_id: curry_leaves
+    grams: 3  # tempering
+  - ingredient_id: coriander_leaves
+    grams: 5
+  - ingredient_id: salt
+    grams: 7
+measures:
+  katori: 150
+assumptions: >-
+  15 g sunflower oil for the tempering, 2.5 g per serving. The dal is pressure-cooked,
+  thinned with tamarind water and simmered with the vegetables to 900 g, about twice the raw
+  weight.
+source_id: recipes_cc_by

@@ -1,0 +1,42 @@
+# Ajwain is left out; the ingredient table has none.
+id: methi_thepla
+name: Methi thepla
+aliases:
+  - thepla
+  - methi na thepla
+regions: [west]
+diet: veg
+servings: 5
+cooked_weight_g: 400
+ingredients:
+  - ingredient_id: atta
+    grams: 200
+  - ingredient_id: besan
+    grams: 30
+  - ingredient_id: methi_leaves
+    grams: 80
+  - ingredient_id: curd
+    grams: 50
+  - ingredient_id: sunflower_oil
+    grams: 30
+  - ingredient_id: turmeric
+    grams: 1
+  - ingredient_id: red_chilli_powder
+    grams: 3
+  - ingredient_id: ginger
+    grams: 5
+  - ingredient_id: green_chilli
+    grams: 5
+  - ingredient_id: cumin_seeds
+    grams: 2
+  - ingredient_id: sugar
+    grams: 4
+  - ingredient_id: salt
+    grams: 4
+measures:
+  piece: 40
+assumptions: >-
+  30 g sunflower oil, 10 g in the dough and 20 g on the tawa, 6 g per serving of 2 theplas.
+  The dough makes 10 theplas of about 40 g once cooked. Sesame seeds are left out; the
+  ingredient table has none.
+source_id: recipes_cc_by

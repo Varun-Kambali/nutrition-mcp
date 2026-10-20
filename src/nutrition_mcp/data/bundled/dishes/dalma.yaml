@@ -1,0 +1,48 @@
+# Panch phoran is modelled as cumin and mustard seeds.
+id: dalma
+name: Dalma
+aliases:
+  - dalama
+  - odia dalma
+regions: [east]
+diet: veg
+servings: 6
+cooked_weight_g: 1050
+ingredients:
+  - ingredient_id: toor_dal
+    grams: 150
+  - ingredient_id: pumpkin
+    grams: 100
+  - ingredient_id: raw_banana
+    grams: 100
+  - ingredient_id: brinjal
+    grams: 80
+  - ingredient_id: potato
+    grams: 80
+  - ingredient_id: green_beans
+    grams: 50
+  - ingredient_id: fresh_coconut
+    grams: 20
+  - ingredient_id: ginger
+    grams: 8
+  - ingredient_id: turmeric
+    grams: 2
+  - ingredient_id: green_chilli
+    grams: 6
+  - ingredient_id: ghee
+    grams: 15  # tempering
+  - ingredient_id: cumin_seeds
+    grams: 3  # tempering
+  - ingredient_id: mustard_seeds
+    grams: 1  # tempering
+  - ingredient_id: red_chilli_powder
+    grams: 2
+  - ingredient_id: salt
+    grams: 8
+measures:
+  katori: 150
+assumptions: >-
+  15 g ghee for the tempering, 2.5 g per serving. Dal and vegetables are cooked together
+  with water to 1050 g, about 1.7 times the raw weight. Raw papaya is left out; the
+  ingredient table has none.
+source_id: recipes_cc_by

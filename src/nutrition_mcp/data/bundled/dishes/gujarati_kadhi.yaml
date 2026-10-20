@@ -1,0 +1,40 @@
+# Cloves and cinnamon in the tempering are modelled as garam masala.
+id: gujarati_kadhi
+name: Gujarati kadhi
+aliases:
+  - gujrati kadhi
+regions: [west]
+diet: veg
+servings: 5
+cooked_weight_g: 750
+ingredients:
+  - ingredient_id: curd
+    grams: 300
+  - ingredient_id: besan
+    grams: 30
+  - ingredient_id: sugar
+    grams: 15
+  - ingredient_id: ginger
+    grams: 6
+  - ingredient_id: green_chilli
+    grams: 6
+  - ingredient_id: ghee
+    grams: 10  # tempering
+  - ingredient_id: cumin_seeds
+    grams: 2  # tempering
+  - ingredient_id: mustard_seeds
+    grams: 2  # tempering
+  - ingredient_id: curry_leaves
+    grams: 3  # tempering
+  - ingredient_id: garam_masala
+    grams: 1  # tempering
+  - ingredient_id: coriander_leaves
+    grams: 4
+  - ingredient_id: salt
+    grams: 6
+measures:
+  katori: 150
+assumptions: >-
+  10 g ghee for the tempering, 2 g per serving. Curd and besan are whisked with about 450 g
+  water and simmered to 750 g.
+source_id: recipes_cc_by

@@ -1,0 +1,36 @@
+# The katori here is a small chutney bowl of 60 g.
+id: coconut_chutney
+name: Coconut chutney
+aliases:
+  - nariyal chutney
+  - thengai chutney
+  - kayi chutney
+regions: [south]
+diet: vegan
+servings: 4
+cooked_weight_g: 240
+ingredients:
+  - ingredient_id: fresh_coconut
+    grams: 100
+  - ingredient_id: chana_dal
+    grams: 15  # roasted gram
+  - ingredient_id: green_chilli
+    grams: 8
+  - ingredient_id: ginger
+    grams: 3
+  - ingredient_id: salt
+    grams: 3
+  - ingredient_id: coconut_oil
+    grams: 5  # tempering
+  - ingredient_id: mustard_seeds
+    grams: 2  # tempering
+  - ingredient_id: curry_leaves
+    grams: 2  # tempering
+measures:
+  katori: 60
+  tbsp: 15
+assumptions: >-
+  5 g coconut oil for the tempering, 1.25 g per serving. Coconut, dal and chillies are
+  ground with about 100 g water and nothing is cooked off. Roasted gram (hurigadale) is
+  modelled with the raw chana dal row.
+source_id: recipes_cc_by

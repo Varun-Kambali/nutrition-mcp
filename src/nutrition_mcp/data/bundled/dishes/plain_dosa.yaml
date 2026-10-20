@@ -1,0 +1,25 @@
+id: plain_dosa
+name: Plain dosa
+aliases:
+  - dosa
+  - sada dosa
+  - dosai
+regions: [south]
+diet: vegan
+servings: 4
+cooked_weight_g: 480
+ingredients:
+  - ingredient_id: white_rice
+    grams: 180
+  - ingredient_id: urad_dal
+    grams: 60
+  - ingredient_id: salt
+    grams: 5
+  - ingredient_id: sunflower_oil
+    grams: 24  # about 3 g on the tawa per dosa
+measures:
+  piece: 60
+assumptions: >-
+  6 g sunflower oil per serving of 2 dosas, about 3 g on the tawa for each. The batter is
+  ground with water and loses some of it on the tawa, so each dosa weighs about 60 g.
+source_id: recipes_cc_by

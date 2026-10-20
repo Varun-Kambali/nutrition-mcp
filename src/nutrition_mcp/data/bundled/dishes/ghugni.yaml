@@ -1,0 +1,47 @@
+id: ghugni
+name: Ghugni
+aliases:
+  - ghughni
+  - ghoogni
+regions: [east]
+diet: vegan
+servings: 6
+cooked_weight_g: 900
+ingredients:
+  - ingredient_id: dried_peas
+    grams: 200
+  - ingredient_id: potato
+    grams: 100
+  - ingredient_id: onion
+    grams: 100
+  - ingredient_id: tomato
+    grams: 80
+  - ingredient_id: ginger
+    grams: 10
+  - ingredient_id: garlic
+    grams: 6
+  - ingredient_id: green_chilli
+    grams: 6
+  - ingredient_id: cumin_seeds
+    grams: 3
+  - ingredient_id: turmeric
+    grams: 2
+  - ingredient_id: red_chilli_powder
+    grams: 4
+  - ingredient_id: garam_masala
+    grams: 3
+  - ingredient_id: mustard_oil
+    grams: 25
+  - ingredient_id: coriander_leaves
+    grams: 6
+  - ingredient_id: fresh_coconut
+    grams: 20
+  - ingredient_id: salt
+    grams: 9
+measures:
+  katori: 150
+assumptions: >-
+  25 g mustard oil, about 4 g per serving. The soaked peas are boiled to about 2.3 times
+  their dry weight and simmered with the masala to 900 g. Whole dried yellow peas are
+  modelled with the dried split peas row.
+source_id: recipes_cc_by

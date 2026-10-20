@@ -1,0 +1,23 @@
+id: chapati
+name: Chapati
+aliases:
+  - roti
+  - phulka
+  - fulka
+  - poli
+  - rotli
+  - ruti
+regions: [north, west, east]
+diet: vegan
+servings: 4
+cooked_weight_g: 320
+ingredients:
+  - ingredient_id: atta
+    grams: 210  # includes about 10 g dusting flour
+measures:
+  roti: 40
+  piece: 40
+assumptions: >-
+  No added fat and no salt; ghee spread on top is not included. 210 g atta makes 8 chapatis
+  of about 40 g once most of the dough water cooks off.
+source_id: recipes_cc_by
