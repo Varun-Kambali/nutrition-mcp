@@ -3,7 +3,7 @@ from typing import Any
 import pytest
 
 from nutrition_mcp.models import Food, Nutrients
-from nutrition_mcp.units import UnitError, normalise_unit, to_grams, valid_units
+from nutrition_mcp.units import UnitError, normalise_unit, to_grams, unit_grams, valid_units
 
 DEFAULT_KATORI_G = 150.0
 
@@ -291,3 +291,14 @@ def test_valid_units_do_not_repeat_a_measure_the_food_defines() -> None:
     ]
     own_tbsp = ingredient(density_g_per_ml=1.0, measures={"tbsp": 12.0})
     assert valid_units(own_tbsp, DEFAULT_KATORI_G) == ["g", "tbsp", "ml", "tsp", "cup", "glass"]
+
+
+def test_unit_grams_give_the_grams_in_one_of_each_valid_unit() -> None:
+    ghee = ingredient(density_g_per_ml=0.9, measures={"tbsp": 12.0})
+    grams = unit_grams(ghee, DEFAULT_KATORI_G)
+    assert list(grams) == valid_units(ghee, DEFAULT_KATORI_G)
+    # The food's own tablespoon wins over 15 ml at its density.
+    assert grams == pytest.approx(
+        {"g": 1.0, "tbsp": 12.0, "ml": 0.9, "tsp": 4.5, "cup": 216.0, "glass": 225.0}
+    )
+    assert unit_grams(gravy(), 200.0) == {"g": 1.0, "serving": 225.0, "katori": 200.0}

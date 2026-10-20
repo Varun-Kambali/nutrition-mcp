@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from nutrition_mcp.config import Settings
 from nutrition_mcp.loader import build_registry
@@ -136,7 +137,8 @@ def test_nutrition_for_summarises_the_food(reg: Registry) -> None:
     assert (food.id, food.kind, food.diet) == ("test_dal", "dish", "vegan")
     assert food.regions == ["south", "north"]
     assert food.aliases == ["plain dal"]
-    assert food.measures == {"katori": 150.0, "serving": 200.0}
+    # Every unit the food accepts, with grams in one of each: its own katori, not the default.
+    assert food.units == {"g": 1.0, "katori": 150.0, "serving": 200.0}
 
 
 def test_nutrition_for_unknown_food(reg: Registry) -> None:
@@ -233,8 +235,23 @@ def test_meal_bad_unit_named(reg: Registry) -> None:
 
 
 def test_meal_bad_amount_named(reg: Registry) -> None:
-    with pytest.raises(ValueError, match=r"item 2 \(toor_dal\): amount must be greater than 0"):
-        meal_totals(reg, SETTINGS, [item("test_dal", 1, "g"), item("toor_dal", 0, "g")])
+    with pytest.raises(ValueError, match=r"item 2 \(toor_dal\): 6000 g .* over the limit"):
+        meal_totals(reg, SETTINGS, [item("test_dal", 1, "g"), item("toor_dal", 6000, "g")])
+
+
+@pytest.mark.parametrize("amount", [0, -1])
+def test_meal_item_amount_must_be_positive(amount: float) -> None:
+    # The bound lives on the model so the compute_meal schema shows it.
+    with pytest.raises(ValidationError, match="greater than 0"):
+        item("toor_dal", amount, "g")
+
+
+@pytest.mark.parametrize("field", ["food_id", "unit"])
+def test_meal_item_food_id_and_unit_are_at_most_64_characters(field: str) -> None:
+    fields = {"food_id": "toor_dal", "amount": 1, "unit": "g"}
+    MealItemIn.model_validate({**fields, field: "x" * 64})
+    with pytest.raises(ValidationError, match="at most 64 characters"):
+        MealItemIn.model_validate({**fields, field: "x" * 65})
 
 
 def test_meal_reports_the_first_bad_item(reg: Registry) -> None:
@@ -254,7 +271,7 @@ def test_meal_item_count_is_bounded(reg: Registry) -> None:
 
 
 def test_rank_iron_per_100kcal_desc(reg: Registry) -> None:
-    result = rank_foods(reg, "iron_mg", "100kcal", None, None, "ingredient", 10)
+    result = rank_foods(reg, SETTINGS, "iron_mg", "100kcal", None, None, "ingredient", 10)
     assert (result.rank_by, result.per, result.order) == ("iron_mg", "100kcal", "desc")
     assert [r.food.id for r in result.results] == [
         "toor_dal",
@@ -269,7 +286,7 @@ def test_rank_iron_per_100kcal_desc(reg: Registry) -> None:
 
 
 def test_rank_kcal_asc(reg: Registry) -> None:
-    result = rank_foods(reg, "kcal", "100g", None, None, "ingredient", 3)
+    result = rank_foods(reg, SETTINGS, "kcal", "100g", None, None, "ingredient", 3)
     assert result.order == "asc"
     assert [r.food.id for r in result.results] == ["water", "egg_boiled", "chicken_raw"]
     assert [r.value for r in result.results] == [0.0, 155.0, 165.0]
@@ -277,7 +294,7 @@ def test_rank_kcal_asc(reg: Registry) -> None:
 
 
 def test_rank_skips_missing_and_counts(reg: Registry) -> None:
-    result = rank_foods(reg, "iron_mg", "100g", None, None, None, 50)
+    result = rank_foods(reg, SETTINGS, "iron_mg", "100g", None, None, None, 50)
     shown = {r.food.id for r in result.results}
     everything = {food.id for food in reg.foods()}
     # The blend has no iron value; the curry's iron is a floor because of the blend.
@@ -286,7 +303,7 @@ def test_rank_skips_missing_and_counts(reg: Registry) -> None:
 
 
 def test_rank_per_serving_ranks_dishes_only(reg: Registry) -> None:
-    result = rank_foods(reg, "iron_mg", "serving", None, None, None, 10)
+    result = rank_foods(reg, SETTINGS, "iron_mg", "serving", None, None, None, 10)
     assert [(r.food.id, r.value) for r in result.results] == [
         ("test_dal", 2.6),
         ("test_roti", 1.17),
@@ -297,32 +314,32 @@ def test_rank_per_serving_ranks_dishes_only(reg: Registry) -> None:
 
 def test_rank_per_serving_rejects_ingredients(reg: Registry) -> None:
     with pytest.raises(ValueError, match="dishes only"):
-        rank_foods(reg, "iron_mg", "serving", None, None, "ingredient", 10)
+        rank_foods(reg, SETTINGS, "iron_mg", "serving", None, None, "ingredient", 10)
 
 
 def test_rank_kcal_per_100kcal_rejected(reg: Registry) -> None:
     with pytest.raises(ValueError, match="kcal"):
-        rank_foods(reg, "kcal", "100kcal", None, None, None, 10)
+        rank_foods(reg, SETTINGS, "kcal", "100kcal", None, None, None, 10)
 
 
 def test_rank_by_must_be_a_nutrient_or_glycemic_load(reg: Registry) -> None:
     with pytest.raises(ValueError, match=r"valid values: .*iron_mg.*glycemic_load"):
-        rank_foods(reg, "iron", "100g", None, None, None, 10)
+        rank_foods(reg, SETTINGS, "iron", "100g", None, None, None, 10)
 
 
 def test_rank_per_must_be_known(reg: Registry) -> None:
     with pytest.raises(ValueError, match="valid values: 100kcal, 100g, serving"):
-        rank_foods(reg, "iron_mg", "cup", None, None, None, 10)
+        rank_foods(reg, SETTINGS, "iron_mg", "cup", None, None, None, 10)
 
 
 @pytest.mark.parametrize("limit", [0, 51])
 def test_rank_limit_is_bounded(reg: Registry, limit: int) -> None:
     with pytest.raises(ValueError, match="limit must be 1 to 50"):
-        rank_foods(reg, "iron_mg", "100g", None, None, None, limit)
+        rank_foods(reg, SETTINGS, "iron_mg", "100g", None, None, None, limit)
 
 
 def test_rank_ties_are_broken_by_name(reg: Registry) -> None:
-    result = rank_foods(reg, "protein_g", "100g", None, None, "ingredient", 10)
+    result = rank_foods(reg, SETTINGS, "protein_g", "100g", None, None, "ingredient", 10)
     assert [r.food.id for r in result.results] == [
         "chicken_raw",
         "toor_dal",
@@ -335,7 +352,7 @@ def test_rank_ties_are_broken_by_name(reg: Registry) -> None:
 
 
 def test_rank_glycemic_load_lowest_first(reg: Registry) -> None:
-    result = rank_foods(reg, "glycemic_load", "100g", None, None, None, 10)
+    result = rank_foods(reg, SETTINGS, "glycemic_load", "100g", None, None, None, 10)
     assert result.order == "asc"
     assert [(r.food.id, r.value) for r in result.results] == [
         ("toor_dal", 13.2),
@@ -346,10 +363,10 @@ def test_rank_glycemic_load_lowest_first(reg: Registry) -> None:
 
 
 def test_rank_glycemic_load_per_serving_and_per_100kcal(reg: Registry) -> None:
-    per_serving = rank_foods(reg, "glycemic_load", "serving", None, None, None, 10)
+    per_serving = rank_foods(reg, SETTINGS, "glycemic_load", "serving", None, None, None, 10)
     assert [(r.food.id, r.value) for r in per_serving.results] == [("test_roti", 11.7)]
     assert per_serving.skipped_missing == 2
-    per_kcal = rank_foods(reg, "glycemic_load", "100kcal", None, None, None, 10)
+    per_kcal = rank_foods(reg, SETTINGS, "glycemic_load", "100kcal", None, None, None, 10)
     assert [(r.food.id, r.value) for r in per_kcal.results] == [
         ("toor_dal", 3.8),
         ("test_roti", 10.3),
@@ -357,12 +374,25 @@ def test_rank_glycemic_load_per_serving_and_per_100kcal(reg: Registry) -> None:
 
 
 def test_rank_applies_the_filters(reg: Registry) -> None:
-    result = rank_foods(reg, "protein_g", "100g", "north", "vegan", "dish", 10)
+    result = rank_foods(reg, SETTINGS, "protein_g", "100g", "north", "vegan", "dish", 10)
     assert [r.food.id for r in result.results] == ["test_roti", "test_dal"]
 
 
+def test_ranked_foods_list_their_units_with_the_default_katori_from_the_settings(
+    reg: Registry,
+) -> None:
+    result = rank_foods(
+        reg, Settings(default_katori_g=200.0), "protein_g", "100g", None, None, "dish", 10
+    )
+    units = {r.food.id: r.food.units for r in result.results}
+    assert units["test_curry"] == {"g": 1.0, "serving": 250.0, "katori": 200.0}
+    # Test dal defines its own katori, and the roti is counted by the piece.
+    assert units["test_dal"]["katori"] == 150.0
+    assert "katori" not in units["test_roti"]
+
+
 def test_rank_limit_keeps_the_count_of_skipped_foods(reg: Registry) -> None:
-    result = rank_foods(reg, "iron_mg", "100g", None, None, None, 1)
+    result = rank_foods(reg, SETTINGS, "iron_mg", "100g", None, None, None, 1)
     assert len(result.results) == 1
     assert result.skipped_missing == 2
 
@@ -408,6 +438,14 @@ def test_region_filter_keeps_dishes_of_that_region(reg: Registry) -> None:
 
 def test_filters_combine(reg: Registry) -> None:
     assert filtered_ids(reg, "south", "veg", "dish") == {"test_dal"}
+
+
+def test_region_with_ingredients_is_rejected(reg: Registry) -> None:
+    # Ingredients have no region, so the pair could only ever return nothing.
+    with pytest.raises(
+        ValueError, match="ingredients have no region; drop region or use kind='dish'"
+    ):
+        filter_foods(reg.foods(), "north", None, "ingredient")
 
 
 @pytest.mark.parametrize(

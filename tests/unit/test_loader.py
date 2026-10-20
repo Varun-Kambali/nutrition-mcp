@@ -3,8 +3,9 @@ import shutil
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
-from nutrition_mcp.config import Settings
+from nutrition_mcp.config import Settings, describe_settings_error
 from nutrition_mcp.loader import (
     INGREDIENT_COLUMNS,
     DataError,
@@ -457,3 +458,41 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.data_dirs == []
     assert settings.default_katori_g == 150.0
     assert settings.log_level == "INFO"
+
+
+def test_log_level_is_a_standard_name_in_any_case(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NUTRITION_MCP_LOG_LEVEL", "debug")
+    assert Settings().log_level == "DEBUG"
+    monkeypatch.setenv("NUTRITION_MCP_LOG_LEVEL", "LOUD")
+    with pytest.raises(ValidationError) as caught:
+        Settings()
+    assert describe_settings_error(caught.value).startswith("NUTRITION_MCP_LOG_LEVEL: ")
+
+
+@pytest.mark.parametrize("value", ["0", "-150", "1001"])
+def test_default_katori_is_above_0_and_at_most_1000_g(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    # 0 would make every katori amount 0 g, and a negative size would fail every tool call.
+    monkeypatch.setenv("NUTRITION_MCP_DEFAULT_KATORI_G", value)
+    with pytest.raises(ValidationError) as caught:
+        Settings()
+    assert describe_settings_error(caught.value).startswith("NUTRITION_MCP_DEFAULT_KATORI_G: ")
+
+
+@pytest.mark.parametrize("value", ["0.5", "1000"])
+def test_default_katori_accepts_sizes_within_the_bounds(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    monkeypatch.setenv("NUTRITION_MCP_DEFAULT_KATORI_G", value)
+    assert Settings().default_katori_g == float(value)
+
+
+def test_a_settings_error_names_every_bad_variable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NUTRITION_MCP_LOG_LEVEL", "LOUD")
+    monkeypatch.setenv("NUTRITION_MCP_DEFAULT_KATORI_G", "big")
+    with pytest.raises(ValidationError) as caught:
+        Settings()
+    message = describe_settings_error(caught.value)
+    assert "NUTRITION_MCP_DEFAULT_KATORI_G: " in message
+    assert "NUTRITION_MCP_LOG_LEVEL: " in message

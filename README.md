@@ -1,12 +1,12 @@
 # nutrition-mcp
 
-Work in progress. The server is not implemented yet. This README is a stub that fills in as each part ships; the reasoning behind the project is in the [case study](docs/case-study.md).
+Work in progress. The server and its five tools run over stdio; the evaluations and the demo come next. This README fills in as each part ships; the reasoning behind the project is in the [case study](docs/case-study.md).
 
 An MCP server that gives any assistant or agent sourced nutrition, glycemic load and micronutrient data for Indian dishes and ingredients, for any amount in grams or household measures.
 
 [![CI](https://github.com/Varun-Kambali/nutrition-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Varun-Kambali/nutrition-mcp/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) · **[Case study](docs/case-study.md)**
 
-Demo: to be recorded once the server runs.
+Demo: not recorded yet.
 
 ## Problem
 
@@ -57,11 +57,65 @@ make setup
 make test
 ```
 
-`make run` exits with "not implemented" until the server lands. Client setup for Claude Desktop and Claude Code will be added here.
+`make run` starts the server on stdio, where it waits for an MCP client. Normally the client starts it for you: see [Use it](#use-it).
 
-## Usage
+## Use it
 
-Not available yet.
+The server runs on your machine and your MCP client starts it. It needs [uv](https://docs.astral.sh/uv/). Run it straight from GitHub with `uvx`, or from a clone with `uv`.
+
+**Claude Desktop.** Add the server to `claude_desktop_config.json` (on macOS in `~/Library/Application Support/Claude/`, on Windows in `%APPDATA%\Claude\`), then restart the app.
+
+From GitHub:
+
+```json
+{
+  "mcpServers": {
+    "nutrition": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/Varun-Kambali/nutrition-mcp", "nutrition-mcp"]
+    }
+  }
+}
+```
+
+From a clone:
+
+```json
+{
+  "mcpServers": {
+    "nutrition": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/nutrition-mcp", "run", "nutrition-mcp"]
+    }
+  }
+}
+```
+
+If Claude Desktop cannot find `uv` or `uvx`, put its full path in `command` (`which uvx` prints it).
+
+**Claude Code.**
+
+```bash
+# From GitHub
+claude mcp add nutrition -- uvx --from git+https://github.com/Varun-Kambali/nutrition-mcp nutrition-mcp
+# From a clone
+claude mcp add nutrition -- uv --directory /path/to/nutrition-mcp run nutrition-mcp
+```
+
+Then ask, for example, "protein and carbs in 2 rotis and a katori of rajma?". The tool descriptions tell the model to find the food ids with `search_food` and take the totals from `compute_meal`.
+
+The five tools, all read-only, and the sources resource:
+
+| Tool or resource | What it gives |
+|---|---|
+| `search_food(query, region?, diet?, kind?, limit?)` | Food ids by name, spelling variants included, with kind, regions, diet and the units the food accepts (grams in one katori, piece, glass and so on). `total` counts every match before `limit`. Every word of the query has to match a name, so a dish that is not in the data returns no results and close names as suggestions |
+| `get_nutrition(food_id, amount, unit)` | Nutrients for an amount in grams or a household measure, with the grams used, the measure and oil assumptions, glycemic load when the GI is known, and the sources |
+| `compute_meal(items)` | Per-item and total nutrients and glycemic load for 1 to 30 items, each a food id, amount and unit |
+| `find_foods(rank_by, per?, region?, diet?, kind?, limit?)` | Foods ranked by one nutrient or by glycemic load, per 100 kcal, 100 g or serving |
+| `compute_targets(sex, age, height_cm, weight_kg, activity, goal)` | Estimated daily calorie and protein targets for an adult, from the Mifflin-St Jeor equation |
+| `nutrition://sources` (resource) | Every loaded data source with its URL, license, version and attribution |
+
+Nutrient values are rounded to 2 decimals, so 0.0 can be a small amount; a value the source does not report is null, never 0. The details given to `compute_targets` pass through the model your client uses before they reach the server. The server stores nothing and does not log tool inputs. Logs are JSON lines on stderr; `NUTRITION_MCP_LOG_LEVEL` sets the level: `DEBUG`, `INFO` (the default), `WARNING`, `ERROR` or `CRITICAL`.
 
 ## Evaluation
 
@@ -79,17 +133,21 @@ The server runs on the user's machine over stdio. There is no hosted endpoint.
 
 ```
 src/nutrition_mcp/   server code
-tests/unit/          unit tests
+tests/               unit and integration tests
 docs/                case study, requirements, architecture
 ```
 
 ## Design decisions
 
-Decision records will be listed here, one line each, as they are written in `docs/decisions/`.
+- [0001](docs/decisions/0001-own-recipes-over-copied-tables.md): write the dish recipes for this project and take ingredient values only from openly licensed tables, because the Indian food tables cannot be redistributed.
+- [0002](docs/decisions/0002-data-sources.md): USDA FoodData Central first, CoFID 2021 where USDA lacks the food or has it only in the wrong form.
+- [0003](docs/decisions/0003-missing-is-not-zero.md): a value the source does not report stays null, and a dish total that lacks one names the ingredients behind the gap.
+- [0004](docs/decisions/0004-facts-not-people.md): the server answers questions about food and stores nothing about the person; condition-aware logic belongs to the planner.
+- [0005](docs/decisions/0005-targets-formula.md): calorie and protein targets from Mifflin-St Jeor, each constant cited, with the limits of the estimate.
 
 ## Limitations and next steps
 
-Nothing runs yet. Known limits of the finished design are in the case study.
+The evaluations have not run, so there are no measured results yet. Known limits of the design are in the case study.
 
 ## What I learned
 

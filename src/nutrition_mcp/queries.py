@@ -50,11 +50,14 @@ def filter_foods(
     """Keep the foods that match every filter given; None means no filter.
 
     Region keeps dishes tagged with it, so it also leaves out ingredients, which have no
-    region. Diet means suitable for: "veg" keeps vegan and vegetarian foods.
+    region; asking for both raises ValueError instead of returning nothing. Diet means
+    suitable for: "veg" keeps vegan and vegetarian foods.
     """
     _require_one_of("region", region, get_args(Region))
     _require_one_of("diet", diet, DIET_SUITABLE_FOR)
     _require_one_of("kind", kind, get_args(Kind))
+    if region is not None and kind == "ingredient":
+        raise ValueError("ingredients have no region; drop region or use kind='dish'")
     suitable = DIET_SUITABLE_FOR[diet] if diet is not None else None
     return [
         food
@@ -91,7 +94,7 @@ def _portion(reg: Registry, settings: Settings, food_id: str, amount: float, uni
         else glycemic_load(food.gi, exact.carbs_available_g)
     )
     result = NutritionResult(
-        food=FoodSummary.from_food(food),
+        food=FoodSummary.from_food(food, settings.default_katori_g),
         amount=amount,
         unit=unit,
         grams=round(grams, DECIMALS),
@@ -204,6 +207,7 @@ def _ranked_value(food: Food, rank_by: str, per: str) -> float | None:
 
 def rank_foods(
     reg: Registry,
+    settings: Settings,
     rank_by: str,
     per: str,
     region: str | None,
@@ -247,7 +251,10 @@ def rank_foods(
         per=cast(Per, per),
         order="asc" if ascending else "desc",
         results=[
-            RankedFood(food=FoodSummary.from_food(food), value=round(value, DECIMALS))
+            RankedFood(
+                food=FoodSummary.from_food(food, settings.default_katori_g),
+                value=round(value, DECIMALS),
+            )
             for food, value in ranked[:limit]
         ],
         skipped_missing=skipped,
