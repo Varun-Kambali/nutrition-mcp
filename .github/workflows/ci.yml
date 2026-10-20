@@ -16,10 +16,29 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true
+      # With UV_FROZEN set, `uv lock --check` only checks that the lockfile parses, not that
+      # it matches pyproject.toml.
+      - name: Check uv.lock matches pyproject.toml
+        run: uv lock --check
+        env:
+          UV_FROZEN: "0"
       - run: uv sync
       - run: make lint
       - run: make test
+      - name: Check the committed JSON Schemas match the models
+        run: |
+          uv run python scripts/export_schemas.py
+          git diff --exit-code schemas/
       - run: docker build -t nutrition-mcp .
+  data-accuracy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run python evals/run_evals.py --suite data_accuracy --check evals/thresholds.toml
   secrets-scan:
     runs-on: ubuntu-latest
     steps:

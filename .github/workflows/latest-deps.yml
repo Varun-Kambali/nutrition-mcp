@@ -1,0 +1,22 @@
+name: latest-deps
+# `uvx --from git+...` installs ignore uv.lock, so a new release of a dependency (an mcp 2.x
+# release most of all) can break real installs while CI, pinned by the lockfile, stays green.
+# This job resolves the newest versions pyproject.toml allows and runs lint and tests on them.
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  latest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          # The cache is keyed on uv.lock, which this job does not follow.
+          enable-cache: false
+      - run: uv sync --upgrade
+      - run: make lint
+      - run: make test
