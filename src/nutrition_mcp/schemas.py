@@ -96,6 +96,8 @@ class SearchResult(BaseModel):
     query: str
     # Best match first. Each carries its kind and regions, so an ambiguous name stays a list.
     results: list[FoodSummary]
+    # How many foods matched before the limit cut the list, so a caller can tell it was cut.
+    total: int
     # Close food names, given only when nothing matched well enough to be a result.
     suggestions: list[str]
 

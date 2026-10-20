@@ -2,20 +2,23 @@
 
 Indian food names have no single Roman spelling ("sambar", "sambhar", "sambaar"), so the
 query and every candidate are normalised the same way, then scored with rapidfuzz. A candidate
-scores the larger of `fuzz.ratio` (whole-string similarity, so a one-letter slip still counts)
-and `fuzz.token_set_ratio` (shared whole words, so "dal" is a full match for "dal tadka").
-Each food keeps its best score over its name, its aliases and its ID read as words.
+scores `fuzz.token_set_ratio` when it holds every word of the query ("dal" is a full match
+for "dal tadka") and `fuzz.ratio`, the similarity of the whole strings, otherwise (so a
+one-letter slip still counts). Each food keeps its best score over its name, its aliases and
+its ID read as words.
 
 Order is score, then how close the best name is as a whole string (plain `fuzz.ratio`), then
-name. The middle key matters because a food whose words contain every query word scores 100
-like the exact name: "paneer" ties Palak paneer, "chapati" ties atta (alias "chapati
-flour"), and the exact name has to come first.
+name, then ID. The second key matters because a food whose words contain every query word
+scores 100 like the exact name: "paneer" ties Palak paneer, "chapati" ties atta (alias
+"chapati flour"), and the exact name has to come first.
 
-WRatio was the first scorer and was dropped: its partial match scores a query that sits
-inside a longer word at 90, so "tea" matched "steamed", "chana" matched the alias "anna" and
-"dal" matched the Tamil "kadalai". Both scorers used now compare whole words or whole strings.
-A query that is only the start of a longer word scores low ("dal" against "dalma" is 75, a
-suggestion and not a result); "dalma" itself is a full match.
+Two earlier scorers were dropped. WRatio's partial match scores a query that sits inside a
+longer word at 90, so "tea" matched "steamed", "chana" matched the alias "anna" and "dal"
+matched the Tamil "kadalai". An unconditional token_set_ratio scores 100 when a short alias
+sits inside a longer query, so "aloo paratha" matched potato through "aloo" and "pao bhaji"
+matched pav; now the token set counts only when the candidate has all the query's words.
+A query that is only the start of a longer word is left out of the results ("dal" against
+"dalma" scores 75); "dalma" itself is a full match.
 
 Filters (region, diet, kind) apply before scoring, so results and suggestions both respect
 them. Thresholds, on the 0 to 100 scale:
@@ -81,9 +84,15 @@ def normalise(text: str) -> str:
 def _score(query: str, food: Food) -> tuple[float, float]:
     """The food's match score and, as the tie-break, how close its best name is as a whole."""
     names = {normalise(food.name), normalise(food.id), *(normalise(a) for a in food.aliases)}
-    whole = [fuzz.ratio(query, name) for name in names if name]
-    shared = [fuzz.token_set_ratio(query, name) for name in names if name]
-    return max([*whole, *shared], default=0.0), max(whole, default=0.0)
+    words = set(query.split())
+    matched = 0.0
+    closest = 0.0
+    for name in names:
+        whole = fuzz.ratio(query, name)
+        closest = max(closest, whole)
+        has_every_word = words <= set(name.split())
+        matched = max(matched, fuzz.token_set_ratio(query, name) if has_every_word else whole)
+    return matched, closest
 
 
 def search_foods(
@@ -118,7 +127,8 @@ def search_foods(
         return SearchResult(
             query=query,
             results=[FoodSummary.from_food(food) for food in matches[:limit]],
+            total=len(matches),
             suggestions=[],
         )
     close = dict.fromkeys(food.name for score, _, food in scored if score >= SUGGESTION_MIN_SCORE)
-    return SearchResult(query=query, results=[], suggestions=list(close)[:MAX_SUGGESTIONS])
+    return SearchResult(query=query, results=[], total=0, suggestions=list(close)[:MAX_SUGGESTIONS])

@@ -139,12 +139,18 @@ def test_exact_name_ranks_before_a_longer_name_that_contains_it(reg: Registry) -
 
 
 def test_equal_scores_are_ordered_by_name() -> None:
-    # Same score and same closeness as a whole string, so only the name can decide.
+    # Both names are 12 letters with no folds, so score and closeness tie and the name
+    # decides. The ids run the other way, so the id would give the opposite order.
     pickles = Registry(
-        {"a": make_food("a", "Lemon pickle"), "b": make_food("b", "Green pickle")}, {}
+        {"a": make_food("a", "Mango pickle"), "b": make_food("b", "Lemon pickle")}, {}
     )
     result = search_foods(pickles, "pickle", None, None, None)
-    assert [food.name for food in result.results] == ["Green pickle", "Lemon pickle"]
+    assert [food.name for food in result.results] == ["Lemon pickle", "Mango pickle"]
+
+
+def test_equal_names_are_ordered_by_id() -> None:
+    twins = Registry({"b": make_food("b", "Mango pickle"), "a": make_food("a", "Mango pickle")}, {})
+    assert ids(search_foods(twins, "pickle", None, None, None)) == ["a", "b"]
 
 
 def test_region_filter(reg: Registry) -> None:
@@ -232,6 +238,48 @@ def test_dal_finds_dals_not_words_that_contain_dal(reg: Registry) -> None:
     assert {"toor_dal", "musur_dal", "varan_bhaat"} <= found
     # The Tamil aliases "kadalai maavu" and "verkadalai" only contain the letters.
     assert not {"besan", "peanuts"} & found
+
+
+def test_a_short_alias_inside_a_longer_query_is_not_a_match(reg: Registry) -> None:
+    # "aloo" is an alias of potato and "paratha" of plain paratha, but the query holds words
+    # that neither has, so neither is a match; plain paratha is only a close name.
+    result = search_foods(reg, "aloo paratha", None, None, None)
+    assert result.results == []
+    assert "Plain paratha" in result.suggestions
+
+
+def test_extra_words_do_not_match_through_one_ingredient(reg: Registry) -> None:
+    assert search_foods(reg, "paneer butter masala", None, None, None).results == []
+
+
+def test_a_variant_spelling_of_a_two_word_dish_finds_only_that_dish(reg: Registry) -> None:
+    # "pao" is also an alias of the pav ingredient, which is not what was asked for.
+    found = ids(search_foods(reg, "pao bhaji", None, None, None))
+    assert "pav_bhaji" in found
+    assert "pav" not in found
+
+
+def test_all_the_query_words_in_a_longer_name_is_a_match(reg: Registry) -> None:
+    found = ids(search_foods(reg, "dal", None, None, None, limit=50))
+    assert {"dal_tadka", "musur_dal", "varan_bhaat"} <= set(found)
+
+
+def test_a_typo_inside_a_two_word_query_is_found(reg: Registry) -> None:
+    assert ids(search_foods(reg, "chana masla", None, None, None))[0] == "chana_masala"
+
+
+def test_a_spelling_variant_of_a_dal_is_found(reg: Registry) -> None:
+    assert "musur_dal" in ids(search_foods(reg, "masoor dal", None, None, None))
+
+
+def test_total_counts_matches_before_the_limit(reg: Registry) -> None:
+    cut = search_foods(reg, "dal", None, None, None, limit=3)
+    assert len(cut.results) == 3
+    assert cut.total > 3
+    whole = search_foods(reg, "dal", None, None, None, limit=50)
+    assert whole.total == len(whole.results)
+    assert cut.total == whole.total
+    assert search_foods(reg, "qwerty", None, None, None).total == 0
 
 
 def test_one_letter_slip_in_a_long_name_is_found(reg: Registry) -> None:
