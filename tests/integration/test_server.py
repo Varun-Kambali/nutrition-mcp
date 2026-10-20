@@ -12,8 +12,10 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.types import CallToolResult, TextContent, TextResourceContents
 
 from nutrition_mcp import __version__
+from nutrition_mcp import server as server_module
 from nutrition_mcp.config import Settings
 from nutrition_mcp.loader import build_registry
+from nutrition_mcp.log import configure_logging
 from nutrition_mcp.registry import Registry
 from nutrition_mcp.schemas import TargetsIn
 from nutrition_mcp.server import SOURCES_URI, TOOL_NAMES, build_server
@@ -345,6 +347,32 @@ async def test_an_unknown_tool_name_is_not_logged(
     assert (await client.call_tool("secret_tool", {})).is_error
     calls = [r for r in caplog.records if r.name == "nutrition_mcp.server"]
     assert [(r.tool, r.outcome) for r in calls] == [("unknown", "error")]  # type: ignore[attr-defined]
+
+
+@pytest.mark.usefixtures("restore_logging")
+async def test_a_crash_is_logged_with_its_cause_but_no_message(
+    client: Client, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Built at run time: the stack prints source lines, and the value must come only from
+    # the exception, which the log leaves out.
+    detail = "".join(["sec", "ret"])
+
+    def broken_search(*args: Any) -> None:
+        raise RuntimeError(detail)
+
+    monkeypatch.setattr(server_module, "search_foods", broken_search)
+    configure_logging("INFO")
+    result = await client.call_tool("search_food", {"query": "roti"})
+
+    assert error_text(result) == "Error executing tool search_food"
+    err = capsys.readouterr().err
+    assert detail not in err
+    crash = next(json.loads(line) for line in err.splitlines() if '"exceptions"' in line)
+    chain = crash["exceptions"]
+    # The SDK wraps the original error; the log keeps both, original first.
+    assert [link["type"] for link in chain] == ["RuntimeError", "UnexpectedToolError"]
+    assert "nutrition_mcp/server.py" in chain[0]["stack"]
+    assert "broken_search" in chain[0]["stack"]
 
 
 async def test_stdio_server_logs_json_lines_without_inputs(tmp_path: Path) -> None:

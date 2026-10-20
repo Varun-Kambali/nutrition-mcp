@@ -14,6 +14,20 @@ from datetime import UTC, datetime
 CALL_FIELDS = ("tool", "latency_ms", "outcome", "count")
 
 
+def _chain(error: BaseException | None) -> list[BaseException]:
+    """The exception and the ones behind it, original first, as Python's traceback shows them.
+
+    The SDK logs a tool crash as UnexpectedToolError raised "from" the real error, so without
+    the chain the log would name only the wrapper and show only SDK frames.
+    """
+    links: list[BaseException] = []
+    # By identity, so a cycle in the chain cannot loop forever.
+    while error is not None and all(error is not seen for seen in links):
+        links.append(error)
+        error = error.__cause__ or (None if error.__suppress_context__ else error.__context__)
+    return links[::-1]
+
+
 class JsonFormatter(logging.Formatter):
     """One JSON object per record: ts, level, msg, and the tool-call fields when present."""
 
@@ -26,11 +40,16 @@ class JsonFormatter(logging.Formatter):
         for field in CALL_FIELDS:
             if hasattr(record, field):
                 line[field] = getattr(record, field)
-        if record.exc_info and record.exc_info[0] is not None:
-            # A KeyError's message is the key that was asked for, so only the type and the
-            # stack (file, line and code, no values) are kept.
-            line["error"] = record.exc_info[0].__name__
-            line["stack"] = "".join(traceback.format_tb(record.exc_info[2]))
+        if record.exc_info:
+            # A KeyError's message is the key that was asked for, so each exception keeps
+            # only its type and its frames (file, line and code, no values).
+            line["exceptions"] = [
+                {
+                    "type": type(error).__name__,
+                    "stack": "".join(traceback.format_tb(error.__traceback__)),
+                }
+                for error in _chain(record.exc_info[1])
+            ]
         return json.dumps(line)
 
 

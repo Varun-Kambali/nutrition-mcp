@@ -44,7 +44,7 @@ The server makes no network calls at runtime. Only the build script talks to USD
 | `queries.py` | The functions behind the tools, which the evals call too: `nutrition_for` (one food and amount), `meal_totals` (per-item and total nutrients, incomplete values named), `rank_foods` (by any nutrient or glycemic load, per 100 kcal, 100 g or serving) and `filter_foods`, the region, diet and kind filters that search shares. Results are rounded to 2 decimals only when they are built |
 | `schemas.py` | The inputs and outputs of those functions, which the tools return as structured output: `FoodSummary`, `MealItemIn`, `NutritionResult`, `MealResult`, `RankedFood`, `RankResult`, `SearchResult`, `TargetsIn` and `TargetsResult` |
 | `targets.py` | `compute_targets`: Mifflin-St Jeor, activity multipliers, goal adjustments, the calorie floor and protein per kg, each constant with its citation. A pure function that stores nothing |
-| `log.py` | JSON log lines on stderr: `ts`, `level`, `msg`, and for a tool call `tool`, `latency_ms`, `outcome` and `count`. Holds the SDK's logger at WARNING and drops exception messages, so no tool input reaches the logs |
+| `log.py` | JSON log lines on stderr: `ts`, `level`, `msg`, and for a tool call `tool`, `latency_ms`, `outcome` and `count`. Holds the SDK's logger at WARNING and logs each exception in a chain by type and stack, without its message, so no tool input reaches the logs |
 | `server.py` | The `MCPServer` with the five tools and the sources resource, the mapping from query errors to tool errors, the per-call log line, and the `nutrition-mcp` entry point: `main()` loads the settings and data, exits 1 on a dataset error, then serves on stdio |
 
 ## Data format (bundled and custom)
@@ -104,7 +104,7 @@ The model chooses which foods and amounts to ask about. Every number in the answ
 
 Structured JSON on stderr, one line per tool call: tool name, latency in milliseconds, outcome, and result count. No tool inputs are logged at all, which includes the food IDs and the details given to `compute_targets` ([ADR 0004](decisions/0004-facts-not-people.md)).
 
-The line is written around the SDK's `call_tool`, so a call the SDK rejects against the schema is logged too, and a tool name the client made up is logged as `unknown`. The SDK's own logger is held at WARNING, because its INFO line for a failed call repeats the error text, which quotes the input ("unknown food id 'x'"). A crash is logged with its exception type and stack but not its message, for the same reason.
+The line is written around the SDK's `call_tool`, so a call the SDK rejects against the schema is logged too, and a tool name the client made up is logged as `unknown`. The SDK's own logger is held at WARNING, because its INFO line for a failed call repeats the error text, which quotes the input ("unknown food id 'x'"). A crash is logged with the type and stack of every exception in its chain, original first, but no messages, for the same reason. The chain matters because the SDK wraps the real error in `UnexpectedToolError`, whose own frames are all inside the SDK.
 
 ## Evaluation design
 

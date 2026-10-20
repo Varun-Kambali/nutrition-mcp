@@ -1,3 +1,5 @@
+import logging
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -21,3 +23,14 @@ def no_bundled_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     )
     monkeypatch.setattr(loader, "bundled_dir", lambda: empty)
     return empty
+
+
+@pytest.fixture
+def restore_logging() -> Iterator[None]:
+    """Put the root and SDK loggers back after a test that calls configure_logging."""
+    root = logging.getLogger()
+    sdk = logging.getLogger("mcp")
+    saved = (root.handlers[:], root.level, sdk.level)
+    yield
+    root.handlers[:], root.level = saved[0], saved[1]
+    sdk.setLevel(saved[2])

@@ -1,21 +1,10 @@
 import json
 import logging
 import sys
-from collections.abc import Iterator
 
 import pytest
 
 from nutrition_mcp.log import JsonFormatter, configure_logging
-
-
-@pytest.fixture
-def restore_logging() -> Iterator[None]:
-    root = logging.getLogger()
-    sdk = logging.getLogger("mcp")
-    saved = (root.handlers[:], root.level, sdk.level)
-    yield
-    root.handlers[:], root.level = saved[0], saved[1]
-    sdk.setLevel(saved[2])
 
 
 def record(msg: str, **extra: object) -> logging.LogRecord:
@@ -58,9 +47,62 @@ def test_an_exception_keeps_its_type_and_stack_but_not_its_message() -> None:
         entry.exc_info = sys.exc_info()
     line = JsonFormatter().format(entry)
     assert "secret_food" not in line
-    logged = json.loads(line)
-    assert logged["error"] == "KeyError"
+    [logged] = json.loads(line)["exceptions"]
+    assert logged["type"] == "KeyError"
     assert "test_log.py" in logged["stack"]
+
+
+def _wrapped_crash() -> logging.LogRecord:
+    # The SDK logs a tool crash as UnexpectedToolError raised "from" the original error.
+    detail = "".join(["secret", "_food"])
+    try:
+        try:
+            raise RuntimeError(detail)
+        except RuntimeError as err:
+            raise LookupError("wrapper") from err
+    except LookupError:
+        entry = record("crash")
+        entry.exc_info = sys.exc_info()
+    return entry
+
+
+def test_an_exception_chain_is_logged_cause_first_without_messages() -> None:
+    line = JsonFormatter().format(_wrapped_crash())
+    assert "secret_food" not in line
+    chain = json.loads(line)["exceptions"]
+    assert [link["type"] for link in chain] == ["RuntimeError", "LookupError"]
+    # Each link keeps its own frames, so the original error's frames are not lost.
+    assert "raise RuntimeError(detail)" in chain[0]["stack"]
+    assert "raise LookupError" in chain[1]["stack"]
+
+
+def test_an_exception_raised_while_handling_another_keeps_both() -> None:
+    try:
+        try:
+            raise KeyError("first")
+        except KeyError:
+            raise ValueError("second") from None
+    except ValueError:
+        suppressed = record("crash")
+        suppressed.exc_info = sys.exc_info()
+    try:
+        try:
+            raise KeyError("first")
+        except KeyError:
+            raise ValueError("second")  # noqa: B904
+    except ValueError:
+        implicit = record("crash")
+        implicit.exc_info = sys.exc_info()
+    # "from None" hides the first error, as Python's own traceback does.
+    assert [
+        link["type"] for link in json.loads(JsonFormatter().format(suppressed))["exceptions"]
+    ] == ["ValueError"]
+    assert [
+        link["type"] for link in json.loads(JsonFormatter().format(implicit))["exceptions"]
+    ] == [
+        "KeyError",
+        "ValueError",
+    ]
 
 
 @pytest.mark.usefixtures("restore_logging")
