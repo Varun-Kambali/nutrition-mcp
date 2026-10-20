@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -70,6 +71,35 @@ async def test_server_names_itself_and_says_how_to_use_the_tools(client: Client)
     assert client.server_info is not None
     assert (client.server_info.name, client.server_info.version) == ("nutrition-mcp", __version__)
     assert "search_food" in (client.instructions or "")
+
+
+def field_names(schema: Any) -> set[str]:
+    """Every property name anywhere in a JSON Schema, nested models included."""
+    names: set[str] = set()
+    if isinstance(schema, dict):
+        properties = schema.get("properties")
+        if isinstance(properties, dict):
+            names.update(properties)
+        for value in schema.values():
+            names |= field_names(value)
+    elif isinstance(schema, list):
+        for value in schema:
+            names |= field_names(value)
+    return names
+
+
+async def test_instructions_name_the_source_field_each_tool_returns(client: Client) -> None:
+    tools = {tool.name: tool for tool in (await client.list_tools()).tools}
+    fields = {name: field_names(tool.output_schema) for name, tool in tools.items()}
+    mentioned = set(re.findall(r"`(\w+)`", client.instructions or ""))
+    # A field the instructions name must exist on some tool's output.
+    assert mentioned <= set().union(*fields.values())
+    # Search and ranking results list `source_ids`; get_nutrition and compute_meal items carry
+    # `sources`. Naming only one of them sends the model looking for a field that is absent.
+    assert "source_ids" in fields["search_food"] & fields["find_foods"]
+    assert "sources" not in fields["search_food"] | fields["find_foods"]
+    assert "sources" in fields["get_nutrition"] & fields["compute_meal"]
+    assert {"source_ids", "sources"} <= mentioned
 
 
 async def test_lists_five_tools_read_only(client: Client) -> None:
