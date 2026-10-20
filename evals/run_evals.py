@@ -36,7 +36,7 @@ from typing import Any
 from nutrition_mcp import loader
 from nutrition_mcp.log import configure_logging
 from nutrition_mcp.models import Dish, Ingredient
-from nutrition_mcp.nutrients import NUTRIENTS
+from nutrition_mcp.nutrients import NUTRIENTS, REFERENCE_NUTRIENTS
 from nutrition_mcp.registry import Registry, UnknownFood
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -47,9 +47,9 @@ SUMMARY = "summary.md"
 # CI fails when a gated nutrient gets worse. Iron and calcium are reported only: fortified
 # flour and enriched rice in the reference foods make large gaps there that say little about
 # the recipes.
+EVALUATED = REFERENCE_NUTRIENTS
 GATED = ("kcal", "protein_g", "carbs_available_g")
-REPORTED = ("iron_mg", "calcium_mg")
-EVALUATED = GATED + REPORTED
+REPORTED = tuple(key for key in EVALUATED if key not in GATED)
 REFERENCE_COLUMNS = ["dish_id", "source_id", "record", "description", *EVALUATED]
 REFERENCE_SOURCES = frozenset({"usda_fdc", "cofid_2021"})
 COFID = "cofid_2021"

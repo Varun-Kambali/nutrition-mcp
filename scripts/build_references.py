@@ -24,15 +24,16 @@ import httpx
 from build_ingredients import (
     SOURCE_IDS,
     BuildError,
-    _number,
     cofid_path,
     fetch_usda,
+    format_number,
     load_cofid,
     usda_cache_path,
 )
 
 from nutrition_mcp.loader import build_registry, bundled_dir, load_dataset
 from nutrition_mcp.models import Dish, Ingredient, Nutrients
+from nutrition_mcp.nutrients import REFERENCE_NUTRIENTS
 from nutrition_mcp.registry import Registry
 from nutrition_mcp.source_mapping import cofid_to_nutrients, usda_to_nutrients
 
@@ -41,8 +42,7 @@ MAP_PATH = ROOT / "data_build" / "reference_map.csv"
 OUT_PATH = ROOT / "evals" / "datasets" / "references.csv"
 
 MAP_COLUMNS = ["dish_id", "source", "record", "notes"]
-NUTRIENTS = ("kcal", "protein_g", "carbs_available_g", "iron_mg", "calcium_mg")
-OUT_COLUMNS = ["dish_id", "source_id", "record", "description", *NUTRIENTS]
+OUT_COLUMNS = ["dish_id", "source_id", "record", "description", *REFERENCE_NUTRIENTS]
 # Survey foods describe a dish as eaten. SR Legacy and Foundation records are ingredients.
 USDA_SURVEY = "Survey (FNDDS)"
 
@@ -94,7 +94,7 @@ def write_csv(references: list[Reference], path: Path) -> None:
         writer = csv.writer(handle, lineterminator="\n")
         writer.writerow(OUT_COLUMNS)
         for ref in references:
-            values = [_number(ref.per_100g.get(key)) for key in NUTRIENTS]
+            values = [format_number(ref.per_100g.get(key)) for key in REFERENCE_NUTRIENTS]
             writer.writerow([ref.dish_id, ref.source_id, ref.record, ref.description, *values])
 
 
@@ -106,14 +106,15 @@ def print_review(references: list[Reference], registry: Registry) -> None:
 
         def pair(key: str, ref: Reference = ref, ours: Nutrients = ours) -> str:
             # Reference first, then the computed dish value.
-            return f"{_number(ref.per_100g.get(key), 1) or '-'} / {_number(ours.get(key), 1)}"
+            reference = format_number(ref.per_100g.get(key), 1) or "-"
+            return f"{reference} / {format_number(ours.get(key), 1)}"
 
         rows.append(
             (
                 ref.dish_id,
                 f"{ref.source_id} {ref.record}",
                 ref.description,
-                *(pair(key) for key in NUTRIENTS),
+                *(pair(key) for key in REFERENCE_NUTRIENTS),
             )
         )
     widths = [max(len(row[i]) for row in [header, *rows]) for i in range(len(header))]
