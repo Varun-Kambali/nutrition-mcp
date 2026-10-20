@@ -1,6 +1,6 @@
 # Data notes
 
-How the bundled ingredient table is built, how each source's values map onto the server's nutrients, and where the two sources define a nutrient differently. The licenses and attribution text for every data file are in [`src/nutrition_mcp/data/bundled/LICENSE.md`](../src/nutrition_mcp/data/bundled/LICENSE.md). Why these two sources were chosen is in [ADR 0002](decisions/0002-data-sources.md).
+How the bundled ingredient table is built, how each source's values map onto the server's nutrients, where the two sources define a nutrient differently, and where the glycemic index values come from. The licenses and attribution text for every data file are in [`src/nutrition_mcp/data/bundled/LICENSE.md`](../src/nutrition_mcp/data/bundled/LICENSE.md). Why these two sources were chosen is in [ADR 0002](decisions/0002-data-sources.md).
 
 ## Building the ingredient table
 
@@ -138,3 +138,58 @@ Other values to read with care, all kept as published and noted in the map:
 - `raw_banana`: the record is USDA's green plantain. Indian raw bananas are cooking varieties that may hold more water, in which case kcal and carbohydrate read high.
 - `surmai`: USDA's king mackerel is the Atlantic species (Scomberomorus cavalla); surmai on Indian coasts is S. commerson, from the same genus.
 - `pav`: UK flour fortification raises calcium, and probably iron, above Indian pav. The split dals are the gap that matters most: every dal dish will show fibre as incomplete until a source with fibre for split dals is found.
+
+## Glycemic index
+
+GI values come from one source: Henry CJ, Quek RYC, Kaur B, Shyam S, Singh HKG, "A glycaemic index compendium of non-western foods", Nutrition & Diabetes 11, 2 (2021), doi:10.1038/s41387-020-00145-w, CC BY 4.0 (`gi_compendium_2021` in `sources.yaml`). Its Table 1 lists 940 foods from 159 studies. Glycemic load is computed from the GI by `nutrition.glycemic_load`: GI x available carbohydrate in grams / 100, rounded to 1 decimal, and missing when either input is missing.
+
+### Extracting the Indian rows
+
+`make gi` runs `scripts/extract_gi.py`. It downloads the paper's full text from Europe PMC once into `.cache/`, checks its SHA-256 (a changed file stops the run), reads Table 1 and writes `data_build/gi_compendium_india.csv`. A row is kept when all three hold:
+
+1. **Indian.** The study was done in India, or the food name is an Indian dish. The country has to be exactly "India": the table's "West India" rows come from a study of Caribbean foods. Rows from other countries count when they name a dish such as idli, dosa, upma, chapati, roti, khichdi, biryani or samosa, including the Sri Lankan names for shared South Indian dishes (thosai, pittu, hopper, string hopper, sampar).
+2. **Glucose scale.** The GI column is headed "glucose = 100", but some rows name white bread as the reference food. Ref 153 reports the same Sri Lankan breads against both glucose and white bread, and white bread scores 100 on the second, so those rows are on a white bread scale. The paper gives no factor to convert them, so they are dropped. Dextrose counts as glucose.
+3. **One number.** The GI cell holds a single value.
+
+The script keeps 176 of the 940 rows: 118 tested in India and 58 tested elsewhere that name an Indian dish. It drops 18 rows that pass the first test, and prints each one with the reason: 16 on a white bread scale (among them T1-667, a rice dosa tested in India), T1-713, whose reference food is Glucodin, a product the paper does not describe, and T1-015, a basmati rice row with one value per ethnic group.
+
+| Column | Holds |
+|---|---|
+| `row_id` | `T1-` and the row number printed in Table 1, so `T1-698` is row 698 |
+| `table` | The paper's table number, always 1 |
+| `food`, `country` | As printed |
+| `gi` | The mean GI as printed, with trailing zeros dropped (68.70 is written 68.7) |
+| `reference` | The paper's reference number for the study, with the study's DOI where the paper gives one |
+| `notes` | The reference food and test period as printed. A row a bundled dish uses also names the dish, the candidate rows considered and why this one was chosen |
+
+The notes for matched rows live in `MATCH_NOTES` in the script, so `make gi` writes the same file every time. A test checks that the rows with notes and the dishes that use them agree.
+
+### Matching a food to a row
+
+GI belongs to food as it is eaten: dishes, and ingredients that are eaten as they are, such as pav, milk or curd, when the compendium lists the same food. Raw grains and dals never get one, because their GI says nothing about the cooked dish. The compendium has no Indian row for pav, milk or curd, so no ingredient has a GI.
+
+A dish gets a GI only when a row is the same food with a similar preparation: the same main ingredients and the same cooking method. A dish the compendium does not name is not given the value of a similar dish. When several rows qualify, rows from studies done in India come first, and among those the median row is used: an actual row, and with an even number of rows the lower of the two middle values. A dish with no such row keeps `gi` and `gi_ref` empty, and its glycemic load is missing.
+
+`gi_ref` records the match as `"<source_id>: <compendium food> (Table <n>, <row_id>)"`, for example `"gi_compendium_2021: Idli (Table 1, T1-698)"`. The loader checks that the source ID names a loaded source and lists that source with the food's other sources. `tests/integration/test_bundled_dishes.py` checks that every bundled `gi_ref` names a row of the CSV with the same food, table and GI.
+
+7 of the 41 dishes have a GI:
+
+| Dish | Row | Compendium food | GI | Candidates and choice |
+|---|---|---|---|---|
+| `idli` | T1-698 | Idli | 62.45 | T1-698 (62.45) and T1-627 (67.11); with two rows, the lower |
+| `plain_dosa` | T1-688 | Dosa | 55.8 | The only Indian dosa row on the glucose scale; T1-667 is on a white bread scale |
+| `rava_upma` | T1-697 | Semolina upma | 62.37 | T1-658 (58), T1-697 (62.37), T1-659 (67); the median |
+| `chapati` | T1-691 | Chapathi | 54.43 | T1-711 (44.6), T1-673 (48.37), T1-691 (54.43), T1-657 (64), T1-631 (83.92); the median |
+| `methi_thepla` | T1-699 | Thepla | 57.77 | The only plain thepla row. The paper does not say whether it had methi leaves |
+| `steamed_rice` | T1-666 | White rice | 79.2 | The only plain white rice row. Parboiled, basmati and high-fibre rice rows are other foods |
+| `bengali_khichuri` | T1-664 | Rice khichdi | 62.5 | The only rice khichdi row. The paper does not name the dal, and our recipe adds potato, cauliflower and peas |
+
+Four of the seven values (idli, dosa, upma and chapati) come from one Kerala study, ref 142.
+
+The other 34 dishes have no GI:
+
+- **Rice cooked with fat, curd or a tempering** (jeera rice, lemon rice, curd rice, varan bhaat): the compendium has no row for these preparations, and fat and curd change how fast the rice is digested, so plain rice's value is not used.
+- **Rice and dal dishes with another name** (ven pongal, bisi bele bath): not listed. Pongal is close to khichdi, but a dish the compendium does not name gets no value; bisi bele bath also adds toor dal, tamarind and vegetables.
+- **Plain paratha**: the nearest rows are porotta (layered maida, T1-696) and misi parantha (with gram flour, T1-634), which have other main ingredients.
+- **Sabudana khichdi**: the only tapioca row (T1-687) is the root, not sago pearls.
+- **Dals, curries, sabzis and snacks** (dal tadka, dal makhani, musur dal, cholar dal, dalma, rajma masala, chana masala, ghugni, sambar, rasam, both kadhis, palak paneer, aloo gobi, aloo posto, begun bhaja, shukto, zunka, dimer dalna, machher jhol, Goan fish curry, coconut chutney, dhokla, batata vada, misal pav and pav bhaji): the compendium has no row for any of them.

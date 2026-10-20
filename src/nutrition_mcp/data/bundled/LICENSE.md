@@ -17,5 +17,6 @@ The code in this repository is MIT licensed (see `LICENSE` at the repository roo
 - CoFID "Tr" (trace) is stored as 0. "N" (present in significant amounts, but CoFID has no reliable value) and blank cells are stored as empty cells.
 - Names, aliases and diet tags were added for this project.
 - `density_g_per_ml` is computed from a USDA cup or tablespoon portion weight.
+- GI values are copied from Table 1 of the compendium without change. `data_build/gi_compendium_india.csv` in the repository keeps the rows tested in India or naming an Indian dish, and leaves out rows measured against white bread instead of glucose.
 
 `docs/data.md` in the repository describes each mapping in full.
