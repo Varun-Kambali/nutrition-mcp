@@ -22,4 +22,6 @@ measures:
 assumptions: >-
   6 g sunflower oil per serving of 2 dosas, about 3 g on the tawa for each. The batter is
   ground with water and loses some of it on the tawa, so each dosa weighs about 60 g.
+gi: 55.8
+gi_ref: "gi_compendium_2021: Dosa (Table 1, T1-688)"
 source_id: recipes_cc_by

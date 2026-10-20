@@ -39,21 +39,21 @@ def rename_source_ids(folder: Path, suffix: str) -> None:
     for path in folder.rglob("*"):
         if path.is_file():
             text = path.read_text(encoding="utf-8")
-            for old in ("test_source", "test_recipes"):
+            for old in ("test_source", "test_recipes", "test_gi"):
                 text = text.replace(old, f"{old}_{suffix}")
             path.write_text(text, encoding="utf-8")
 
 
 def test_loads_fixture_dataset() -> None:
     sources, ingredients, dishes = load_dataset(FIXTURE)
-    assert [s.id for s in sources] == ["test_source", "test_recipes"]
+    assert [s.id for s in sources] == ["test_source", "test_recipes", "test_gi"]
     assert [i.id for i in ingredients] == ["toor_dal", "water", "ghee"]
     assert [d.id for d in dishes] == ["test_dal"]
     toor = ingredients[0]
     assert toor.aliases == ["arhar dal", "tur dal"]
     assert toor.per_100g.kcal == 343
     assert toor.per_100g.vit_d_ug is None
-    assert (toor.gi, toor.gi_ref) == (28, "Test compendium table 1")
+    assert (toor.gi, toor.gi_ref) == (28, "test_gi: Toor dal (Table 1, T1-001)")
     assert ingredients[1].aliases == []
     assert ingredients[1].density_g_per_ml == 1
 
@@ -102,9 +102,62 @@ def test_ingredient_food_fields() -> None:
     assert toor.measures == {}
     assert toor.serving_g is None
     assert toor.assumptions is None
-    assert toor.source_ids == ["test_source"]
-    assert (toor.gi, toor.gi_ref) == (28, "Test compendium table 1")
+    # The GI comes from another source than the nutrients, so both are listed.
+    assert toor.source_ids == ["test_source", "test_gi"]
+    assert (toor.gi, toor.gi_ref) == (28, "test_gi: Toor dal (Table 1, T1-001)")
     assert registry.get("ghee").density_g_per_ml == 0.91
+
+
+def test_dish_gi_ref_adds_its_source(tmp_path: Path) -> None:
+    folder = copy_fixture(tmp_path)
+    edit(
+        folder / "dishes" / "test_dal.yaml",
+        "source_id: test_recipes",
+        'gi: 40\ngi_ref: "test_gi: Test dal (Table 1, T1-002)"\nsource_id: test_recipes',
+    )
+    dal = build_registry([folder]).get("test_dal")
+    assert dal.gi == 40
+    assert dal.source_ids == ["test_recipes", "test_source", "test_gi"]
+
+
+def test_gi_ref_source_already_listed_is_not_repeated(tmp_path: Path) -> None:
+    folder = copy_fixture(tmp_path)
+    edit(folder / "ingredients.csv", '"test_gi: ', '"test_source: ')
+    assert build_registry([folder]).get("toor_dal").source_ids == ["test_source"]
+
+
+def test_gi_ref_with_unknown_source_names_row(tmp_path: Path) -> None:
+    folder = copy_fixture(tmp_path)
+    path = folder / "ingredients.csv"
+    edit(path, '"test_gi: ', '"nowhere: ')
+    with pytest.raises(DataError) as error:
+        build_registry([folder])
+    assert str(error.value).startswith(f"{path}:2: ")
+    assert "nowhere" in str(error.value)
+
+
+def test_dish_gi_ref_with_unknown_source_names_file(tmp_path: Path) -> None:
+    folder = copy_fixture(tmp_path)
+    path = folder / "dishes" / "test_dal.yaml"
+    edit(
+        path,
+        "source_id: test_recipes",
+        'gi: 40\ngi_ref: "nowhere: Test dal (Table 1, T1-002)"\nsource_id: test_recipes',
+    )
+    with pytest.raises(DataError) as error:
+        build_registry([folder])
+    assert str(error.value).startswith(f"{path}:0: ")
+    assert "nowhere" in str(error.value)
+
+
+def test_gi_ref_without_a_source_id_names_row(tmp_path: Path) -> None:
+    folder = copy_fixture(tmp_path)
+    path = folder / "ingredients.csv"
+    edit(path, '"test_gi: Toor dal (Table 1, T1-001)"', "Toor dal (Table 1 T1-001)")
+    with pytest.raises(DataError) as error:
+        build_registry([folder])
+    assert str(error.value).startswith(f"{path}:2: ")
+    assert "gi_ref" in str(error.value)
 
 
 def test_missing_nutrient_marks_incomplete() -> None:
@@ -383,7 +436,7 @@ def test_bad_source_entry_names_entry(tmp_path: Path) -> None:
 def test_registry_lists_foods_and_sources_in_load_order() -> None:
     registry = build_registry([FIXTURE])
     assert [f.id for f in registry.foods()] == ["toor_dal", "water", "ghee", "test_dal"]
-    assert [s.id for s in registry.sources()] == ["test_source", "test_recipes"]
+    assert [s.id for s in registry.sources()] == ["test_source", "test_recipes", "test_gi"]
 
 
 def test_registry_get_unknown_food_raises() -> None:

@@ -42,4 +42,6 @@ measures:
 assumptions: >-
   25 g ghee, about 4 g per serving. Rice and roasted moong dal are cooked soft with the
   vegetables in about 800 g water and end at 1320 g, 6 times the raw rice and dal.
+gi: 62.5
+gi_ref: "gi_compendium_2021: Rice khichdi (Table 1, T1-664)"
 source_id: recipes_cc_by

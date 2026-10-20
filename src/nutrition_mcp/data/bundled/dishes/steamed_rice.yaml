@@ -21,4 +21,6 @@ measures:
 assumptions: >-
   No added fat and no salt. The rice is cooked in a pressure cooker or in excess water to 3
   times its raw weight.
+gi: 79.2
+gi_ref: "gi_compendium_2021: White rice (Table 1, T1-666)"
 source_id: recipes_cc_by
