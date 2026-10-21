@@ -6,7 +6,7 @@ An MCP server that gives any assistant or agent sourced nutrition, glycemic load
 
 ![A lunch question answered through the server](docs/media/demo.gif)
 
-A lunch question in an MCP client, with the wait for the model sped up. The model looks the foods up with `search_food` and takes every number in the table from `compute_meal`. The two rough additions in the notes below the table, for ghee on the rotis and for curd or paneer, are the model's own estimates.
+A lunch question in Claude Desktop, with the tool approvals sped up. The model looks up each food with `search_food`, then sends all three to `compute_meal`, and every number in the table comes from that call. One line below the table misreads the server: "the rice assumes about 15 g of ghee" is the whole pot. The tool says "15 g ghee, under 4 g per serving".
 
 ## Problem
 
