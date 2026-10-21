@@ -355,9 +355,8 @@ class ToolBox(Protocol):
     async def call(self, call: ToolCall) -> tuple[ToolResult, ToolCallRecord]: ...
 
 
-def _error_text(result: CallToolResult) -> str:
-    text = " ".join(block.text for block in result.content if isinstance(block, TextContent))
-    return text or "the tool returned an error with no text"
+def _text(result: CallToolResult) -> str:
+    return " ".join(block.text for block in result.content if isinstance(block, TextContent))
 
 
 class McpToolBox:
@@ -378,11 +377,11 @@ class McpToolBox:
         else:
             is_error = bool(result.is_error)
             if is_error:
-                response = {"error": _error_text(result)}
+                response = {"error": _text(result) or "the tool returned an error with no text"}
             elif result.structured_content is not None:
                 response = {"output": result.structured_content}
             else:
-                response = {"output": {"text": _error_text(result)}}
+                response = {"output": {"text": _text(result)}}
         latency_ms = (time.perf_counter() - started) * 1000
         record = ToolCallRecord(call.name, dict(call.args), is_error, latency_ms)
         return ToolResult(call, response, is_error), record
@@ -460,6 +459,9 @@ async def answer(
         if tools is None or not reply.turn.calls:
             outcome.parsed = parse_final_json(reply.turn.text)
             return outcome
+        if turn == MAX_TURNS:
+            # No turn is left to read the results, so the calls are not run.
+            break
         results: list[ToolResult] = []
         for call in reply.turn.calls:
             result, record = await tools.call(call)

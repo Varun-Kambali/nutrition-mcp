@@ -420,10 +420,13 @@ def test_the_with_tools_arm_sends_tool_results_back() -> None:
 
 def test_a_question_stops_at_the_turn_cap() -> None:
     model = FakeModel(lambda history, tools: reply("", grounding.ToolCall("search_food", {})))
-    outcome = run(grounding.answer, model, question("q1"), FakeTools())
+    tools = FakeTools()
+    outcome = run(grounding.answer, model, question("q1"), tools)
     assert outcome.capped
     assert outcome.turns == grounding.MAX_TURNS
     assert len(model.requests) == grounding.MAX_TURNS
+    # The last turn's calls are not run: no turn is left to read their results.
+    assert len(tools.calls) == len(outcome.tool_calls) == grounding.MAX_TURNS - 1
     assert isinstance(outcome.parsed, grounding.Failed)
     assert "turn cap" in outcome.parsed.reason
 
