@@ -1,5 +1,4 @@
 import json
-import shutil
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -13,7 +12,6 @@ from nutrition_mcp.nutrients import NUTRIENT_KEYS, REFERENCE_NUTRIENTS
 
 NUTRIENTS = ("kcal", "protein_g", "carbs_available_g", "iron_mg", "calcium_mg")
 NOW = datetime(2026, 10, 20, 9, 0, tzinfo=UTC)
-DATA_ACCURACY_FILE = "2026-10-20_data-accuracy_32aa03d.json"
 
 SOURCES_YAML = """\
 - id: cofid_2021
@@ -290,13 +288,15 @@ def _grounding_file(folder: Path) -> None:
         "summary": [
             {
                 "measure": "Mean absolute error on calories (%)",
-                "n": 26,
+                "n_without_tools": 26,
+                "n_with_tools": 21,
                 "without_tools": 31.2,
                 "with_tools": 4.2,
             },
             {
                 "measure": "p95 tool latency (ms)",
-                "n": 70,
+                "n_without_tools": None,
+                "n_with_tools": 70,
                 "without_tools": None,
                 "with_tools": 12.5,
             },
@@ -319,11 +319,11 @@ def test_summary_keeps_the_grounding_rows_when_data_accuracy_rewrites_it(
     grounding = [line for line in lines if "fff0000" in line]
     accuracy = [line for line in lines if "abc1234" in line]
     assert grounding[0] == (
-        "| Mean absolute error on calories (%) | 31.2 | 4.2 | 26 | test-model | 2026-10-19 "
+        "| Mean absolute error on calories (%) | 31.2 | 4.2 | 26 / 21 | test-model | 2026-10-19 "
         "| fff0000 | 0123456789ab "
         "| [2026-10-19_test-model_fff0000.json](2026-10-19_test-model_fff0000.json) |"
     )
-    assert grounding[1].startswith("| p95 tool latency (ms) | n/a | 12.5 | 70 |")
+    assert grounding[1].startswith("| p95 tool latency (ms) | n/a | 12.5 | n/a / 70 |")
     assert len(accuracy) == len(NUTRIENTS)
     # Grounding first, then data accuracy.
     assert lines.index(grounding[-1]) < lines.index(accuracy[0])
@@ -461,12 +461,14 @@ def test_a_normal_run_writes_the_results_file_and_summary(
     assert "_data-accuracy_" in names[0]
 
 
-def test_the_headline_is_the_first_row_of_the_first_table(tmp_path: Path) -> None:
+def test_the_headline_is_the_first_row_of_the_first_table(
+    tiny_dataset: Path, references_csv: Path, tmp_path: Path
+) -> None:
     # The portfolio site reads the first data row of the first table in summary.md, and
     # shows "<measure>: <Baseline> -> <This project>" when those two columns exist.
     out = tmp_path / "results"
     _grounding_file(out)
-    shutil.copy(run_evals.RESULTS / DATA_ACCURACY_FILE, out)
+    run_evals.write_results(run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234"), out)
 
     lines = run_evals.write_summary(out).read_text(encoding="utf-8").splitlines()
 
@@ -477,12 +479,26 @@ def test_the_headline_is_the_first_row_of_the_first_table(tmp_path: Path) -> Non
     assert lines[first + 2].startswith("| Mean absolute error on calories (%) | 31.2 | 4.2 |")
 
 
-def test_summary_without_a_grounding_run_is_unchanged(tmp_path: Path) -> None:
-    out = tmp_path / "results"
-    out.mkdir()
-    shutil.copy(run_evals.RESULTS / DATA_ACCURACY_FILE, out)
-    summary = run_evals.write_summary(out).read_text(encoding="utf-8")
-    assert summary == (run_evals.RESULTS / "summary.md").read_text(encoding="utf-8")
+def test_summary_without_a_grounding_run_has_only_the_data_accuracy_table(
+    tiny_dataset: Path, references_csv: Path, tmp_path: Path
+) -> None:
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    alone, both = tmp_path / "alone", tmp_path / "both"
+    run_evals.write_results(result, alone)
+    run_evals.write_results(result, both)
+    _grounding_file(both)
+
+    only = run_evals.write_summary(alone).read_text(encoding="utf-8")
+    with_grounding = run_evals.write_summary(both).read_text(encoding="utf-8")
+
+    intro, block = only.split("Data accuracy compares", 1)
+    assert intro.startswith("# Evaluation results\n")
+    assert "|" not in intro and "Grounding" not in only
+    # The data-accuracy part is the same text whether or not a grounding run exists, and the
+    # grounding table goes before it.
+    head, tail = with_grounding.split("Data accuracy compares", 1)
+    assert tail == block
+    assert head.startswith(intro) and "| Measure | Baseline | This project |" in head
 
 
 def test_summary_names_a_grounding_file_without_a_model(tmp_path: Path) -> None:
@@ -506,6 +522,21 @@ def test_summary_names_a_grounding_file_without_a_model(tmp_path: Path) -> None:
 def test_grounding_results_are_named_by_model(tmp_path: Path, model: str, name: str) -> None:
     result = {"suite": "grounding", "date": "2026-10-21", "commit": "abc1234", "model": model}
     assert run_evals.write_results(result, tmp_path).name == name
+
+
+def test_the_env_example_placeholder_counts_as_no_key(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    example = (run_evals.ROOT / ".env.example").read_text(encoding="utf-8")
+    assert f"\n{run_evals.API_KEY_VAR}={run_evals.PLACEHOLDER_KEY}\n" in example
+    monkeypatch.setenv("GEMINI_API_KEY", run_evals.PLACEHOLDER_KEY)
+    out = tmp_path / "results"
+    assert run_evals.main(["--suite", "grounding", "--out", str(out)]) == 1
+    assert "GEMINI_API_KEY is not set" in capsys.readouterr().err
+    assert not out.exists()
 
 
 def test_grounding_needs_the_api_key(
@@ -619,3 +650,64 @@ def test_min_interval_applies_to_grounding_only(
         run_evals.main(["--suite", "data_accuracy", "--min-interval", "1"])
     assert exit_info.value.code == 2
     assert "--min-interval" in capsys.readouterr().err
+
+
+class RefusedEverything:
+    """A model client whose every request is refused, as with a key the API rejects."""
+
+    model = "gemini-test"
+
+    async def generate(self, system: str, history: Any, tools: Any) -> grounding.ModelReply:
+        raise grounding.ModelError("http 400")
+
+
+def grounding_args(out: Path) -> list[str]:
+    return ["--suite", "grounding", "--limit", "2", "--min-interval", "0", "--out", str(out)]
+
+
+def test_a_run_without_answers_writes_nothing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+    monkeypatch.setattr(grounding, "gemini_client", lambda model, key: RefusedEverything())
+    out = tmp_path / "results"
+    assert run_evals.main(grounding_args(out)) == 1
+    err = capsys.readouterr().err
+    assert "no answer" in err and "nothing written" in err
+    assert not out.exists()
+
+
+def test_a_missing_eval_group_is_one_clear_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+
+    def no_genai(model: str, key: str) -> None:
+        raise ModuleNotFoundError("No module named 'google'", name="google")
+
+    monkeypatch.setattr(grounding, "gemini_client", no_genai)
+    assert run_evals.main(grounding_args(tmp_path / "results")) == 1
+    err = capsys.readouterr().err.strip().splitlines()
+    assert len(err) == 1 and "--group eval" in err[0]
+
+
+def test_a_server_that_does_not_start_is_one_clear_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+    monkeypatch.setattr(grounding, "gemini_client", lambda model, key: AnswersAtOnce(model))
+    monkeypatch.setattr(grounding, "SERVER_MAIN", "import sys; sys.exit(1)")
+    out = tmp_path / "results"
+    assert run_evals.main(grounding_args(out)) == 1
+    err = capsys.readouterr().err.strip().splitlines()
+    assert err[-1].startswith("error: ") and "server did not start" in err[-1]
+    assert not out.exists()

@@ -121,3 +121,39 @@ async def test_the_server_gets_none_of_the_callers_data_folders(
     assert result.is_error and record.is_error
     assert "error" in result.response
     assert record.latency_ms > 0
+
+
+async def test_a_server_that_does_not_start_is_one_clear_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(grounding, "SERVER_MAIN", "import sys; sys.exit(1)")
+    with pytest.raises(grounding.GroundingError, match="server did not start"):
+        async with grounding.stdio_toolbox():
+            pass
+
+
+class Refused:
+    model = "refused-model"
+
+    async def generate(
+        self,
+        system: str,
+        history: Sequence[grounding.Message],
+        tools: Sequence[grounding.ToolSpec],
+    ) -> grounding.ModelReply:
+        raise grounding.ModelError("http 400")
+
+
+async def test_a_stopped_run_is_a_plain_error_with_the_real_server() -> None:
+    # The MCP client's task group would wrap an error raised while the server runs in an
+    # ExceptionGroup, which run_evals does not catch.
+    questions = [QUESTION.model_copy(update={"id": f"q{i}"}) for i in range(1, 7)]
+    with pytest.raises(grounding.GroundingError, match="in a row"):
+        await grounding.run(
+            Refused(),
+            questions,
+            now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
+            commit="abc1234",
+            dataset_version="0123456789ab",
+            min_interval=0.0,
+        )

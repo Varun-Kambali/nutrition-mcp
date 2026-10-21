@@ -46,11 +46,16 @@ def test_questions_file_rows_are_valid(questions: list[grounding.Question]) -> N
 
 
 def test_questions_cover_every_region(questions: list[grounding.Question]) -> None:
+    # Only dishes tagged with one region count: steamed rice alone carries all four.
     reg = build_registry([])
-    regions = {
-        region for q in questions for item in q.items for region in reg.get(item.food_id).regions
-    }
-    assert regions == {"north", "south", "east", "west"}
+    per_region: dict[str, set[str]] = {}
+    for q in questions:
+        for item in q.items:
+            regions = reg.get(item.food_id).regions
+            if len(regions) == 1:
+                per_region.setdefault(regions[0], set()).add(q.id)
+    assert set(per_region) == {"north", "south", "east", "west"}
+    assert all(len(ids) >= 4 for ids in per_region.values()), per_region
 
 
 def test_questions_resolve_to_complete_golden_answers(
@@ -234,6 +239,10 @@ def test_parse_reads_a_missing_list() -> None:
     assert grounding.parse_final_json('{"missing": ["kheer"], "kcal": 200}') == grounding.Missing(
         ("kheer",), has_numbers=True
     )
+    # A null or a non-number is no number given.
+    assert grounding.parse_final_json(
+        '{"missing": ["kheer"], "kcal": null, "protein_g": "n/a"}'
+    ) == grounding.Missing(("kheer",), has_numbers=False)
 
 
 # Scoring
@@ -288,6 +297,9 @@ def test_metrics() -> None:
 
     assert metrics == {
         "n": 2,
+        "n_items": 4,
+        "n_missing_dishes": 2,
+        "n_replied": 6,
         "mape_kcal": 5.0,
         "mape_protein": 25.0,
         "mape_carbs": 12.5,
@@ -623,21 +635,24 @@ def test_tool_errors_and_latency_reach_the_results() -> None:
     summary = result["summary"]
     assert summary[0] == {
         "measure": "Mean absolute error on calories (%)",
-        "n": 1,
+        "n_without_tools": 1,
+        "n_with_tools": 1,
         "without_tools": result["without_tools"]["mape_kcal"],
         "with_tools": result["with_tools"]["mape_kcal"],
     }
     api_errors = next(row for row in summary if row["measure"] == "API errors (count)")
     assert api_errors == {
         "measure": "API errors (count)",
-        "n": 2,
+        "n_without_tools": 2,
+        "n_with_tools": 2,
         "without_tools": 0,
         "with_tools": 0,
     }
     latency = next(row for row in summary if row["measure"] == "p95 tool latency (ms)")
     assert latency == {
         "measure": "p95 tool latency (ms)",
-        "n": 4,
+        "n_without_tools": None,
+        "n_with_tools": 4,
         "without_tools": None,
         "with_tools": 1.5,
     }
@@ -804,6 +819,7 @@ def test_history_to_contents() -> None:
             False,
         ),
         (genai_errors.ClientError(403, {}), False),
+        (genai_errors.ClientError(408, {}), True),
     ],
 )
 def test_api_errors_map_to_model_errors(error: genai_errors.APIError, retryable: bool) -> None:
@@ -886,3 +902,131 @@ def test_a_tool_call_that_breaks_is_a_tool_error() -> None:
     assert result.is_error and record.is_error
     assert result.response == {"error": "tool call failed: MCPError"}
     assert record.latency_ms >= 0
+
+
+def test_summary_n_is_each_arms_own_count() -> None:
+    questions = [question("q1"), question("q2"), question("m1", missing=("kheer",))]
+    golden = {q: {"kcal": 200.0, "protein_g": 10.0, "carbs_g": 40.0} for q in ("q1", "q2")}
+    without = {
+        "q1": grounding.Outcome(numbers(200, 10, 40)),
+        "q2": grounding.Outcome(grounding.Failed("no JSON object")),
+        "m1": grounding.Outcome(grounding.Missing(("kheer",), has_numbers=False)),
+    }
+    with_ = {
+        "q1": grounding.Outcome(numbers(200, 10, 40)),
+        "q2": grounding.Outcome(numbers(210, 10, 40)),
+        "m1": grounding.Outcome(grounding.ApiError("http 503")),
+    }
+    result = grounding.build_result(
+        "fake-model",
+        questions,
+        golden,
+        without,
+        with_,
+        now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
+        commit="abc1234",
+        dataset_version="0123456789ab",
+        min_interval=0.0,
+    )
+    n = {row["measure"]: (row["n_without_tools"], row["n_with_tools"]) for row in result["summary"]}
+    # MAPE: answers with numbers. Within 10%: questions with items that got a reply.
+    assert n["Mean absolute error on calories (%)"] == (1, 2)
+    assert n["Answers within 10% on calories (share)"] == (2, 2)
+    # m1 had an API error with tools, so no missing dish was scored there.
+    assert n["Missing dishes reported (share)"] == (1, 0)
+    assert n["Failed answers (count)"] == (3, 2)
+    assert n["API errors (count)"] == (3, 3)
+
+
+def test_a_run_stops_after_consecutive_api_errors() -> None:
+    model = FakeModel(lambda history, tools: grounding.ModelError("http 400"))
+
+    @contextlib.asynccontextmanager
+    async def toolbox() -> Any:
+        yield FakeTools()
+
+    with pytest.raises(grounding.GroundingError, match="in a row"):
+        run(
+            grounding.run,
+            model,
+            [question(f"q{i}") for i in range(1, 7)],
+            now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
+            commit="abc1234",
+            dataset_version="0123456789ab",
+            min_interval=0.0,
+            toolbox=toolbox,
+        )
+    assert len(model.requests) == grounding.MAX_CONSECUTIVE_API_ERRORS == 5
+
+
+def test_an_answer_resets_the_api_error_count() -> None:
+    calls: list[int] = []
+
+    def script(history: Sequence[grounding.Message], tools: Sequence[grounding.ToolSpec]) -> Any:
+        calls.append(1)
+        # Every fifth request answers; the four between fail.
+        if len(calls) % 5 == 0:
+            return reply('{"kcal": 150, "protein_g": 4, "carbs_g": 30}')
+        return grounding.ModelError("http 400")
+
+    @contextlib.asynccontextmanager
+    async def toolbox() -> Any:
+        yield FakeTools()
+
+    result = run(
+        grounding.run,
+        FakeModel(script),
+        [question(f"q{i}") for i in range(1, 6)],
+        now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
+        commit="abc1234",
+        dataset_version="0123456789ab",
+        min_interval=0.0,
+        toolbox=toolbox,
+    )
+    assert result["without_tools"]["api_errors"] == 4
+    assert result["with_tools"]["api_errors"] == 4
+
+
+@pytest.mark.parametrize(
+    "script",
+    [
+        # A key the API refuses: every request is an API error.
+        lambda history, tools: grounding.ModelError("http 400"),
+        # Replies, but none that can be read as an answer.
+        lambda history, tools: reply("No idea."),
+    ],
+)
+def test_a_run_with_no_answer_in_an_arm_is_an_error(script: Any) -> None:
+    @contextlib.asynccontextmanager
+    async def toolbox() -> Any:
+        yield FakeTools()
+
+    with pytest.raises(grounding.GroundingError, match="no answer"):
+        run(
+            grounding.run,
+            FakeModel(script),
+            [question("q1"), question("q2")],
+            now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
+            commit="abc1234",
+            dataset_version="0123456789ab",
+            min_interval=0.0,
+            toolbox=toolbox,
+        )
+
+
+def test_the_gemini_client_has_a_request_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    from google import genai
+
+    built: list[dict[str, Any]] = []
+
+    def record(**kwargs: Any) -> object:
+        built.append(kwargs)
+        return object()
+
+    monkeypatch.setattr(genai, "Client", record)
+    client = grounding.gemini_client("gemini-test", "stand-in")
+    assert client.model == "gemini-test"
+    [kwargs] = built
+    assert kwargs["api_key"] == "stand-in"
+    # Milliseconds, as google-genai takes it.
+    assert kwargs["http_options"].timeout == grounding.REQUEST_TIMEOUT_MS == 120_000

@@ -60,6 +60,11 @@ MAX_TURNS = 8
 # limits are counted per minute, so the waits add up to more than a minute.
 RETRY_DELAYS = (5.0, 10.0, 20.0, 40.0)
 TOOL_TIMEOUT_S = 30.0
+# google-genai sets no request timeout of its own. A request that times out is retried.
+REQUEST_TIMEOUT_MS = 120_000
+# Questions in a row, across both arms, that end in an API error before the run stops. By then
+# the key, the quota or the service is at fault, and the rest would fail the same way.
+MAX_CONSECUTIVE_API_ERRORS = 5
 # Percentage error at or under which an answer counts as within 10%.
 WITHIN_PCT = 10.0
 
@@ -257,7 +262,9 @@ def parse_final_json(text: str) -> Parsed:
         foods = found["missing"]
         if not isinstance(foods, list) or not foods or not all(isinstance(f, str) for f in foods):
             return Failed("missing is not a list of food names")
-        return Missing(tuple(foods), has_numbers=any(key in found for key in ANSWER_KEYS))
+        # A null or a non-number next to the list is no number given.
+        given = any(_number(found.get(key)) is not None for key in ANSWER_KEYS)
+        return Missing(tuple(foods), has_numbers=given)
     values: dict[str, float] = {}
     for key in ANSWER_KEYS:
         if key not in found:
@@ -412,8 +419,19 @@ async def stdio_toolbox() -> AsyncIterator[ToolBox]:
         args=["-c", SERVER_MAIN],
         env={"NUTRITION_MCP_LOG_LEVEL": "WARNING"},
     )
-    async with Client(params, read_timeout_seconds=TOOL_TIMEOUT_S) as client:
-        listed = (await client.list_tools()).tools
+    async with contextlib.AsyncExitStack() as stack:
+        # Only starting up is wrapped, so an error raised while the arms run stays as it is.
+        # A server that exits at once surfaces as an ExceptionGroup around MCPError.
+        try:
+            client = await stack.enter_async_context(
+                Client(params, read_timeout_seconds=TOOL_TIMEOUT_S)
+            )
+            listed = (await client.list_tools()).tools
+        except (MCPError, OSError, ExceptionGroup) as err:
+            raise GroundingError(
+                f"the nutrition-mcp server did not start ({type(err).__name__}); its errors "
+                "are above, on stderr"
+            ) from err
         specs = [ToolSpec(tool.name, tool.description or "", tool.input_schema) for tool in listed]
         yield McpToolBox(client, specs)
 
@@ -518,6 +536,30 @@ async def answer(
     return outcome
 
 
+class _ApiErrorStreak:
+    """Counts questions in a row that ended in an API error; at the limit, the run stops.
+
+    It records why rather than raising: run() raises once the server has closed, because the
+    MCP client's task group would wrap an error raised inside it in an ExceptionGroup.
+    """
+
+    def __init__(self, limit: int) -> None:
+        self.limit = limit
+        self.count = 0
+        self.stopped: str | None = None
+
+    def record(self, parsed: Parsed) -> None:
+        if not isinstance(parsed, ApiError):
+            self.count = 0
+            return
+        self.count += 1
+        if self.count >= self.limit:
+            self.stopped = (
+                f"stopped after {self.count} questions in a row with API errors (last: "
+                f"{parsed.kind}); check the key, the quota and the model id"
+            )
+
+
 def _label(parsed: Parsed) -> str:
     if isinstance(parsed, Numbers):
         return "answered"
@@ -534,15 +576,20 @@ async def run_arm(
     tools: ToolBox | None,
     *,
     pacer: Pacer | None = None,
+    streak: _ApiErrorStreak | None = None,
     sleep: Sleep = anyio.sleep,
 ) -> dict[str, Outcome]:
     arm = "without_tools" if tools is None else "with_tools"
+    streak = streak if streak is not None else _ApiErrorStreak(MAX_CONSECUTIVE_API_ERRORS)
     outcomes: dict[str, Outcome] = {}
     for question in questions:
         outcome = await answer(model, question, tools, pacer=pacer, sleep=sleep)
         # Ids and outcomes only: questions and answers stay out of the logs.
         log.info("%s %s: %s", arm, question.id, _label(outcome.parsed))
         outcomes[question.id] = outcome
+        streak.record(outcome.parsed)
+        if streak.stopped:
+            break
     return outcomes
 
 
@@ -589,7 +636,13 @@ def score_arm(
         if isinstance(parsed, Numbers):
             for key in ANSWER_KEYS:
                 errors[key].append(ape(golden[question.id][key], parsed.values[key]))
-    metrics: dict[str, Any] = {"n": len(errors["kcal"])}
+    metrics: dict[str, Any] = {
+        "n": len(errors["kcal"]),
+        # The denominators of the shares and counts below, which leave out API errors.
+        "n_items": len(with_items),
+        "n_missing_dishes": len(expecting_missing),
+        "n_replied": len(answered),
+    }
     for key, name in METRIC_NAMES.items():
         found = errors[key]
         metrics[f"mape_{name}"] = round(sum(found) / len(found), 1) if found else None
@@ -651,31 +704,29 @@ def _tokens(outcomes: Mapping[str, Outcome]) -> dict[str, int]:
 def summary_rows(result: Mapping[str, Any]) -> list[dict[str, Any]]:
     """The rows summary.md shows, headline first, each value copied from the arms."""
     without, with_ = result["without_tools"], result["with_tools"]
-    asked = result["questions_with_items"]
 
-    def row(measure: str, n: int, metric: str) -> dict[str, Any]:
+    def row(measure: str, n: str | None, metric: str) -> dict[str, Any]:
+        # Each arm's own n: answers fail and requests error per arm, so the two can differ.
         return {
             "measure": measure,
-            "n": n,
+            "n_without_tools": without[n] if n else result["n"],
+            "n_with_tools": with_[n] if n else result["n"],
             "without_tools": without[metric],
             "with_tools": with_[metric],
         }
 
     return [
-        row("Mean absolute error on calories (%)", asked, "mape_kcal"),
-        row("Mean absolute error on protein (%)", asked, "mape_protein"),
-        row("Mean absolute error on carbohydrate (%)", asked, "mape_carbs"),
-        row("Answers within 10% on calories (share)", asked, "within_10pct_kcal"),
-        row(
-            "Missing dishes reported (share)",
-            result["questions_expecting_missing"],
-            "missing_reported",
-        ),
-        row("Failed answers (count)", result["n"], "failed_answers"),
-        row("API errors (count)", result["n"], "api_errors"),
+        row("Mean absolute error on calories (%)", "n", "mape_kcal"),
+        row("Mean absolute error on protein (%)", "n", "mape_protein"),
+        row("Mean absolute error on carbohydrate (%)", "n", "mape_carbs"),
+        row("Answers within 10% on calories (share)", "n_items", "within_10pct_kcal"),
+        row("Missing dishes reported (share)", "n_missing_dishes", "missing_reported"),
+        row("Failed answers (count)", "n_replied", "failed_answers"),
+        row("API errors (count)", None, "api_errors"),
         {
             "measure": "p95 tool latency (ms)",
-            "n": result["tool_calls"],
+            "n_without_tools": None,
+            "n_with_tools": result["tool_calls"],
             "without_tools": None,
             "with_tools": result["p95_tool_latency_ms"],
         },
@@ -743,6 +794,20 @@ def build_result(
 Toolboxes = Callable[[], contextlib.AbstractAsyncContextManager[ToolBox]]
 
 
+def _require_an_answer(arm: str, outcomes: Mapping[str, Outcome]) -> None:
+    """Raise GroundingError when no question in the arm got a readable answer.
+
+    Such a run measures the key or the service, not the model, and its results must never
+    replace a real headline.
+    """
+    kinds = Counter(type(outcome.parsed).__name__ for outcome in outcomes.values())
+    if not kinds["Numbers"] and not kinds["Missing"]:
+        raise GroundingError(
+            f"the {arm} arm got no answer to any of {len(outcomes)} questions "
+            f"(API errors {kinds['ApiError']}, failed answers {kinds['Failed']})"
+        )
+
+
 async def run(
     model: ModelClient,
     questions: Sequence[Question],
@@ -763,9 +828,18 @@ async def run(
     """
     golden = golden_answers(questions)
     pacer = Pacer(min_interval, clock=clock, sleep=sleep)
+    # One streak across both arms: errors at the end of one and the start of the other are
+    # still in a row.
+    streak = _ApiErrorStreak(MAX_CONSECUTIVE_API_ERRORS)
+    with_: dict[str, Outcome] = {}
     async with toolbox() as tools:
-        without = await run_arm(model, questions, None, pacer=pacer, sleep=sleep)
-        with_ = await run_arm(model, questions, tools, pacer=pacer, sleep=sleep)
+        without = await run_arm(model, questions, None, pacer=pacer, streak=streak, sleep=sleep)
+        if not streak.stopped:
+            with_ = await run_arm(model, questions, tools, pacer=pacer, streak=streak, sleep=sleep)
+    if streak.stopped:
+        raise GroundingError(streak.stopped)
+    for arm, outcomes in (("without_tools", without), ("with_tools", with_)):
+        _require_an_answer(arm, outcomes)
     return build_result(
         model.model,
         questions,
@@ -902,7 +976,8 @@ def reply_from_response(response: "types.GenerateContentResponse") -> ModelReply
 def model_error(err: "genai_errors.APIError") -> ModelError:
     """The status code alone: the error's text can quote the request."""
     kind = f"http {err.code}"
-    if err.code == 429 or err.code >= 500:
+    # The codes google-genai itself retries when asked to: timeout, too many requests, 5xx.
+    if err.code in (408, 429) or err.code >= 500:
         return RetryableModelError(kind)
     return ModelError(kind)
 
@@ -947,5 +1022,7 @@ class GeminiClient:
 
 def gemini_client(model: str, api_key: str) -> GeminiClient:
     from google import genai
+    from google.genai import types
 
-    return GeminiClient(model, genai.Client(api_key=api_key))
+    options = types.HttpOptions(timeout=REQUEST_TIMEOUT_MS)
+    return GeminiClient(model, genai.Client(api_key=api_key, http_options=options))

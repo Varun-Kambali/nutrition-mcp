@@ -17,6 +17,8 @@ model, so it runs on demand only (`make eval`, which loads .env). EVAL_MODEL ove
 default model. A run writes evals/results/YYYY-MM-DD_<model>_<commit>.json and rebuilds
 summary.md; --limit N asks only the first N questions, and --min-interval sets the least
 time between two model requests.
+A run that stops after API errors in a row, or that gets no readable answer in one of its
+arms, exits 1 and writes nothing, so it cannot replace a real headline.
 
 Every results file is JSON with `suite`, `date`, `generated_at`, `commit` and
 `dataset_version`. summary.md is rebuilt from the newest file of each suite (the latest
@@ -73,6 +75,8 @@ SUITES = ("data_accuracy", "grounding")
 RESULT_FIELDS = ("suite", "date", "generated_at", "commit", "dataset_version")
 LABELS = {spec.key: f"{spec.label} ({spec.unit})" for spec in NUTRIENTS}
 API_KEY_VAR = "GEMINI_API_KEY"
+# The value .env.example ships with; a .env copied without editing must not count as a key.
+PLACEHOLDER_KEY = "your-gemini-key-here"
 MODEL_VAR = "EVAL_MODEL"
 
 log = logging.getLogger("nutrition_mcp.evals")
@@ -367,6 +371,11 @@ def _summary_rows(path: Path, data: Mapping[str, Any]) -> list[tuple[str, Any, A
         raise EvalError(f"{path}: summary data has the wrong shape for summary.md") from None
 
 
+def _arm_n(row: Mapping[str, Any]) -> str:
+    """Each arm's n for a grounding row, Baseline first: "26 / 21"."""
+    return f"{_cell(row['n_without_tools'])} / {_cell(row['n_with_tools'])}"
+
+
 def _grounding_lines(path: Path, data: Mapping[str, Any]) -> list[str]:
     """The grounding table, one row per summary measure, the headline first.
 
@@ -376,7 +385,7 @@ def _grounding_lines(path: Path, data: Mapping[str, Any]) -> list[str]:
     """
     try:
         cells = [
-            (row["measure"], row["without_tools"], row["with_tools"], row["n"])
+            (row["measure"], row["without_tools"], row["with_tools"], _arm_n(row))
             for row in data["summary"]
         ]
         shared = (
@@ -395,16 +404,16 @@ def _grounding_lines(path: Path, data: Mapping[str, Any]) -> list[str]:
         "percentage error over the answers that gave numbers; an answer without numbers is left",
         "out of it and counts as outside 10%. A question whose model request failed after its",
         "retries is an API error: it is counted on its own row and left out of every other one.",
-        "Shares run from 0 to 1. n is the number of questions behind a row, or of tool calls",
-        "for latency. The model runs at the provider's default temperature, so answers vary",
-        "from run to run.",
+        "Shares run from 0 to 1. n is the number of questions behind each value, Baseline first,",
+        "or of tool calls for latency. The model runs at the provider's default temperature, so",
+        "answers vary from run to run.",
         "",
         "| Measure | Baseline | This project | n | Model | Date | Commit | Dataset version "
         "| Results file |",
         "|---|---|---|---|---|---|---|---|---|",
     ]
     for measure, without, with_, n in cells:
-        lines.append(f"| {measure} | {_cell(without)} | {_cell(with_)} | {_cell(n)} {shared}")
+        lines.append(f"| {measure} | {_cell(without)} | {_cell(with_)} | {n} {shared}")
     return [*lines, ""]
 
 
@@ -461,6 +470,15 @@ def _number(value: float | None) -> str:
     return "-" if value is None else f"{value:g}"
 
 
+def _print_table(rows: Sequence[Sequence[str]]) -> None:
+    """Rows of text cells in columns as wide as their widest cell, two spaces apart."""
+    widths = [max(len(row[i]) for row in rows) for i in range(len(rows[0]))]
+    for row in rows:
+        print(
+            "  ".join(cell.ljust(width) for cell, width in zip(row, widths, strict=True)).rstrip()
+        )
+
+
 def print_report(result: Mapping[str, Any]) -> None:
     print(
         f"Data accuracy: {result['n']} reference dishes, dataset {result['dataset_version']}, "
@@ -487,19 +505,7 @@ def print_report(result: Mapping[str, Any]) -> None:
         ]
         sources = ", ".join(row["ingredient_source_ids"])
         table.append((row["dish_id"], f"{row['source_id']} {row['record']}", *cells, sources))
-    widths = [max(len(line[i]) for line in table) for i in range(len(header))]
-    for line in table:
-        print(
-            "  ".join(cell.ljust(width) for cell, width in zip(line, widths, strict=True)).rstrip()
-        )
-
-
-def _print_table(rows: Sequence[Sequence[str]]) -> None:
-    widths = [max(len(row[i]) for row in rows) for i in range(len(rows[0]))]
-    for row in rows:
-        print(
-            "  ".join(cell.ljust(width) for cell, width in zip(row, widths, strict=True)).rstrip()
-        )
+    _print_table(table)
 
 
 def print_grounding_report(result: Mapping[str, Any]) -> None:
@@ -517,7 +523,7 @@ def print_grounding_report(result: Mapping[str, Any]) -> None:
                     row["measure"],
                     _cell(row["without_tools"]),
                     _cell(row["with_tools"]),
-                    str(row["n"]),
+                    _arm_n(row),
                 )
                 for row in result["summary"]
             ),
@@ -544,8 +550,8 @@ def run_grounding(limit: int | None, out: Path, min_interval: float) -> int:
 
     The key is checked first, so a run without one starts no server and builds no client.
     """
-    api_key = os.environ.get(API_KEY_VAR)
-    if not api_key:
+    api_key = os.environ.get(API_KEY_VAR, "").strip()
+    if not api_key or api_key == PLACEHOLDER_KEY:
         print(
             f"error: {API_KEY_VAR} is not set. Put it in .env (see .env.example), which "
             "`make eval` loads, or set it in the environment.",
@@ -554,11 +560,20 @@ def run_grounding(limit: int | None, out: Path, min_interval: float) -> int:
         return 1
     model = os.environ.get(MODEL_VAR) or grounding.DEFAULT_MODEL
     try:
+        client = grounding.gemini_client(model, api_key)
+    except ModuleNotFoundError as err:
+        print(
+            f"error: the eval dependency group is not installed ({err.name} is missing); run "
+            "with `uv run --group eval`, as make eval does",
+            file=sys.stderr,
+        )
+        return 1
+    try:
         questions = grounding.load_questions(grounding.QUESTIONS)[:limit]
         result = anyio.run(
             functools.partial(
                 grounding.run,
-                grounding.gemini_client(model, api_key),
+                client,
                 questions,
                 now=datetime.now(UTC),
                 commit=git_commit(),
@@ -567,7 +582,7 @@ def run_grounding(limit: int | None, out: Path, min_interval: float) -> int:
             )
         )
     except (grounding.GroundingError, loader.DataError) as err:
-        print(f"error: {err}", file=sys.stderr)
+        print(f"error: {err}; nothing written", file=sys.stderr)
         return 1
     log.info("grounding asked %d questions of %s", result["n"], result["model"])
     print_grounding_report(result)
