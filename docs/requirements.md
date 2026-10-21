@@ -75,9 +75,9 @@ All tools are read-only, return structured output from Pydantic models, and are 
 
 ### Docs
 
-- [ ] README per the template: demo GIF, results table, Mermaid diagram, quickstart, limitations, and data licenses with attribution.
+- [x] README per the template: demo GIF, results table, Mermaid diagram, quickstart, limitations, and data licenses with attribution.
 - [x] `docs/data.md` with the nutrient definitions and source mappings.
-- [ ] The case study, kept current. An ADR for each decision.
+- [x] The case study, kept current. An ADR for each decision.
 - [x] `portfolio.json` and the `portfolio` repo topic.
 
 ## Non-goals for v1
