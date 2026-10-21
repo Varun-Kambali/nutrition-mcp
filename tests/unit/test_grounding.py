@@ -701,12 +701,39 @@ def test_tool_errors_and_latency_reach_the_results() -> None:
 
     # The headline row comes first, and every summary value is copied from the arms.
     summary = result["summary"]
+    assert [row["measure"] for row in summary] == [
+        "Calorie error against the dataset totals, MAPE (%)",
+        "Protein error against the dataset totals, MAPE (%)",
+        "Carbohydrate error against the dataset totals, MAPE (%)",
+        "Answers within 10% on calories (share)",
+        "Missing dishes reported (share)",
+        "Failed answers (count)",
+        "API errors (count)",
+        "Tool errors (count)",
+        "p95 tool latency (ms)",
+    ]
     assert summary[0] == {
-        "measure": "Mean absolute error on calories (%)",
+        "measure": "Calorie error against the dataset totals, MAPE (%)",
         "n_without_tools": 1,
         "n_with_tools": 1,
         "without_tools": result["without_tools"]["mape_kcal"],
         "with_tools": result["with_tools"]["mape_kcal"],
+    }
+    rows = {row["measure"]: row for row in summary}
+    # Without tools there is no data to look a dish up in, so that share has no baseline.
+    assert rows["Missing dishes reported (share)"] == {
+        "measure": "Missing dishes reported (share)",
+        "n_without_tools": None,
+        "n_with_tools": 1,
+        "without_tools": None,
+        "with_tools": 0.0,
+    }
+    assert rows["Tool errors (count)"] == {
+        "measure": "Tool errors (count)",
+        "n_without_tools": None,
+        "n_with_tools": 4,
+        "without_tools": None,
+        "with_tools": 4,
     }
     api_errors = next(row for row in summary if row["measure"] == "API errors (count)")
     assert api_errors == {
@@ -999,10 +1026,10 @@ def test_summary_n_is_each_arms_own_count() -> None:
     n = {row["measure"]: (row["n_without_tools"], row["n_with_tools"]) for row in result["summary"]}
     # MAPE: questions both arms answered with numbers. Within 10%: each arm's questions with
     # items that got a reply.
-    assert n["Mean absolute error on calories (%)"] == (1, 1)
+    assert n["Calorie error against the dataset totals, MAPE (%)"] == (1, 1)
     assert n["Answers within 10% on calories (share)"] == (2, 2)
     # m1 had an API error with tools, so no missing dish was scored there.
-    assert n["Missing dishes reported (share)"] == (1, 0)
+    assert n["Missing dishes reported (share)"] == (None, 0)
     assert n["Failed answers (count)"] == (3, 2)
     assert n["API errors (count)"] == (3, 3)
 

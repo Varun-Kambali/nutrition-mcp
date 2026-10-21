@@ -764,21 +764,34 @@ def summary_rows(result: Mapping[str, Any]) -> list[dict[str, Any]]:
         # Both arms' errors are over the same questions, so they share one n.
         return {**row(measure, None, metric), **dict.fromkeys(N_KEYS, result["n_paired"])}
 
+    def tools_only(measure: str, n: Any, value: Any) -> dict[str, Any]:
+        # Measures with no baseline: the without-tools arm has no tools and no data.
+        return {
+            "measure": measure,
+            "n_without_tools": None,
+            "n_with_tools": n,
+            "without_tools": None,
+            "with_tools": value,
+        }
+
     return [
-        paired("Mean absolute error on calories (%)", "mape_kcal"),
-        paired("Mean absolute error on protein (%)", "mape_protein"),
-        paired("Mean absolute error on carbohydrate (%)", "mape_carbs"),
+        # The golden answers are the server's own totals, so the error is against those, not
+        # against what the food contains; the data-accuracy suite measures that.
+        paired("Calorie error against the dataset totals, MAPE (%)", "mape_kcal"),
+        paired("Protein error against the dataset totals, MAPE (%)", "mape_protein"),
+        paired("Carbohydrate error against the dataset totals, MAPE (%)", "mape_carbs"),
         row("Answers within 10% on calories (share)", "n_items", "within_10pct_kcal"),
-        row("Missing dishes reported (share)", "n_missing_dishes", "missing_reported"),
+        # Without tools the model has no data to look a dish up in, so a missing list from it
+        # says nothing about the data.
+        tools_only(
+            "Missing dishes reported (share)",
+            with_["n_missing_dishes"],
+            with_["missing_reported"],
+        ),
         row("Failed answers (count)", "n_replied", "failed_answers"),
         row("API errors (count)", None, "api_errors"),
-        {
-            "measure": "p95 tool latency (ms)",
-            "n_without_tools": None,
-            "n_with_tools": result["tool_calls"],
-            "without_tools": None,
-            "with_tools": result["p95_tool_latency_ms"],
-        },
+        tools_only("Tool errors (count)", result["tool_calls"], result["tool_errors"]["count"]),
+        tools_only("p95 tool latency (ms)", result["tool_calls"], result["p95_tool_latency_ms"]),
     ]
 
 

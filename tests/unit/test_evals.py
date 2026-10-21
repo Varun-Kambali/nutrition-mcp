@@ -9,6 +9,7 @@ import run_evals
 
 from nutrition_mcp import loader
 from nutrition_mcp.nutrients import NUTRIENT_KEYS, REFERENCE_NUTRIENTS
+from nutrition_mcp.schemas import MealItemIn
 
 NUTRIENTS = ("kcal", "protein_g", "carbs_available_g", "iron_mg", "calcium_mg")
 NOW = datetime(2026, 10, 20, 9, 0, tzinfo=UTC)
@@ -287,7 +288,7 @@ def _grounding_file(folder: Path) -> None:
         "model": "test-model",
         "summary": [
             {
-                "measure": "Mean absolute error on calories (%)",
+                "measure": "Calorie error against the dataset totals, MAPE (%)",
                 "n_without_tools": 26,
                 "n_with_tools": 21,
                 "without_tools": 31.2,
@@ -319,7 +320,8 @@ def test_summary_keeps_the_grounding_rows_when_data_accuracy_rewrites_it(
     grounding = [line for line in lines if "fff0000" in line]
     accuracy = [line for line in lines if "abc1234" in line]
     assert grounding[0] == (
-        "| Mean absolute error on calories (%) | 31.2 | 4.2 | 26 / 21 | test-model | 2026-10-19 "
+        "| Calorie error against the dataset totals, MAPE (%) | 31.2 | 4.2 | 26 / 21 | test-model "
+        "| 2026-10-19 "
         "| fff0000 | 0123456789ab "
         "| [2026-10-19_test-model_fff0000.json](2026-10-19_test-model_fff0000.json) |"
     )
@@ -476,7 +478,68 @@ def test_the_headline_is_the_first_row_of_the_first_table(
     header = [cell.strip() for cell in lines[first].strip("|").split("|")]
     assert header[:4] == ["Measure", "Baseline", "This project", "n"]
     assert lines[first + 1].startswith("|---")
-    assert lines[first + 2].startswith("| Mean absolute error on calories (%) | 31.2 | 4.2 |")
+    assert lines[first + 2].startswith(
+        "| Calorie error against the dataset totals, MAPE (%) | 31.2 | 4.2 |"
+    )
+
+
+def site_headline(markdown: str) -> str:
+    """What the portfolio site shows: "<measure>: <Baseline> -> <This project>".
+
+    The same steps as headline() and describe() in the site's assets/js/summary.js: the first
+    Markdown table, its first row, and the Baseline and This project columns.
+    """
+    lines = markdown.splitlines()
+    first = next(i for i, line in enumerate(lines) if line.startswith("|"))
+    assert lines[first + 1].startswith("|---")
+
+    def cells(line: str) -> list[str]:
+        return [cell.strip() for cell in line.strip().strip("|").split("|")]
+
+    header, row = cells(lines[first]), cells(lines[first + 2])
+    lower = [cell.lower() for cell in header]
+    return f"{row[0]}: {row[lower.index('baseline')]} -> {row[lower.index('this project')]}"
+
+
+def test_the_site_shows_the_calorie_error_from_a_real_grounding_result(tmp_path: Path) -> None:
+    asked = [
+        grounding.Question(
+            id="q1",
+            question="2 idlis",
+            items=(MealItemIn(food_id="idli", amount=2, unit="piece"),),
+        ),
+        grounding.Question(id="m1", question="a katori of kheer", expect_missing=("kheer",)),
+    ]
+    golden = grounding.golden_answers(asked)
+    kcal = golden["q1"]["kcal"]
+
+    def answered(value: float) -> grounding.Outcome:
+        values = {**golden["q1"], "kcal": value}
+        return grounding.Outcome(grounding.Numbers(values))
+
+    missing = grounding.Outcome(grounding.Missing(("kheer",), has_numbers=False))
+    result = grounding.build_result(
+        "test-model",
+        asked,
+        golden,
+        {"q1": answered(kcal * 1.5), "m1": missing},
+        {"q1": answered(kcal), "m1": missing},
+        now=NOW,
+        commit="abc1234",
+        dataset_version="0123456789ab",
+        min_interval=0.0,
+    )
+    out = tmp_path / "results"
+    run_evals.write_results(result, out)
+
+    markdown = run_evals.write_summary(out).read_text(encoding="utf-8")
+
+    assert site_headline(markdown) == (
+        "Calorie error against the dataset totals, MAPE (%): 50.0 -> 0.0"
+    )
+    missing_row = next(line for line in markdown.splitlines() if line.startswith("| Missing"))
+    assert missing_row.startswith("| Missing dishes reported (share) | n/a | 1.0 | n/a / 1 |")
+    assert "no data to look a dish up in" in markdown
 
 
 def test_summary_without_a_grounding_run_has_only_the_data_accuracy_table(
@@ -615,9 +678,9 @@ def test_a_grounding_run_writes_the_results_file_and_summary(
     assert data["min_request_interval_s"] == 0.0
     assert data["dataset_version"] == run_evals.dataset_version(loader.bundled_dir())
     summary = (out / "summary.md").read_text(encoding="utf-8")
-    assert "| Mean absolute error on calories (%) |" in summary
+    assert "| Calorie error against the dataset totals, MAPE (%) |" in summary
     report = capsys.readouterr().out
-    assert "Mean absolute error on calories (%)" in report
+    assert "Calorie error against the dataset totals, MAPE (%)" in report
     assert "stand-in" not in report
 
 
