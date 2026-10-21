@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
@@ -594,6 +595,126 @@ def test_grounding_results_are_named_by_model(tmp_path: Path, model: str, name: 
     assert run_evals.write_results(result, tmp_path).name == name
 
 
+def test_a_limited_run_is_named_apart_from_the_full_run(tmp_path: Path) -> None:
+    # A smoke run on the same day and commit must not take the full run's file name.
+    result = {
+        "suite": "grounding",
+        "date": "2026-10-21",
+        "commit": "abc1234",
+        "model": "gemini-test",
+        "limit": 2,
+    }
+    path = run_evals.write_results(result, tmp_path)
+    assert path.name == "2026-10-21_gemini-test-limit2_abc1234.json"
+
+
+def test_a_results_file_is_never_overwritten(
+    tiny_dataset: Path,
+    references_csv: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setattr(run_evals, "REFERENCES", references_csv)
+    monkeypatch.setattr(run_evals, "git_commit", lambda: "abc1234")
+    out = tmp_path / "results"
+    args = ["--suite", "data_accuracy", "--out", str(out)]
+    assert run_evals.main(args) == 0
+    [results] = out.glob("*.json")
+    before = results.read_text(encoding="utf-8")
+    (out / "summary.md").write_text("left as it was\n", encoding="utf-8")
+    capsys.readouterr()
+
+    assert run_evals.main(args) == 1
+
+    err = capsys.readouterr().err
+    assert results.name in err and "already exists" in err
+    assert results.read_text(encoding="utf-8") == before
+    assert (out / "summary.md").read_text(encoding="utf-8") == "left as it was\n"
+
+
+def test_a_grounding_run_checks_the_file_name_before_asking_anything(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+    monkeypatch.setenv("EVAL_MODEL", "gemini-test")
+    monkeypatch.setattr(run_evals, "git_commit", lambda: "abc1234")
+
+    def no_model(*args: Any) -> None:
+        raise AssertionError("no model client may be built when the results file exists")
+
+    monkeypatch.setattr(grounding, "gemini_client", no_model)
+    out = tmp_path / "results"
+    out.mkdir()
+    taken = out / f"{datetime.now(UTC).date().isoformat()}_gemini-test_abc1234.json"
+    taken.write_text("{}\n", encoding="utf-8")
+
+    assert run_evals.main(["--suite", "grounding", "--out", str(out)]) == 1
+    assert "already exists" in capsys.readouterr().err
+    assert taken.read_text(encoding="utf-8") == "{}\n"
+    assert sorted(path.name for path in out.iterdir()) == [taken.name]
+
+
+def test_a_limited_grounding_run_leaves_the_summary_alone(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+    monkeypatch.setattr(grounding, "gemini_client", lambda model, key: AnswersAtOnce(model))
+    monkeypatch.setattr(run_evals, "git_commit", lambda: "abc1234")
+    out = tmp_path / "results"
+    out.mkdir()
+    (out / "summary.md").write_text("left as it was\n", encoding="utf-8")
+
+    assert run_evals.main(grounding_args(out)) == 0
+
+    [results] = out.glob("*.json")
+    data = json.loads(results.read_text(encoding="utf-8"))
+    total = len(grounding.load_questions(grounding.QUESTIONS))
+    assert (data["n"], data["limit"], data["questions_total"]) == (2, 2, total)
+    assert (out / "summary.md").read_text(encoding="utf-8") == "left as it was\n"
+    assert "summary.md" in capsys.readouterr().out
+
+
+def test_the_summary_skips_limited_results(tmp_path: Path) -> None:
+    out = tmp_path / "results"
+    _grounding_file(out)
+    full = out / "2026-10-19_test-model_fff0000.json"
+    limited = json.loads(full.read_text(encoding="utf-8"))
+    limited.update(generated_at="2026-10-20T10:00:00+00:00", commit="eee0000", limit=2)
+    (out / "2026-10-20_test-model-limit2_eee0000.json").write_text(
+        json.dumps(limited), encoding="utf-8"
+    )
+
+    summary = run_evals.write_summary(out).read_text(encoding="utf-8")
+    assert "fff0000" in summary and "eee0000" not in summary
+
+    full.unlink()
+    assert "| Measure | Baseline |" not in run_evals.write_summary(out).read_text(encoding="utf-8")
+
+
+@pytest.mark.skipif(shutil.which("make") is None, reason="needs make")
+@pytest.mark.parametrize(
+    ("target", "suite"), [("eval", "grounding"), ("eval-data", "data_accuracy")]
+)
+def test_make_passes_args_to_the_runner(target: str, suite: str) -> None:
+    # -n prints the command without running it.
+    completed = subprocess.run(
+        ["make", "-n", target, "ARGS=--limit 2 --out /tmp/smoke"],
+        cwd=run_evals.ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert f"--suite {suite} --limit 2 --out /tmp/smoke" in completed.stdout
+
+
 def git(root: Path, *args: str) -> None:
     subprocess.run(
         ["git", "-c", "user.name=t", "-c", "user.email=t@example.org", *args],
@@ -721,14 +842,16 @@ def test_a_grounding_run_writes_the_results_file_and_summary(
     monkeypatch.setattr(run_evals, "git_commit", lambda: "abc1234")
     out = tmp_path / "results"
 
-    args = ["--suite", "grounding", "--limit", "2", "--min-interval", "0", "--out", str(out)]
+    args = ["--suite", "grounding", "--min-interval", "0", "--out", str(out)]
     assert run_evals.main(args) == 0
 
     assert built == [("gemini-test", "stand-in")]
     [results] = [path for path in out.iterdir() if path.suffix == ".json"]
     assert results.name.endswith("_gemini-test_abc1234.json")
     data = json.loads(results.read_text(encoding="utf-8"))
-    assert data["n"] == 2 and data["model"] == "gemini-test"
+    total = len(grounding.load_questions(grounding.QUESTIONS))
+    assert (data["n"], data["questions_total"], data["limit"]) == (total, total, None)
+    assert data["model"] == "gemini-test"
     assert data["min_request_interval_s"] == 0.0
     assert data["dataset_version"] == run_evals.dataset_version(loader.bundled_dir())
     assert data["questions_version"] == grounding.questions_version(grounding.QUESTIONS)

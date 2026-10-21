@@ -827,11 +827,15 @@ def build_result(
     dataset_version: str,
     questions_version: str,
     min_interval: float,
+    limit: int | None = None,
+    questions_total: int | None = None,
 ) -> dict[str, Any]:
     """The results dict for run_evals.write_results.
 
     `dirty` says whether files outside evals/results/ differed from `commit` when the run
     started (None when git could not tell), so a result from uncommitted code is marked.
+    `limit` is the --limit the run was given, if any, and `questions_total` the number of
+    questions in the file (`questions` when not given); a limited run is never a headline.
     """
     utc = now.astimezone(UTC)
     records = [record for outcome in with_.values() for record in outcome.tool_calls]
@@ -857,6 +861,8 @@ def build_result(
         "max_turns": MAX_TURNS,
         "min_request_interval_s": min_interval,
         "n": len(questions),
+        "questions_total": len(questions) if questions_total is None else questions_total,
+        "limit": limit,
         "questions_with_items": sum(bool(q.items) for q in questions),
         "questions_expecting_missing": sum(bool(q.expect_missing) for q in questions),
         "tokens": {"without_tools": _tokens(without), "with_tools": _tokens(with_)},
@@ -915,6 +921,8 @@ async def run(
     dataset_version: str,
     questions_version: str,
     min_interval: float,
+    limit: int | None = None,
+    questions_total: int | None = None,
     toolbox: Toolboxes = stdio_toolbox,
     clock: Clock = time.monotonic,
     sleep: Sleep = anyio.sleep,
@@ -951,6 +959,8 @@ async def run(
         dataset_version=dataset_version,
         questions_version=questions_version,
         min_interval=min_interval,
+        limit=limit,
+        questions_total=questions_total,
     )
 
 

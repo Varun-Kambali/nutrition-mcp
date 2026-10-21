@@ -1,4 +1,6 @@
 COV_MIN ?= 80
+# Extra options for evals/run_evals.py, as in make eval ARGS="--limit 2 --out /tmp/smoke".
+ARGS ?=
 
 .PHONY: setup lint test eval eval-data run docker data gi
 
@@ -18,10 +20,10 @@ test:
 ENV_FILE := $(if $(wildcard .env),--env-file .env)
 
 eval:
-	uv run $(ENV_FILE) --group eval python evals/run_evals.py --suite grounding
+	uv run $(ENV_FILE) --group eval python evals/run_evals.py --suite grounding $(ARGS)
 
 eval-data:
-	uv run python evals/run_evals.py --suite data_accuracy
+	uv run python evals/run_evals.py --suite data_accuracy $(ARGS)
 
 run:
 	uv run nutrition-mcp

@@ -322,18 +322,51 @@ def check_thresholds(
     return failures
 
 
-def _file_label(result: Mapping[str, Any]) -> str:
-    if result["suite"] == "grounding":
-        # A model id can hold a "/" or a space, which have no place in a file name.
-        return re.sub(r"[^A-Za-z0-9._-]+", "-", str(result["model"]))
-    return str(result["suite"]).replace("_", "-")
+def _file_label(suite: str, model: str | None, limit: int | None) -> str:
+    if suite != "grounding":
+        return suite.replace("_", "-")
+    # A model id can hold a "/" or a space, which have no place in a file name.
+    label = re.sub(r"[^A-Za-z0-9._-]+", "-", str(model))
+    # A limited run gets its own name, so a smoke run cannot take the full run's file.
+    return label if limit is None else f"{label}-limit{limit}"
+
+
+def results_path(
+    out: Path,
+    date: str,
+    suite: str,
+    commit: str,
+    model: str | None = None,
+    limit: int | None = None,
+) -> Path:
+    """Where a results file goes: named by date, suite (or model, for grounding), commit."""
+    return out / f"{date}_{_file_label(suite, model, limit)}_{commit}.json"
+
+
+def _taken(path: Path) -> EvalError:
+    return EvalError(
+        f"{_shown(path)} already exists, and a results file is never overwritten; nothing "
+        "written. Commit or move it, or run again after a new commit"
+    )
 
 
 def write_results(result: Mapping[str, Any], out: Path) -> Path:
-    """Write a results file named by date, then suite (or model, for grounding), then commit."""
+    """Write a new results file. Raises EvalError, writing nothing, when the name is taken."""
+    path = results_path(
+        out,
+        result["date"],
+        result["suite"],
+        result["commit"],
+        result.get("model"),
+        result.get("limit"),
+    )
     out.mkdir(parents=True, exist_ok=True)
-    path = out / f"{result['date']}_{_file_label(result)}_{result['commit']}.json"
-    path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    try:
+        # "x" fails when the file exists, so a result can never replace another.
+        with path.open("x", encoding="utf-8") as handle:
+            handle.write(json.dumps(result, indent=2) + "\n")
+    except FileExistsError:
+        raise _taken(path) from None
     return path
 
 
@@ -350,6 +383,9 @@ def _latest_results(out: Path) -> dict[str, tuple[Path, dict[str, Any]]]:
         suite = data["suite"]
         if suite not in SUITES:
             raise EvalError(f"{path}: suite must be one of {', '.join(SUITES)}")
+        # A run on part of the questions is a check of the wiring, never the headline.
+        if data.get("limit") is not None:
+            continue
         # ISO 8601 timestamps in UTC sort in time order as strings.
         if suite not in latest or data["generated_at"] >= latest[suite][1]["generated_at"]:
             latest[suite] = (path, data)
@@ -586,6 +622,13 @@ def run_grounding(limit: int | None, out: Path, min_interval: float) -> int:
         )
         return 1
     model = os.environ.get(MODEL_VAR) or grounding.DEFAULT_MODEL
+    now = datetime.now(UTC)
+    commit = git_commit()
+    # Checked before any request, so a run that could not be saved costs no quota.
+    planned = results_path(out, now.date().isoformat(), "grounding", commit, model, limit)
+    if planned.exists():
+        print(f"error: {_taken(planned)}", file=sys.stderr)
+        return 1
     try:
         client = grounding.gemini_client(model, api_key)
     except ModuleNotFoundError as err:
@@ -596,18 +639,20 @@ def run_grounding(limit: int | None, out: Path, min_interval: float) -> int:
         )
         return 1
     try:
-        questions = grounding.load_questions(grounding.QUESTIONS)[:limit]
+        questions = grounding.load_questions(grounding.QUESTIONS)
         result = anyio.run(
             functools.partial(
                 grounding.run,
                 client,
-                questions,
-                now=datetime.now(UTC),
-                commit=git_commit(),
+                questions[:limit],
+                now=now,
+                commit=commit,
                 dirty=git_dirty(),
                 dataset_version=dataset_version(loader.bundled_dir()),
                 questions_version=grounding.questions_version(grounding.QUESTIONS),
                 min_interval=min_interval,
+                limit=limit,
+                questions_total=len(questions),
             )
         )
     except (grounding.GroundingError, loader.DataError) as err:
@@ -617,6 +662,12 @@ def run_grounding(limit: int | None, out: Path, min_interval: float) -> int:
     print_grounding_report(result)
     try:
         path = write_results(result, out)
+        if limit is not None:
+            print(
+                f"\nWrote {_shown(path)}. summary.md is left as it was: a run with --limit "
+                "is never the headline."
+            )
+            return 0
         summary = write_summary(out)
     except EvalError as err:
         print(f"error: {err}", file=sys.stderr)
