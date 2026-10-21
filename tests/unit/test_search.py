@@ -5,7 +5,7 @@ from nutrition_mcp.loader import build_registry
 from nutrition_mcp.models import Diet, Food, Nutrients, Region
 from nutrition_mcp.registry import Registry
 from nutrition_mcp.schemas import FoodSummary, SearchResult
-from nutrition_mcp.search import _has_every_word, normalise, search_foods
+from nutrition_mcp.search import NOT_FOUND_NOTE, _has_every_word, normalise, search_foods
 from nutrition_mcp.units import valid_units
 
 SETTINGS = Settings(default_katori_g=150.0)
@@ -250,7 +250,9 @@ def test_filters_apply_before_suggestions_are_chosen(reg: Registry) -> None:
 def test_no_match_is_empty_not_error(reg: Registry) -> None:
     # Nothing is close to the query, so there are no suggestions either.
     result = search_foods(reg, SETTINGS, "qwerty", None, None, None)
-    assert result == SearchResult(query="qwerty", results=[], total=0, suggestions=[])
+    assert result == SearchResult(
+        query="qwerty", results=[], total=0, suggestions=[], note=NOT_FOUND_NOTE
+    )
 
 
 def test_filters_that_leave_no_foods_give_an_empty_result() -> None:
@@ -264,12 +266,37 @@ def test_filters_that_leave_no_foods_give_an_empty_result() -> None:
     # The food is there without the diet filter, and no vegan dish is from the east.
     assert ids(search_foods(pool, SETTINGS, "fish curry", "east", None, None)) == ["a"]
     result = search_foods(pool, SETTINGS, "fish curry", "east", "vegan", None)
-    assert result == SearchResult(query="fish curry", results=[], total=0, suggestions=[])
+    assert result == SearchResult(
+        query="fish curry", results=[], total=0, suggestions=[], note=NOT_FOUND_NOTE
+    )
 
 
 def test_suggestions_come_only_when_nothing_matched(reg: Registry) -> None:
     assert search_foods(reg, SETTINGS, "sambar", None, None, None).suggestions == []
     assert search_foods(reg, SETTINGS, "dahi vada", None, None, None).suggestions != []
+
+
+# An empty result says what it means. The first grounding run searched for pulao 4 times,
+# got no results each time, then searched "rice" and answered with jeera rice.
+
+
+def test_an_empty_result_says_the_food_is_not_in_the_data(reg: Registry) -> None:
+    result = search_foods(reg, SETTINGS, "pulao", None, None, None)
+    assert result.results == []
+    assert result.suggestions != []
+    assert result.note == NOT_FOUND_NOTE
+
+
+def test_the_note_says_to_report_the_food_missing_instead_of_substituting() -> None:
+    assert NOT_FOUND_NOTE.startswith("Not found:")
+    assert "report that food as missing" in NOT_FOUND_NOTE
+    # The three ways the first run found something else to answer with.
+    for substitute in ("a suggestion", "a broader match", "other foods put together"):
+        assert substitute in NOT_FOUND_NOTE
+
+
+def test_a_search_with_results_has_no_note(reg: Registry) -> None:
+    assert search_foods(reg, SETTINGS, "sambar", None, None, None).note is None
 
 
 def test_suggestions_are_capped_at_five() -> None:

@@ -54,6 +54,12 @@ them. Thresholds, on the 0 to 100 scale:
   it come back as "did you mean" candidates, best first. A food that fails the word check
   can still be a suggestion, so "chicken curry" suggests Chana masala without returning it.
 - MAX_QUERY_LENGTH 100 characters, and a limit of 1 to MAX_SEARCH_LIMIT results.
+
+An empty result carries NOT_FOUND_NOTE, which says the food is not in the data and is to be
+reported as missing. The tool description says the same, but a model reads the result at the
+moment it decides what to do next. In the first grounding run, a model that got no results
+for pulao searched 4 more times, broadened the query to "rice" and answered with jeera rice;
+for masala dosa it searched for the dosa and a potato filling until it ran out of turns.
 """
 
 import re
@@ -75,6 +81,14 @@ MAX_SEARCH_LIMIT = 50
 MAX_QUERY_LENGTH = 100
 # Words this long or longer may be one edit apart and still match.
 TYPO_MIN_LETTERS = 5
+
+NOT_FOUND_NOTE = (
+    "Not found: no food in the data has a name that matches every word of this query. "
+    "Common spelling variants already match, so a respelled query seldom finds more, and a "
+    "broader one finds other foods. When the query is the food's name as asked, report that "
+    "food as missing. Do not answer with a suggestion, a broader match or other foods put "
+    "together in its place."
+)
 
 # Common transliteration variants, applied in this order. The long vowels fold before the
 # doubled letters collapse: collapsing first would turn "paneer" into "paner", while
@@ -187,9 +201,9 @@ def search_foods(
 
     A name that fits several foods returns all of them, so the caller can choose. A food is a
     result only when one of its names holds every query word (see the module docstring), so
-    a dish that is not in the data returns no results and up to 5 close names as suggestions.
-    Raises ValueError for a limit outside 1 to 50, a query over 100 characters or with no
-    letters or digits, or a region, diet or kind that is not valid.
+    a dish that is not in the data returns no results, NOT_FOUND_NOTE and up to 5 close names
+    as suggestions. Raises ValueError for a limit outside 1 to 50, a query over 100
+    characters or with no letters or digits, or a region, diet or kind that is not valid.
     """
     if not 1 <= limit <= MAX_SEARCH_LIMIT:
         raise ValueError(f"limit must be 1 to {MAX_SEARCH_LIMIT}, got {limit}")
@@ -220,4 +234,10 @@ def search_foods(
     close = dict.fromkeys(
         food.name for score, _, _, food in scored if score >= SUGGESTION_MIN_SCORE
     )
-    return SearchResult(query=query, results=[], total=0, suggestions=list(close)[:MAX_SUGGESTIONS])
+    return SearchResult(
+        query=query,
+        results=[],
+        total=0,
+        suggestions=list(close)[:MAX_SUGGESTIONS],
+        note=NOT_FOUND_NOTE,
+    )
