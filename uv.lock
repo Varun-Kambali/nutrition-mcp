@@ -958,6 +958,7 @@ dev = [
     { name = "types-pyyaml" },
 ]
 eval = [
+    { name = "anyio" },
     { name = "google-genai" },
 ]
 
@@ -984,7 +985,10 @@ dev = [
     { name = "types-openpyxl" },
     { name = "types-pyyaml" },
 ]
-eval = [{ name = "google-genai" }]
+eval = [
+    { name = "anyio", specifier = ">=4.9" },
+    { name = "google-genai" },
+]
 
 [[package]]
 name = "openpyxl"
