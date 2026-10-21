@@ -172,10 +172,12 @@ DISH_NAMES: list[tuple[str, str]] = [
 ]
 
 # The foods in evals/datasets/questions.jsonl, named as the questions name them, in the
-# singular: plurals such as "rotis" are a known gap (README, limitations).
+# singular and in the plural where a question counts them.
 QUESTION_NAMES: list[tuple[str, str]] = [
     ("roti", "chapati"),
+    ("rotis", "chapati"),
     ("plain paratha", "plain_paratha"),
+    ("plain parathas", "plain_paratha"),
     ("palak paneer", "palak_paneer"),
     ("chole", "chana_masala"),
     ("jeera rice", "jeera_rice"),
@@ -187,6 +189,7 @@ QUESTION_NAMES: list[tuple[str, str]] = [
     ("sambar", "sambar"),
     ("coconut chutney", "coconut_chutney"),
     ("plain dosa", "plain_dosa"),
+    ("plain dosas", "plain_dosa"),
     ("curd rice", "curd_rice"),
     ("lemon rice", "lemon_rice"),
     ("rasam", "rasam"),
@@ -201,8 +204,10 @@ QUESTION_NAMES: list[tuple[str, str]] = [
     ("aloo posto", "aloo_posto"),
     ("pav bhaji", "pav_bhaji"),
     ("batata vada", "batata_vada"),
+    ("batata vadas", "batata_vada"),
     ("khaman dhokla", "dhokla"),
     ("methi thepla", "methi_thepla"),
+    ("methi theplas", "methi_thepla"),
     ("dahi", "curd"),
     ("sabudana khichdi", "sabudana_khichdi"),
     ("milk", "whole_milk"),
@@ -266,7 +271,9 @@ def test_the_table_has_every_food_in_the_questions() -> None:
     assert asked <= named
 
 
-@pytest.mark.parametrize("query", ["chicken curry", "masala dosa", "pulao", "kheer"])
+@pytest.mark.parametrize(
+    "query", ["chicken curry", "masala dosa", "pulao", "kheer", "masala dosas", "kheers"]
+)
 def test_a_dish_not_in_the_data_returns_nothing(reg: Registry, query: str) -> None:
     assert found(reg, query) == []
 

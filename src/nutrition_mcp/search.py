@@ -44,6 +44,16 @@ matched pav; now the token set counts only when the candidate has all the query'
 A query that is only the start of a longer word is left out of the results ("dal" against
 "dalma" scores 75); "dalma" itself is a full match.
 
+Plurals. A query that finds nothing as typed is searched again with the final "s" taken off
+each word of PLURAL_MIN_LETTERS or more letters, the way units are read ("rotis", "pieces").
+The one-edit rule already finds a plural of a word with 5 or more letters ("chapatis",
+"mangoes" through "mangoe"), but "rotis" against "roti" and "vadas" against "vada" are one
+letter off a word of 4 letters, which must match exactly. The singular is tried only when
+the query as typed finds nothing, so a food whose own name ends in "s" ("chaas") is found
+as it is, and every query that found a food before finds the same foods. The singular then
+goes through the same word and score checks, so the plural of a dish that is not in the
+data ("kheers") still finds nothing.
+
 Filters (region, diet, kind) apply before scoring, so results and suggestions both respect
 them. Thresholds, on the 0 to 100 scale:
 - RESULT_MIN_SCORE 80: the score a candidate that passes the word check needs for its food
@@ -83,6 +93,9 @@ MAX_SEARCH_LIMIT = 50
 MAX_QUERY_LENGTH = 100
 # Words this long or longer may be one edit apart and still match.
 TYPO_MIN_LETTERS = 5
+# Words this long or longer lose a final "s" when a query is tried in the singular, so
+# "pavs" becomes "pav" but a 3-letter word such as "ras" is left alone.
+PLURAL_MIN_LETTERS = 4
 
 NOT_FOUND_NOTE = (
     "Not found: no food in the data has a name that matches every word of this query. "
@@ -197,6 +210,25 @@ def _score(query: str, food: Food, spelled_exactly: set[str]) -> tuple[float, fl
     return score, closest, is_result
 
 
+def _singular(query: str) -> str:
+    """The normalised query with the final "s" taken off each word of PLURAL_MIN_LETTERS or more."""
+    return " ".join(
+        word.removesuffix("s") if len(word) >= PLURAL_MIN_LETTERS else word
+        for word in query.split()
+    )
+
+
+Scored = tuple[float, float, bool, Food]
+
+
+def _rank(query: str, candidates: list[Food], pool_words: set[str]) -> list[Scored]:
+    """Every candidate with its score, closeness and whether it is a result, best first."""
+    spelled_exactly = pool_words.intersection(query.split())
+    scored = [(*_score(query, food, spelled_exactly), food) for food in candidates]
+    scored.sort(key=lambda row: (-row[0], -row[1], row[3].name, row[3].id))
+    return scored
+
+
 def search_foods(
     reg: Registry,
     settings: Settings,
@@ -227,11 +259,14 @@ def search_foods(
     # Taken from the foods left after the filters: a word that only a filtered-out food spells
     # exactly must not stop a typo from finding the food that is still in the pool.
     pool_words = {word for food in candidates for name in _names(food) for word in name.split()}
-    spelled_exactly = pool_words.intersection(wanted.split())
-    scored = [(*_score(wanted, food, spelled_exactly), food) for food in candidates]
-    scored.sort(key=lambda row: (-row[0], -row[1], row[3].name, row[3].id))
-
+    scored = _rank(wanted, candidates, pool_words)
     matches = [food for _, _, is_result, food in scored if is_result]
+    singular = _singular(wanted)
+    if not matches and singular != wanted:
+        # A plural: see the module docstring.
+        matches = [
+            food for _, _, is_result, food in _rank(singular, candidates, pool_words) if is_result
+        ]
     if matches:
         return SearchResult(
             query=query,
@@ -241,6 +276,7 @@ def search_foods(
             total=len(matches),
             suggestions=[],
         )
+    # Suggestions are scored on the query as typed.
     close = dict.fromkeys(
         food.name for score, _, _, food in scored if score >= SUGGESTION_MIN_SCORE
     )
