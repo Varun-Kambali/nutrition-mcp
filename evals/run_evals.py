@@ -16,15 +16,22 @@ file is for other data than the bundled data; CI runs it that way on every pull 
 and again with this server's tools (evals/grounding.py). It needs GEMINI_API_KEY and calls the
 model, so it runs on demand only (`make eval`, which loads .env). EVAL_MODEL overrides the
 default model. A run writes evals/results/YYYY-MM-DD_<model>_<commit>.json and rebuilds
-summary.md; --limit N asks only the first N questions, and --min-interval sets the least
-time between two model requests.
-A run that stops after failed model requests in a row, or that gets no readable answer in
-one of its arms, exits 1 and writes nothing, so it cannot replace a real headline.
+summary.md, and --min-interval sets the least time between two model requests. --limit N
+asks only the first N questions, to check the wiring: such a run writes
+YYYY-MM-DD_<model>-limitN_<commit>.json and leaves summary.md alone.
+A run that stops after failed model requests in a row, or where an arm answers no question
+with items with numbers, exits 1 and writes nothing, so it cannot replace a real headline.
+A results file is never overwritten: when its name is taken the run exits 1 and writes
+nothing (grounding checks before its first request).
 
-Every results file is JSON with `suite`, `date`, `generated_at`, `commit` and
-`dataset_version`. summary.md is rebuilt from the newest file of each suite (the latest
-`generated_at`), grounding first. A grounding file also names its `model` and lists its
-summary rows under `summary`, each with `measure`, `n`, `without_tools` and `with_tools`.
+Every results file is JSON with `suite`, `date`, `generated_at`, `commit`, `dirty` (files
+outside evals/results/ were modified or untracked at run time) and `dataset_version`.
+summary.md is rebuilt from the newest file of each suite (the latest `generated_at`),
+grounding first, skipping files with a `limit`. A grounding file also records its `model`,
+`questions_version`, `limit` and `questions_total`, and lists its summary rows under
+`summary`, each with `measure`, `without_tools` and `with_tools` (the Baseline and This
+project values) and `n_without_tools` and `n_with_tools` (the n behind each value, or
+null where the measure has no value for that arm).
 
 The report goes to stdout as plain text; logs go to stderr as JSON.
 """
