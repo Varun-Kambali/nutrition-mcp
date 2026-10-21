@@ -36,7 +36,9 @@ dev = [
     "pre-commit",
 ]
 build-data = ["openpyxl", "httpx"]
-eval = ["google-genai"]
+# The eval code imports anyio itself. mcp depends on it too, so `make eval-data` has it
+# without this group.
+eval = ["google-genai", "anyio>=4.9"]
 
 [tool.hatch.version]
 path = "src/nutrition_mcp/__init__.py"

@@ -1,12 +1,17 @@
 import json
+import shutil
+import subprocess
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+import grounding
 import pytest
 import run_evals
 
 from nutrition_mcp import loader
+from nutrition_mcp.nutrients import NUTRIENT_KEYS, REFERENCE_NUTRIENTS
+from nutrition_mcp.schemas import MealItemIn
 
 NUTRIENTS = ("kcal", "protein_g", "carbs_available_g", "iron_mg", "calcium_mg")
 NOW = datetime(2026, 10, 20, 9, 0, tzinfo=UTC)
@@ -100,6 +105,12 @@ def references_csv(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return path
+
+
+def test_reference_nutrients_are_nutrients_the_server_stores() -> None:
+    # A key outside NUTRIENT_KEYS would read as missing on every dish and drop out of the
+    # comparison without an error.
+    assert set(REFERENCE_NUTRIENTS) <= set(NUTRIENT_KEYS)
 
 
 def test_mape() -> None:
@@ -206,7 +217,7 @@ def test_dataset_version_is_stable_and_follows_the_data(tiny_dataset: Path) -> N
 
 
 def test_data_accuracy_results_shape(tiny_dataset: Path, references_csv: Path) -> None:
-    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
 
     assert result["suite"] == "data_accuracy"
     assert result["date"] == "2026-10-20"
@@ -249,20 +260,20 @@ def test_a_reference_to_an_unknown_dish_is_an_error(tiny_dataset: Path, tmp_path
         encoding="utf-8",
     )
     with pytest.raises(run_evals.EvalError, match="no_such_dish"):
-        run_evals.data_accuracy(path, now=NOW, commit="abc1234")
+        run_evals.data_accuracy(path, now=NOW, commit="abc1234", dirty=False)
 
 
 def test_references_need_the_expected_header(tiny_dataset: Path, tmp_path: Path) -> None:
     path = tmp_path / "references.csv"
     path.write_text("dish_id,kcal\ndal_a,100\n", encoding="utf-8")
     with pytest.raises(run_evals.EvalError, match="header"):
-        run_evals.data_accuracy(path, now=NOW, commit="abc1234")
+        run_evals.data_accuracy(path, now=NOW, commit="abc1234", dirty=False)
 
 
 def test_results_file_is_named_by_date_suite_and_commit(
     tiny_dataset: Path, references_csv: Path, tmp_path: Path
 ) -> None:
-    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
     path = run_evals.write_results(result, tmp_path / "results")
     assert path.name == "2026-10-20_data-accuracy_abc1234.json"
     assert json.loads(path.read_text(encoding="utf-8")) == result
@@ -276,7 +287,23 @@ def _grounding_file(folder: Path) -> None:
         "generated_at": "2026-10-19T10:00:00+00:00",
         "commit": "fff0000",
         "dataset_version": "0123456789ab",
-        "summary": [{"measure": "kcal MAPE with tools (%)", "n": 30, "value": 4.2}],
+        "model": "test-model",
+        "summary": [
+            {
+                "measure": "Calorie error against the dataset totals, MAPE (%)",
+                "n_without_tools": 26,
+                "n_with_tools": 21,
+                "without_tools": 31.2,
+                "with_tools": 4.2,
+            },
+            {
+                "measure": "p95 tool latency (ms)",
+                "n_without_tools": None,
+                "n_with_tools": 70,
+                "without_tools": None,
+                "with_tools": 12.5,
+            },
+        ],
     }
     (folder / "2026-10-19_test-model_fff0000.json").write_text(json.dumps(fake), encoding="utf-8")
 
@@ -286,18 +313,24 @@ def test_summary_keeps_the_grounding_rows_when_data_accuracy_rewrites_it(
 ) -> None:
     out = tmp_path / "results"
     _grounding_file(out)
-    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
     run_evals.write_results(result, out)
 
     summary = run_evals.write_summary(out).read_text(encoding="utf-8")
 
     lines = [line for line in summary.splitlines() if line.startswith("| ")]
-    grounding = [line for line in lines if "kcal MAPE with tools" in line]
+    grounding = [line for line in lines if "fff0000" in line]
     accuracy = [line for line in lines if "abc1234" in line]
-    assert len(grounding) == 1 and "| 30 | 4.2 |" in grounding[0] and "fff0000" in grounding[0]
+    assert grounding[0] == (
+        "| Calorie error against the dataset totals, MAPE (%) | 31.2 | 4.2 | 26 / 21 | test-model "
+        "| 2026-10-19 "
+        "| fff0000 | 0123456789ab "
+        "| [2026-10-19_test-model_fff0000.json](2026-10-19_test-model_fff0000.json) |"
+    )
+    assert grounding[1].startswith("| p95 tool latency (ms) | n/a | 12.5 | n/a / 70 |")
     assert len(accuracy) == len(NUTRIENTS)
     # Grounding first, then data accuracy.
-    assert lines.index(grounding[0]) < lines.index(accuracy[0])
+    assert lines.index(grounding[-1]) < lines.index(accuracy[0])
     kcal = next(line for line in accuracy if "kcal" in line)
     assert "| 2 | 27.5 |" in kcal
     assert result["dataset_version"] in kcal and "2026-10-20" in kcal
@@ -307,8 +340,10 @@ def test_summary_uses_the_latest_results_file_of_a_suite(
     tiny_dataset: Path, references_csv: Path, tmp_path: Path
 ) -> None:
     out = tmp_path / "results"
-    older = run_evals.data_accuracy(references_csv, now=NOW - timedelta(hours=1), commit="aaa1111")
-    newer = run_evals.data_accuracy(references_csv, now=NOW, commit="bbb2222")
+    older = run_evals.data_accuracy(
+        references_csv, now=NOW - timedelta(hours=1), commit="aaa1111", dirty=False
+    )
+    newer = run_evals.data_accuracy(references_csv, now=NOW, commit="bbb2222", dirty=False)
     run_evals.write_results(newer, out)
     run_evals.write_results(older, out)
 
@@ -327,7 +362,7 @@ def test_summary_names_a_results_file_it_cannot_use(tmp_path: Path) -> None:
 def test_results_are_dated_in_utc(tiny_dataset: Path, references_csv: Path) -> None:
     # 23:30 in UTC-5 is already the next day in UTC; date and generated_at have to agree.
     evening = datetime(2026, 10, 20, 23, 30, tzinfo=timezone(timedelta(hours=-5)))
-    result = run_evals.data_accuracy(references_csv, now=evening, commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=evening, commit="abc1234", dirty=False)
     assert result["date"] == "2026-10-21"
     assert result["generated_at"] == "2026-10-21T04:30:00+00:00"
 
@@ -347,7 +382,7 @@ def test_summary_names_a_data_accuracy_file_without_scores(
     tiny_dataset: Path, references_csv: Path, tmp_path: Path
 ) -> None:
     out = tmp_path / "results"
-    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
     del result["per_nutrient"]["kcal"]
     run_evals.write_results(result, out)
     with pytest.raises(run_evals.EvalError, match=r"data-accuracy_abc1234\.json"):
@@ -361,6 +396,10 @@ def test_summary_names_a_data_accuracy_file_without_scores(
         "max_mape = 30.0\nmin_n = 2.5",
         "max_mape = 30.0\nmin_n = true",
         "max_mape = -1.0\nmin_n = 2",
+        # nan compares false with every MAPE, and inf is above all of them, so either one
+        # would switch the gate off without failing.
+        "max_mape = nan\nmin_n = 2",
+        "max_mape = inf\nmin_n = 2",
     ],
 )
 def test_thresholds_must_be_numbers(tmp_path: Path, entry: str) -> None:
@@ -373,11 +412,18 @@ def test_thresholds_must_be_numbers(tmp_path: Path, entry: str) -> None:
 def test_the_report_prints_mape_to_one_decimal(
     tiny_dataset: Path, references_csv: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
     result["per_nutrient"]["kcal"]["mape"] = 25.0
     run_evals.print_report(result)
     kcal = next(line for line in capsys.readouterr().out.splitlines() if line.startswith("kcal "))
     assert " 25.0 " in kcal
+
+
+LOOSE = (
+    "[data_accuracy.kcal]\nmax_mape = 30.0\nmin_n = 2\n"
+    "[data_accuracy.protein_g]\nmax_mape = 30.0\nmin_n = 2\n"
+    "[data_accuracy.carbs_available_g]\nmax_mape = 30.0\nmin_n = 1\n"
+)
 
 
 def test_check_mode_writes_nothing_and_exits_by_the_thresholds(
@@ -390,18 +436,14 @@ def test_check_mode_writes_nothing_and_exits_by_the_thresholds(
 ) -> None:
     monkeypatch.setattr(run_evals, "REFERENCES", references_csv)
     out = tmp_path / "results"
+    # The committed result for the data as it is, which the check also compares with.
+    committed = run_evals.write_results(
+        run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False), out
+    )
     loose = tmp_path / "loose.toml"
-    loose.write_text(
-        "[data_accuracy.kcal]\nmax_mape = 30.0\nmin_n = 2\n"
-        "[data_accuracy.protein_g]\nmax_mape = 30.0\nmin_n = 2\n"
-        "[data_accuracy.carbs_available_g]\nmax_mape = 30.0\nmin_n = 1\n",
-        encoding="utf-8",
-    )
+    loose.write_text(LOOSE, encoding="utf-8")
     tight = tmp_path / "tight.toml"
-    tight.write_text(
-        loose.read_text(encoding="utf-8").replace("max_mape = 30.0", "max_mape = 1.0", 1),
-        encoding="utf-8",
-    )
+    tight.write_text(LOOSE.replace("max_mape = 30.0", "max_mape = 1.0", 1), encoding="utf-8")
     args = ["--suite", "data_accuracy", "--out", str(out), "--check"]
 
     assert run_evals.main([*args, str(loose)]) == 0
@@ -410,7 +452,54 @@ def test_check_mode_writes_nothing_and_exits_by_the_thresholds(
     report = capsys.readouterr().out
     assert "FAIL kcal: MAPE 27.5 is above max_mape 1.0" in report
     assert "FAIL protein_g" not in report
-    assert not out.exists()
+    assert list(out.iterdir()) == [committed]
+
+
+def test_check_mode_fails_when_the_committed_result_is_for_other_data(
+    tiny_dataset: Path,
+    references_csv: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setattr(run_evals, "REFERENCES", references_csv)
+    out = tmp_path / "results"
+    old = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
+    run_evals.write_results(old, out)
+    # The data changes after the result was committed, still inside the thresholds.
+    dish = tiny_dataset / "dishes" / "dal_a.yaml"
+    dish.write_text(dish.read_text(encoding="utf-8").replace("400", "410"), encoding="utf-8")
+    thresholds = tmp_path / "loose.toml"
+    thresholds.write_text(LOOSE, encoding="utf-8")
+
+    args = ["--suite", "data_accuracy", "--out", str(out), "--check", str(thresholds)]
+    assert run_evals.main(args) == 1
+
+    report = capsys.readouterr().out
+    current = run_evals.dataset_version(tiny_dataset)
+    stale = next(line for line in report.splitlines() if line.startswith("FAIL "))
+    assert old["dataset_version"] in stale and current in stale
+    assert "make eval-data" in stale and "commit" in stale
+    assert "FAIL kcal" not in report
+
+
+def test_check_mode_fails_without_a_data_accuracy_result(
+    tiny_dataset: Path,
+    references_csv: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setattr(run_evals, "REFERENCES", references_csv)
+    thresholds = tmp_path / "loose.toml"
+    thresholds.write_text(LOOSE, encoding="utf-8")
+    out = tmp_path / "results"
+    _grounding_file(out)
+    args = ["--suite", "data_accuracy", "--out", str(out), "--check", str(thresholds)]
+    assert run_evals.main(args) == 1
+    assert "make eval-data" in capsys.readouterr().out
 
 
 def test_a_normal_run_writes_the_results_file_and_summary(
@@ -428,8 +517,489 @@ def test_a_normal_run_writes_the_results_file_and_summary(
     assert "_data-accuracy_" in names[0]
 
 
-def test_grounding_is_not_implemented_yet(
-    capsys: pytest.CaptureFixture[str], restore_logging: None
+def test_the_headline_is_the_first_row_of_the_first_table(
+    tiny_dataset: Path, references_csv: Path, tmp_path: Path
 ) -> None:
-    assert run_evals.main(["--suite", "grounding"]) == 2
-    assert "not implemented yet" in capsys.readouterr().err
+    # The portfolio site reads the first data row of the first table in summary.md, and
+    # shows "<measure>: <Baseline> -> <This project>" when those two columns exist.
+    out = tmp_path / "results"
+    _grounding_file(out)
+    run_evals.write_results(
+        run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False), out
+    )
+
+    lines = run_evals.write_summary(out).read_text(encoding="utf-8").splitlines()
+
+    first = next(i for i, line in enumerate(lines) if line.startswith("| "))
+    header = [cell.strip() for cell in lines[first].strip("|").split("|")]
+    assert header[:4] == ["Measure", "Baseline", "This project", "n"]
+    assert lines[first + 1].startswith("|---")
+    assert lines[first + 2].startswith(
+        "| Calorie error against the dataset totals, MAPE (%) | 31.2 | 4.2 |"
+    )
+
+
+def site_headline(markdown: str) -> str:
+    """What the portfolio site shows: "<measure>: <Baseline> -> <This project>".
+
+    The same steps as headline() and describe() in the site's assets/js/summary.js: the first
+    Markdown table, its first row, and the Baseline and This project columns.
+    """
+    lines = markdown.splitlines()
+    first = next(i for i, line in enumerate(lines) if line.startswith("|"))
+    assert lines[first + 1].startswith("|---")
+
+    def cells(line: str) -> list[str]:
+        return [cell.strip() for cell in line.strip().strip("|").split("|")]
+
+    header, row = cells(lines[first]), cells(lines[first + 2])
+    lower = [cell.lower() for cell in header]
+    return f"{row[0]}: {row[lower.index('baseline')]} -> {row[lower.index('this project')]}"
+
+
+def test_the_site_shows_the_calorie_error_from_a_real_grounding_result(tmp_path: Path) -> None:
+    asked = [
+        grounding.Question(
+            id="q1",
+            question="2 idlis",
+            items=(MealItemIn(food_id="idli", amount=2, unit="piece"),),
+        ),
+        grounding.Question(id="m1", question="a katori of kheer", expect_missing=("kheer",)),
+    ]
+    golden = grounding.golden_answers(asked)
+    kcal = golden["q1"]["kcal"]
+
+    def answered(value: float) -> grounding.Outcome:
+        values = {**golden["q1"], "kcal": value}
+        return grounding.Outcome(grounding.Numbers(values))
+
+    missing = grounding.Outcome(grounding.Missing(("kheer",), has_numbers=False))
+    result = grounding.build_result(
+        "test-model",
+        asked,
+        golden,
+        {"q1": answered(kcal * 1.5), "m1": missing},
+        {"q1": answered(kcal), "m1": missing},
+        now=NOW,
+        commit="abc1234",
+        dataset_version="0123456789ab",
+        dirty=False,
+        questions_version="fedcba987654",
+        min_interval=0.0,
+    )
+    out = tmp_path / "results"
+    run_evals.write_results(result, out)
+
+    markdown = run_evals.write_summary(out).read_text(encoding="utf-8")
+
+    assert site_headline(markdown) == (
+        "Calorie error against the dataset totals, MAPE (%): 50.0 -> 0.0"
+    )
+    missing_row = next(line for line in markdown.splitlines() if line.startswith("| Missing"))
+    assert missing_row.startswith("| Missing dishes reported (share) | n/a | 1.0 | n/a / 1 |")
+    assert "no data to look a dish up in" in markdown
+
+
+def test_summary_without_a_grounding_run_has_only_the_data_accuracy_table(
+    tiny_dataset: Path, references_csv: Path, tmp_path: Path
+) -> None:
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
+    alone, both = tmp_path / "alone", tmp_path / "both"
+    run_evals.write_results(result, alone)
+    run_evals.write_results(result, both)
+    _grounding_file(both)
+
+    only = run_evals.write_summary(alone).read_text(encoding="utf-8")
+    with_grounding = run_evals.write_summary(both).read_text(encoding="utf-8")
+
+    intro, block = only.split("Data accuracy compares", 1)
+    assert intro.startswith("# Evaluation results\n")
+    assert "|" not in intro and "Grounding" not in only
+    # The data-accuracy part is the same text whether or not a grounding run exists, and the
+    # grounding table goes before it.
+    head, tail = with_grounding.split("Data accuracy compares", 1)
+    assert tail == block
+    assert head.startswith(intro) and "| Measure | Baseline | This project |" in head
+
+
+def test_summary_names_a_grounding_file_without_a_model(tmp_path: Path) -> None:
+    out = tmp_path / "results"
+    _grounding_file(out)
+    path = out / "2026-10-19_test-model_fff0000.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    del data["model"]
+    path.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(run_evals.EvalError, match=r"2026-10-19_test-model_fff0000\.json"):
+        run_evals.write_summary(out)
+
+
+@pytest.mark.parametrize(
+    ("model", "name"),
+    [
+        ("gemini-3.1-flash-lite", "2026-10-21_gemini-3.1-flash-lite_abc1234.json"),
+        ("models/gemini 3", "2026-10-21_models-gemini-3_abc1234.json"),
+    ],
+)
+def test_grounding_results_are_named_by_model(tmp_path: Path, model: str, name: str) -> None:
+    result = {"suite": "grounding", "date": "2026-10-21", "commit": "abc1234", "model": model}
+    assert run_evals.write_results(result, tmp_path).name == name
+
+
+def test_a_limited_run_is_named_apart_from_the_full_run(tmp_path: Path) -> None:
+    # A smoke run on the same day and commit must not take the full run's file name.
+    result = {
+        "suite": "grounding",
+        "date": "2026-10-21",
+        "commit": "abc1234",
+        "model": "gemini-test",
+        "limit": 2,
+    }
+    path = run_evals.write_results(result, tmp_path)
+    assert path.name == "2026-10-21_gemini-test-limit2_abc1234.json"
+
+
+def test_a_results_file_is_never_overwritten(
+    tiny_dataset: Path,
+    references_csv: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setattr(run_evals, "REFERENCES", references_csv)
+    monkeypatch.setattr(run_evals, "git_commit", lambda: "abc1234")
+    out = tmp_path / "results"
+    args = ["--suite", "data_accuracy", "--out", str(out)]
+    assert run_evals.main(args) == 0
+    [results] = out.glob("*.json")
+    before = results.read_text(encoding="utf-8")
+    (out / "summary.md").write_text("left as it was\n", encoding="utf-8")
+    capsys.readouterr()
+
+    assert run_evals.main(args) == 1
+
+    err = capsys.readouterr().err
+    assert results.name in err and "already exists" in err
+    assert results.read_text(encoding="utf-8") == before
+    assert (out / "summary.md").read_text(encoding="utf-8") == "left as it was\n"
+
+
+def test_a_grounding_run_checks_the_file_name_before_asking_anything(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+    monkeypatch.setenv("EVAL_MODEL", "gemini-test")
+    monkeypatch.setattr(run_evals, "git_commit", lambda: "abc1234")
+
+    def no_model(*args: Any) -> None:
+        raise AssertionError("no model client may be built when the results file exists")
+
+    monkeypatch.setattr(grounding, "gemini_client", no_model)
+    out = tmp_path / "results"
+    out.mkdir()
+    taken = out / f"{datetime.now(UTC).date().isoformat()}_gemini-test_abc1234.json"
+    taken.write_text("{}\n", encoding="utf-8")
+
+    assert run_evals.main(["--suite", "grounding", "--out", str(out)]) == 1
+    assert "already exists" in capsys.readouterr().err
+    assert taken.read_text(encoding="utf-8") == "{}\n"
+    assert sorted(path.name for path in out.iterdir()) == [taken.name]
+
+
+def test_a_limited_grounding_run_leaves_the_summary_alone(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+    monkeypatch.setattr(grounding, "gemini_client", lambda model, key: AnswersAtOnce(model))
+    monkeypatch.setattr(run_evals, "git_commit", lambda: "abc1234")
+    out = tmp_path / "results"
+    out.mkdir()
+    (out / "summary.md").write_text("left as it was\n", encoding="utf-8")
+
+    assert run_evals.main(grounding_args(out)) == 0
+
+    [results] = out.glob("*.json")
+    data = json.loads(results.read_text(encoding="utf-8"))
+    total = len(grounding.load_questions(grounding.QUESTIONS))
+    assert (data["n"], data["limit"], data["questions_total"]) == (2, 2, total)
+    assert (out / "summary.md").read_text(encoding="utf-8") == "left as it was\n"
+    assert "summary.md" in capsys.readouterr().out
+
+
+def test_the_summary_skips_limited_results(tmp_path: Path) -> None:
+    out = tmp_path / "results"
+    _grounding_file(out)
+    full = out / "2026-10-19_test-model_fff0000.json"
+    limited = json.loads(full.read_text(encoding="utf-8"))
+    limited.update(generated_at="2026-10-20T10:00:00+00:00", commit="eee0000", limit=2)
+    (out / "2026-10-20_test-model-limit2_eee0000.json").write_text(
+        json.dumps(limited), encoding="utf-8"
+    )
+
+    summary = run_evals.write_summary(out).read_text(encoding="utf-8")
+    assert "fff0000" in summary and "eee0000" not in summary
+
+    full.unlink()
+    assert "| Measure | Baseline |" not in run_evals.write_summary(out).read_text(encoding="utf-8")
+
+
+@pytest.mark.skipif(shutil.which("make") is None, reason="needs make")
+@pytest.mark.parametrize(
+    ("target", "suite"), [("eval", "grounding"), ("eval-data", "data_accuracy")]
+)
+def test_make_passes_args_to_the_runner(target: str, suite: str) -> None:
+    # -n prints the command without running it.
+    completed = subprocess.run(
+        ["make", "-n", target, "ARGS=--limit 2 --out /tmp/smoke"],
+        cwd=run_evals.ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert f"--suite {suite} --limit 2 --out /tmp/smoke" in completed.stdout
+
+
+def git(root: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@example.org", *args],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+
+
+def test_dirty_means_a_change_outside_the_results_folder(tmp_path: Path) -> None:
+    git(tmp_path, "init", "-q")
+    (tmp_path / "evals" / "results").mkdir(parents=True)
+    (tmp_path / "data.csv").write_text("a\n", encoding="utf-8")
+    git(tmp_path, "add", ".")
+    git(tmp_path, "commit", "-q", "-m", "start")
+    assert run_evals.git_dirty(tmp_path) is False
+
+    # A results file waiting to be committed is what a run produces, not a change it ran on.
+    (tmp_path / "evals" / "results" / "new.json").write_text("{}\n", encoding="utf-8")
+    assert run_evals.git_dirty(tmp_path) is False
+
+    (tmp_path / "data.csv").write_text("b\n", encoding="utf-8")
+    assert run_evals.git_dirty(tmp_path) is True
+    git(tmp_path, "checkout", "--", "data.csv")
+    (tmp_path / "notes.txt").write_text("x\n", encoding="utf-8")
+    assert run_evals.git_dirty(tmp_path) is True
+
+
+def test_dirty_is_unknown_outside_a_git_checkout(tmp_path: Path) -> None:
+    assert run_evals.git_dirty(tmp_path / "no_such_folder") is None
+
+
+def test_a_data_accuracy_run_records_whether_the_tree_was_dirty(
+    tiny_dataset: Path,
+    references_csv: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    restore_logging: None,
+) -> None:
+    monkeypatch.setattr(run_evals, "REFERENCES", references_csv)
+    monkeypatch.setattr(run_evals, "git_dirty", lambda: True)
+    out = tmp_path / "results"
+    assert run_evals.main(["--suite", "data_accuracy", "--out", str(out)]) == 0
+    [results] = out.glob("*.json")
+    assert json.loads(results.read_text(encoding="utf-8"))["dirty"] is True
+
+
+def test_the_env_example_placeholder_counts_as_no_key(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    example = (run_evals.ROOT / ".env.example").read_text(encoding="utf-8")
+    assert f"\n{run_evals.API_KEY_VAR}={run_evals.PLACEHOLDER_KEY}\n" in example
+    monkeypatch.setenv("GEMINI_API_KEY", run_evals.PLACEHOLDER_KEY)
+    out = tmp_path / "results"
+    assert run_evals.main(["--suite", "grounding", "--out", str(out)]) == 1
+    assert "GEMINI_API_KEY is not set" in capsys.readouterr().err
+    assert not out.exists()
+
+
+def test_grounding_needs_the_api_key(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    def no_model(*args: Any) -> None:
+        raise AssertionError("no model client may be built without a key")
+
+    monkeypatch.setattr(grounding, "gemini_client", no_model)
+    out = tmp_path / "results"
+    assert run_evals.main(["--suite", "grounding", "--out", str(out)]) == 1
+    assert "GEMINI_API_KEY is not set" in capsys.readouterr().err
+    assert not out.exists()
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--check", "evals/thresholds.toml"],
+        ["--limit", "0"],
+        ["--min-interval", "-1"],
+        ["--min-interval", "nan"],
+    ],
+)
+def test_grounding_rejects_options_it_cannot_use(
+    args: list[str], restore_logging: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        run_evals.main(["--suite", "grounding", *args])
+    assert exit_info.value.code == 2
+
+
+class AnswersAtOnce:
+    """A model that answers every question from memory, tools or not."""
+
+    def __init__(self, model: str) -> None:
+        self.model = model
+
+    async def generate(self, system: str, history: Any, tools: Any) -> grounding.ModelReply:
+        text = '{"kcal": 300, "protein_g": 12, "carbs_g": 45}'
+        return grounding.ModelReply(grounding.ModelTurn(text, ()), grounding.Usage(80, 15))
+
+
+def test_a_grounding_run_writes_the_results_file_and_summary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    # A stand-in value: the fake model below is all that receives it.
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+    monkeypatch.setenv("EVAL_MODEL", "gemini-test")
+    built: list[tuple[str, str]] = []
+
+    def fake_client(model: str, api_key: str) -> AnswersAtOnce:
+        built.append((model, api_key))
+        return AnswersAtOnce(model)
+
+    monkeypatch.setattr(grounding, "gemini_client", fake_client)
+    monkeypatch.setattr(run_evals, "git_commit", lambda: "abc1234")
+    out = tmp_path / "results"
+
+    args = ["--suite", "grounding", "--min-interval", "0", "--out", str(out)]
+    assert run_evals.main(args) == 0
+
+    assert built == [("gemini-test", "stand-in")]
+    [results] = [path for path in out.iterdir() if path.suffix == ".json"]
+    assert results.name.endswith("_gemini-test_abc1234.json")
+    data = json.loads(results.read_text(encoding="utf-8"))
+    total = len(grounding.load_questions(grounding.QUESTIONS))
+    assert (data["n"], data["questions_total"], data["limit"]) == (total, total, None)
+    assert data["model"] == "gemini-test"
+    assert data["min_request_interval_s"] == 0.0
+    assert data["dataset_version"] == run_evals.dataset_version(loader.bundled_dir())
+    assert data["questions_version"] == grounding.questions_version(grounding.QUESTIONS)
+    assert data["dirty"] is run_evals.git_dirty()
+    summary = (out / "summary.md").read_text(encoding="utf-8")
+    assert "| Calorie error against the dataset totals, MAPE (%) |" in summary
+    report = capsys.readouterr().out
+    assert "Calorie error against the dataset totals, MAPE (%)" in report
+    assert "stand-in" not in report
+
+
+def test_eval_model_defaults_in_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, restore_logging: None
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+    monkeypatch.delenv("EVAL_MODEL", raising=False)
+    built: list[str] = []
+
+    def fake_client(model: str, api_key: str) -> AnswersAtOnce:
+        built.append(model)
+        return AnswersAtOnce(model)
+
+    monkeypatch.setattr(grounding, "gemini_client", fake_client)
+    # The default interval is read from grounding when the flag is left out; a small value
+    # keeps the test quick.
+    assert grounding.MIN_REQUEST_INTERVAL_S == 4.0
+    monkeypatch.setattr(grounding, "MIN_REQUEST_INTERVAL_S", 0.01)
+    assert run_evals.main(["--suite", "grounding", "--limit", "1", "--out", str(tmp_path)]) == 0
+    assert built == [grounding.DEFAULT_MODEL] == ["gemini-3.1-flash-lite"]
+    [results] = tmp_path.glob("*.json")
+    assert json.loads(results.read_text(encoding="utf-8"))["min_request_interval_s"] == 0.01
+
+
+def test_min_interval_applies_to_grounding_only(
+    restore_logging: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        run_evals.main(["--suite", "data_accuracy", "--min-interval", "1"])
+    assert exit_info.value.code == 2
+    assert "--min-interval" in capsys.readouterr().err
+
+
+class RefusedEverything:
+    """A model client whose every request is refused, as with a key the API rejects."""
+
+    model = "gemini-test"
+
+    async def generate(self, system: str, history: Any, tools: Any) -> grounding.ModelReply:
+        raise grounding.ModelError("http 400")
+
+
+def grounding_args(out: Path) -> list[str]:
+    return ["--suite", "grounding", "--limit", "2", "--min-interval", "0", "--out", str(out)]
+
+
+def test_a_run_without_answers_writes_nothing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+    monkeypatch.setattr(grounding, "gemini_client", lambda model, key: RefusedEverything())
+    out = tmp_path / "results"
+    assert run_evals.main(grounding_args(out)) == 1
+    err = capsys.readouterr().err
+    assert "no answer" in err and "nothing written" in err
+    assert not out.exists()
+
+
+def test_a_missing_eval_group_is_one_clear_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+
+    def no_genai(model: str, key: str) -> None:
+        raise ModuleNotFoundError("No module named 'google'", name="google")
+
+    monkeypatch.setattr(grounding, "gemini_client", no_genai)
+    assert run_evals.main(grounding_args(tmp_path / "results")) == 1
+    err = capsys.readouterr().err.strip().splitlines()
+    assert len(err) == 1 and "--group eval" in err[0]
+
+
+def test_a_server_that_does_not_start_is_one_clear_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+    monkeypatch.setattr(grounding, "gemini_client", lambda model, key: AnswersAtOnce(model))
+    monkeypatch.setattr(grounding, "SERVER_MAIN", "import sys; sys.exit(1)")
+    out = tmp_path / "results"
+    assert run_evals.main(grounding_args(out)) == 1
+    err = capsys.readouterr().err.strip().splitlines()
+    assert err[-1].startswith("error: ") and "server did not start" in err[-1]
+    assert not out.exists()

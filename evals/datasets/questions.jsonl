@@ -1,0 +1,30 @@
+{"id": "q01", "question": "How much protein is in 2 rotis and a katori of rajma?", "items": [{"food_id": "chapati", "amount": 2, "unit": "roti"}, {"food_id": "rajma_masala", "amount": 1, "unit": "katori"}]}
+{"id": "q02", "question": "How many carbs are in 2 plain parathas?", "items": [{"food_id": "plain_paratha", "amount": 2, "unit": "piece"}]}
+{"id": "q03", "question": "I had a katori of palak paneer with 3 rotis. What are the calories, protein and carbs?", "items": [{"food_id": "palak_paneer", "amount": 1, "unit": "katori"}, {"food_id": "chapati", "amount": 3, "unit": "roti"}]}
+{"id": "q04", "question": "Lunch was a katori of chole, 2 rotis and a katori of jeera rice. How many calories is that?", "items": [{"food_id": "chana_masala", "amount": 1, "unit": "katori"}, {"food_id": "chapati", "amount": 2, "unit": "roti"}, {"food_id": "jeera_rice", "amount": 1, "unit": "katori"}]}
+{"id": "q05", "question": "What is the nutrition in 200 g of aloo gobi?", "items": [{"food_id": "aloo_gobi", "amount": 200, "unit": "g"}]}
+{"id": "q06", "question": "A thali of 2 rotis, a katori of dal tadka, a katori of steamed rice and a katori of aloo gobi: calories, protein and carbs?", "items": [{"food_id": "chapati", "amount": 2, "unit": "roti"}, {"food_id": "dal_tadka", "amount": 1, "unit": "katori"}, {"food_id": "steamed_rice", "amount": 1, "unit": "katori"}, {"food_id": "aloo_gobi", "amount": 1, "unit": "katori"}]}
+{"id": "q07", "question": "How many carbohydrates are in 3 rotis?", "items": [{"food_id": "chapati", "amount": 3, "unit": "roti"}]}
+{"id": "q08", "question": "Carbs in a plate of idli with a katori of sambar?", "items": [{"food_id": "idli", "amount": 1, "unit": "plate"}, {"food_id": "sambar", "amount": 1, "unit": "katori"}]}
+{"id": "q09", "question": "Breakfast was 3 idlis, a katori of sambar and 2 tablespoons of coconut chutney. Calories and protein?", "items": [{"food_id": "idli", "amount": 3, "unit": "piece"}, {"food_id": "sambar", "amount": 1, "unit": "katori"}, {"food_id": "coconut_chutney", "amount": 2, "unit": "tbsp"}]}
+{"id": "q10", "question": "What do 2 plain dosas with a katori of coconut chutney come to?", "items": [{"food_id": "plain_dosa", "amount": 2, "unit": "piece"}, {"food_id": "coconut_chutney", "amount": 1, "unit": "katori"}]}
+{"id": "q11", "question": "How many calories are in a katori of curd rice?", "items": [{"food_id": "curd_rice", "amount": 1, "unit": "katori"}]}
+{"id": "q12", "question": "How many carbs in 250 g of lemon rice?", "items": [{"food_id": "lemon_rice", "amount": 250, "unit": "g"}]}
+{"id": "q13", "question": "A katori each of steamed rice, sambar and rasam, plus 100 g of curd. What are the totals?", "items": [{"food_id": "steamed_rice", "amount": 1, "unit": "katori"}, {"food_id": "sambar", "amount": 1, "unit": "katori"}, {"food_id": "rasam", "amount": 1, "unit": "katori"}, {"food_id": "curd", "amount": 100, "unit": "g"}]}
+{"id": "q14", "question": "How much protein is in one and a half katoris of rava upma?", "items": [{"food_id": "rava_upma", "amount": 1.5, "unit": "katori"}]}
+{"id": "q15", "question": "Machher jhol with rice: a katori of the fish curry and 2 katoris of rice. Calories and protein?", "items": [{"food_id": "machher_jhol", "amount": 1, "unit": "katori"}, {"food_id": "steamed_rice", "amount": 2, "unit": "katori"}]}
+{"id": "q16", "question": "A katori of musur dal, a katori of rice and 2 pieces of begun bhaja: how many calories?", "items": [{"food_id": "musur_dal", "amount": 1, "unit": "katori"}, {"food_id": "steamed_rice", "amount": 1, "unit": "katori"}, {"food_id": "begun_bhaja", "amount": 2, "unit": "piece"}]}
+{"id": "q17", "question": "What is the nutrition in 2 katoris of Bengali khichuri?", "items": [{"food_id": "bengali_khichuri", "amount": 2, "unit": "katori"}]}
+{"id": "q18", "question": "Protein in a katori of dimer dalna with 2 rotis?", "items": [{"food_id": "dimer_dalna", "amount": 1, "unit": "katori"}, {"food_id": "chapati", "amount": 2, "unit": "roti"}]}
+{"id": "q19", "question": "How many carbs are in a katori of ghugni?", "items": [{"food_id": "ghugni", "amount": 1, "unit": "katori"}]}
+{"id": "q20", "question": "A katori of aloo posto with a katori of steamed rice: calories, protein and carbs?", "items": [{"food_id": "aloo_posto", "amount": 1, "unit": "katori"}, {"food_id": "steamed_rice", "amount": 1, "unit": "katori"}]}
+{"id": "q21", "question": "How many calories are in a plate of pav bhaji?", "items": [{"food_id": "pav_bhaji", "amount": 1, "unit": "plate"}]}
+{"id": "q22", "question": "How many carbs are in 2 batata vadas?", "items": [{"food_id": "batata_vada", "amount": 2, "unit": "piece"}]}
+{"id": "q23", "question": "What is the protein in 4 pieces of khaman dhokla?", "items": [{"food_id": "dhokla", "amount": 4, "unit": "piece"}]}
+{"id": "q24", "question": "3 methi theplas with 100 g of dahi: calories, protein and carbs?", "items": [{"food_id": "methi_thepla", "amount": 3, "unit": "piece"}, {"food_id": "curd", "amount": 100, "unit": "g"}]}
+{"id": "q25", "question": "A katori of sabudana khichdi and a glass of milk. How many calories?", "items": [{"food_id": "sabudana_khichdi", "amount": 1, "unit": "katori"}, {"food_id": "whole_milk", "amount": 1, "unit": "glass"}]}
+{"id": "q26", "question": "Goan fish curry with rice, a katori of each: what are the totals?", "items": [{"food_id": "goan_fish_curry", "amount": 1, "unit": "katori"}, {"food_id": "steamed_rice", "amount": 1, "unit": "katori"}]}
+{"id": "q27", "question": "How many calories, and how much protein and carbs, are in a katori of chicken curry?", "items": [], "expect_missing": ["chicken curry"]}
+{"id": "q28", "question": "What is the nutrition in one masala dosa?", "items": [], "expect_missing": ["masala dosa"]}
+{"id": "q29", "question": "How many calories are in a katori of pulao?", "items": [], "expect_missing": ["pulao"]}
+{"id": "q30", "question": "How many carbs are in a katori of kheer?", "items": [], "expect_missing": ["kheer"]}

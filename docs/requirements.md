@@ -64,14 +64,14 @@ All tools are read-only, return structured output from Pydantic models, and are 
 
 - [ ] Unit tests for loading, validation, nutrient mapping, unit conversion, dish computation and glycemic load. In-memory MCP client tests for every tool, including the error paths.
 - [ ] At least 80% coverage on `src/`.
-- [ ] CI runs lint, type check, tests, the data-accuracy evaluation, gitleaks and the Docker build.
+- [x] CI runs lint, type check, tests, the data-accuracy evaluation, gitleaks and the Docker build.
 - [ ] Every tool checked by hand in MCP Inspector and in Claude Code.
 
 ### Evaluation
 
-- [ ] **Data accuracy.** For every bundled dish that also appears in an independent source (CoFID's homemade dishes such as sambar, saag, raita and the dal curries; USDA's survey foods such as dal and idli), compare the computed values per 100 g with the reference. kcal, protein and available carbohydrate are the main measures; iron and calcium are reported too. Report n, mean absolute percentage error and the worst cases. No model calls, so it runs in CI, with thresholds in `evals/thresholds.toml` set after the first run.
-- [ ] **Grounding lift.** About 30 natural-language questions ("protein in 2 rotis and a katori of rajma?", "carbs in a plate of idli and sambar?"). Each question's golden answer is computed by the server's own functions from listed food IDs, amounts and units. The same model answers each question without tools and with the server's tools. Report mean absolute percentage error on kcal, protein and carbohydrate, the share of answers within 10%, and tool-call errors. The model is a free-tier Gemini model. This runs on demand (`make eval`), and results are committed with the date, model ID, commit and cost.
-- [ ] **Latency.** p95 tool latency across the grounding run.
+- [x] **Data accuracy.** For every bundled dish that also appears in an independent source (CoFID's homemade dishes such as sambar, saag, raita and the dal curries; USDA's survey foods such as dal and idli), compare the computed values per 100 g with the reference. kcal, protein and available carbohydrate are the main measures; iron and calcium are reported too. Report n, mean absolute percentage error and the worst cases. No model calls, so it runs in CI, with thresholds in `evals/thresholds.toml` set after the first run.
+- [x] **Grounding lift.** About 30 natural-language questions ("protein in 2 rotis and a katori of rajma?", "carbs in a plate of idli and sambar?"). Each question's golden answer is computed by the server's own functions from listed food IDs, amounts and units. The same model answers each question without tools and with the server's tools. Report mean absolute percentage error on kcal, protein and carbohydrate, the share of answers within 10%, and tool-call errors. The model is a free-tier Gemini model. This runs on demand (`make eval`), and results are committed with the date, model ID, commit and cost.
+- [x] **Latency.** p95 tool latency across the grounding run.
 
 ### Docs
 
