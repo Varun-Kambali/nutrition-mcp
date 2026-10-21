@@ -478,8 +478,9 @@ def reply(text: str = "", *calls: grounding.ToolCall) -> grounding.ModelReply:
 class FakeTools:
     """A toolbox that answers every call with the same output and records it."""
 
-    def __init__(self, *, error: bool = False) -> None:
+    def __init__(self, *, error: bool = False, instructions: str | None = None) -> None:
         self.specs = [grounding.ToolSpec("search_food", "Find foods.", {"type": "object"})]
+        self.instructions = instructions
         self.error = error
         self.calls: list[grounding.ToolCall] = []
 
@@ -546,6 +547,50 @@ def test_the_with_tools_arm_sends_tool_results_back() -> None:
     assert [record.name for record in outcome.tool_calls] == ["search_food"]
     assert model.requests[0][2] == tools.specs
     assert (outcome.input_tokens, outcome.output_tokens) == (200, 40)
+
+
+def test_the_with_tools_arm_adds_the_server_instructions_to_the_prompt() -> None:
+    model = FakeModel(lambda history, tools: reply('{"kcal": 145, "protein_g": 4, "carbs_g": 29}'))
+    tools = FakeTools(instructions="Call search_food first.")
+    run(grounding.answer, model, question("q1"), tools)
+    [(system, _, _)] = model.requests
+    # The task prompt comes first, unchanged, then what the server sent at connection.
+    assert system.startswith(grounding.SYSTEM_PROMPT)
+    assert system.endswith(
+        "\n\nInstructions from the nutrition-mcp server:\nCall search_food first."
+    )
+
+
+@pytest.mark.parametrize("instructions", [None, ""])
+def test_a_server_without_instructions_leaves_the_prompt_as_it_is(instructions: str | None) -> None:
+    model = FakeModel(lambda history, tools: reply('{"kcal": 145, "protein_g": 4, "carbs_g": 29}'))
+    run(grounding.answer, model, question("q1"), FakeTools(instructions=instructions))
+    assert model.requests[0][0] == grounding.SYSTEM_PROMPT
+
+
+@pytest.mark.parametrize(
+    ("instructions", "recorded"), [("Call search_food first.", True), (None, False)]
+)
+def test_the_results_say_whether_the_server_instructions_were_passed(
+    instructions: str | None, recorded: bool
+) -> None:
+    @contextlib.asynccontextmanager
+    async def toolbox() -> Any:
+        yield FakeTools(instructions=instructions)
+
+    result = run(
+        grounding.run,
+        FakeModel(lambda history, tools: reply('{"kcal": 150, "protein_g": 4, "carbs_g": 30}')),
+        [question("q1")],
+        now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
+        commit="abc1234",
+        dataset_version="0123456789ab",
+        dirty=False,
+        questions_version="fedcba987654",
+        min_interval=0.0,
+        toolbox=toolbox,
+    )
+    assert result["server_instructions"] is recorded
 
 
 def test_a_question_stops_at_the_turn_cap() -> None:
@@ -1060,7 +1105,7 @@ def test_a_tool_call_that_breaks_is_a_tool_error() -> None:
         async def call_tool(self, name: str, arguments: dict[str, Any]) -> None:
             raise MCPError(code=-32001, message="Request 'tools/call' timed out")
 
-    tools = grounding.McpToolBox(Broken(), [])
+    tools = grounding.McpToolBox(Broken(), [], None)
     result, record = run(tools.call, grounding.ToolCall("search_food", {"query": "idli"}))
     assert result.is_error and record.is_error
     assert result.response == {"error": "tool call failed: MCPError"}

@@ -217,6 +217,11 @@ async def test_search_description_says_to_check_the_result_is_the_food_asked_for
     tools = {tool.name: tool.description or "" for tool in (await client.list_tools()).tools}
     assert "name or one of its aliases is the food asked for" in tools["search_food"]
     assert "report the dish as missing" in tools["search_food"]
+    assert "`note`" in tools["search_food"]
+
+
+async def test_instructions_say_to_report_a_food_search_does_not_find(client: Client) -> None:
+    assert "report it as missing" in (client.instructions or "")
 
 
 # search_food
@@ -229,6 +234,38 @@ async def test_search_food_returns_ids_and_total(client: Client) -> None:
     assert found["results"][0]["units"] == {"g": 1.0, "piece": 40.0, "roti": 40.0, "serving": 40.0}
     assert found["total"] >= 1
     assert found["suggestions"] == []
+    assert found["note"] is None
+
+
+async def test_an_empty_search_tells_the_model_to_report_the_food_missing(client: Client) -> None:
+    # A model reads this when it decides whether to answer with another food, so the text is
+    # pinned here: changing it changes what the grounding evaluation measures.
+    result = await client.call_tool("search_food", {"query": "chicken curry"})
+    found = ok(result)
+    assert found["results"] == []
+    assert found["note"] == (
+        "Not found: no food in the data has a name that matches every word of this query. "
+        "Common spelling variants already match, so a respelled query seldom finds more, and a "
+        "broader one finds other foods. When the query is the food's name as asked, report that "
+        "food as missing. Do not answer with a suggestion, a broader match or other foods put "
+        "together in its place."
+    )
+    # A client that passes the model the text content instead of the structured one has it too.
+    block = result.content[0]
+    assert isinstance(block, TextContent)
+    assert found["note"] in block.text
+
+
+async def test_an_empty_search_under_a_filter_asks_for_a_search_without_it(client: Client) -> None:
+    # The roti is a dish, so it is in the data but not among the ingredients. Pinned like the
+    # note above.
+    found = ok(await client.call_tool("search_food", {"query": "roti", "kind": "ingredient"}))
+    assert found["results"] == []
+    assert found["note"] == (
+        "Not found with the region, diet or kind given, so the food may still be in the data. "
+        "Search again without those filters before reporting it as missing, and do not answer "
+        "with a suggestion in its place."
+    )
 
 
 async def test_search_food_filters_by_kind(client: Client) -> None:

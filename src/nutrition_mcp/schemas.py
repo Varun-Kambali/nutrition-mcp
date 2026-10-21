@@ -133,6 +133,12 @@ class SearchResult(BaseModel):
     total: int
     # Close food names, given only when nothing matched well enough to be a result.
     suggestions: list[str]
+    note: str | None = Field(
+        default=None,
+        description="Set only when there are no results: says the food is not in the data and "
+        "is to be reported as missing, not answered with a suggestion or another food, or, "
+        "when a filter was given, to search again without it first.",
+    )
 
 
 class TargetsIn(BaseModel):

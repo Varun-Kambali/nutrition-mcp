@@ -28,7 +28,8 @@ Every results file is JSON with `suite`, `date`, `generated_at`, `commit`, `dirt
 outside evals/results/ were modified or untracked at run time) and `dataset_version`.
 summary.md is rebuilt from the newest file of each suite (the latest `generated_at`),
 grounding first, skipping files with a `limit`. A grounding file also records its `model`,
-`questions_version`, `limit` and `questions_total`, and lists its summary rows under
+`questions_version`, `limit`, `questions_total` and `server_instructions` (whether the
+with-tools prompt carried the server's instructions), and lists its summary rows under
 `summary`, each with `measure`, `without_tools` and `with_tools` (the Baseline and This
 project values) and `n_without_tools` and `n_with_tools` (the n behind each value, or
 null where the measure has no value for that arm).

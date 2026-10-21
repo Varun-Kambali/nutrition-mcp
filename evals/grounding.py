@@ -5,10 +5,12 @@ it. The golden answer is what `queries.meal_totals` computes for those items fro
 data, so a model that calls the tools and copies their totals matches it exactly. A question
 about a dish that is not in the data has no items and names the dish in `expect_missing`.
 
-The model answers every question twice with the same system prompt: once with no tools (from
-memory), and once with the tools of a `nutrition-mcp` server started over stdio. The tool loop
-is run here rather than by google-genai's automatic MCP support, so each `call_tool` can be
-timed and its errors counted. The harness talks to the model through `ModelClient`, so tests
+The model answers every question twice with the same task prompt: once with no tools (from
+memory), and once with the tools of a `nutrition-mcp` server started over stdio. The with-tools
+arm also gets the instructions the server sends when a client connects, after the task prompt,
+as a client that passes them on to its model would (`system_prompt`). The tool loop is run
+here rather than by google-genai's automatic MCP support, so each `call_tool` can be timed and
+its errors counted. The harness talks to the model through `ModelClient`, so tests
 use a fake and only `GeminiClient` calls the network.
 
 Scoring needs no judge model: the prompt asks for a final JSON object, and `parse_final_json`
@@ -86,6 +88,19 @@ SYSTEM_PROMPT = (
     '{"missing": ["<food as named in the question>"]} and give no numbers.'
 )
 
+
+def system_prompt(instructions: str | None) -> str:
+    """The task prompt, then the server's instructions when the arm has a server that sent some.
+
+    The MCP specification describes a server's instructions as a hint for the model that a
+    client may add to its system prompt. Passing them measures the server as such a client
+    uses it; the results file records whether they were passed (`server_instructions`).
+    """
+    if not instructions:
+        return SYSTEM_PROMPT
+    return f"{SYSTEM_PROMPT}\n\nInstructions from the nutrition-mcp server:\n{instructions}"
+
+
 # The server runs from the interpreter running the evaluation, the way the `nutrition-mcp`
 # console script starts it, so both use the same installed package.
 SERVER_MAIN = "from nutrition_mcp.server import main; main()"
@@ -122,9 +137,11 @@ class Question(BaseModel):
 
 
 def questions_version(path: Path) -> str:
-    """First 12 hex characters of SHA-256 over the questions file, then the system prompt.
+    """First 12 hex characters of SHA-256 over the questions file, then the task prompt.
 
-    Either one changes what the model is asked, so either one changes the version.
+    Either one changes what the model is asked, so either one changes the version. The
+    server's instructions and tool descriptions are not in it: they come from the server at
+    run time, and the commit pins them.
     """
     digest = hashlib.sha256(path.read_bytes())
     digest.update(SYSTEM_PROMPT.encode("utf-8"))
@@ -391,6 +408,10 @@ class ToolBox(Protocol):
     @property
     def specs(self) -> Sequence[ToolSpec]: ...
 
+    # What the server sent at connection for the model, if anything.
+    @property
+    def instructions(self) -> str | None: ...
+
     async def call(self, call: ToolCall) -> tuple[ToolResult, ToolCallRecord]: ...
 
 
@@ -401,9 +422,10 @@ def _text(result: CallToolResult) -> str:
 class McpToolBox:
     """The server's tools through an MCP client, each call timed on the client side."""
 
-    def __init__(self, client: Client, specs: Sequence[ToolSpec]) -> None:
+    def __init__(self, client: Client, specs: Sequence[ToolSpec], instructions: str | None) -> None:
         self._client = client
         self.specs = list(specs)
+        self.instructions = instructions
 
     async def call(self, call: ToolCall) -> tuple[ToolResult, ToolCallRecord]:
         started = time.perf_counter()
@@ -453,7 +475,7 @@ async def stdio_toolbox() -> AsyncIterator[ToolBox]:
                 "are above, on stderr"
             ) from err
         specs = [ToolSpec(tool.name, tool.description or "", tool.input_schema) for tool in listed]
-        yield McpToolBox(client, specs)
+        yield McpToolBox(client, specs, client.instructions)
 
 
 # Answering questions
@@ -498,6 +520,7 @@ class Pacer:
 
 async def _generate(
     model: ModelClient,
+    system: str,
     history: Sequence[Message],
     specs: Sequence[ToolSpec],
     pacer: Pacer,
@@ -506,7 +529,7 @@ async def _generate(
     for delay in (*RETRY_DELAYS, None):
         await pacer.wait()
         try:
-            return await model.generate(SYSTEM_PROMPT, history, specs)
+            return await model.generate(system, history, specs)
         except RetryableModelError as err:
             if delay is None:
                 raise
@@ -532,11 +555,12 @@ async def answer(
     """
     pacer = pacer if pacer is not None else Pacer(0.0, sleep=sleep)
     specs = list(tools.specs) if tools is not None else []
+    system = system_prompt(tools.instructions if tools is not None else None)
     history: list[Message] = [UserText(question.question)]
     outcome = Outcome(Failed("turn cap reached"))
     for turn in range(1, MAX_TURNS + 1):
         try:
-            reply = await _generate(model, history, specs, pacer, sleep)
+            reply = await _generate(model, system, history, specs, pacer, sleep)
         except RetryableModelError as err:
             outcome.parsed = ApiError(err.kind)
             outcome.turns = turn
@@ -829,6 +853,7 @@ def build_result(
     min_interval: float,
     limit: int | None = None,
     questions_total: int | None = None,
+    server_instructions: bool = False,
 ) -> dict[str, Any]:
     """The results dict for run_evals.write_results.
 
@@ -836,6 +861,8 @@ def build_result(
     run started (None when git could not tell), so a result from uncommitted work is marked.
     `limit` is the --limit the run was given, if any, and `questions_total` the number of
     questions in the file (`questions` when not given); a limited run is never a headline.
+    `server_instructions` says whether the with-tools arm's prompt carried the instructions
+    the server sent; runs before it was recorded did not pass them.
     """
     utc = now.astimezone(UTC)
     records = [record for outcome in with_.values() for record in outcome.tool_calls]
@@ -859,6 +886,7 @@ def build_result(
         "cost_usd": 0.0,
         "temperature": TEMPERATURE,
         "max_turns": MAX_TURNS,
+        "server_instructions": server_instructions,
         "min_request_interval_s": min_interval,
         "n": len(questions),
         "questions_total": len(questions) if questions_total is None else questions_total,
@@ -940,6 +968,7 @@ async def run(
     streak = _ApiErrorStreak(MAX_CONSECUTIVE_API_ERRORS)
     with_: dict[str, Outcome] = {}
     async with toolbox() as tools:
+        server_instructions = bool(tools.instructions)
         without = await run_arm(model, questions, None, pacer=pacer, streak=streak, sleep=sleep)
         if not streak.stopped:
             with_ = await run_arm(model, questions, tools, pacer=pacer, streak=streak, sleep=sleep)
@@ -961,6 +990,7 @@ async def run(
         min_interval=min_interval,
         limit=limit,
         questions_total=questions_total,
+        server_instructions=server_instructions,
     )
 
 
