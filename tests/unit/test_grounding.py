@@ -306,10 +306,10 @@ def test_metrics() -> None:
         "m2": grounding.Outcome(numbers(300, 5, 50)),
     }
 
-    metrics = grounding.score_arm(questions, golden, outcomes)
+    metrics = grounding.score_arm(questions, golden, outcomes, paired=["q1", "q2"])
 
     assert metrics == {
-        "n": 2,
+        "n_numbers": 2,
         "n_items": 4,
         "n_missing_dishes": 2,
         "n_replied": 6,
@@ -330,12 +330,52 @@ def test_metrics_with_no_scored_answer_have_no_mape() -> None:
     questions = [question("q1")]
     golden = {"q1": {"kcal": 200.0, "protein_g": 10.0, "carbs_g": 40.0}}
     metrics = grounding.score_arm(
-        questions, golden, {"q1": grounding.Outcome(grounding.Failed("x"))}
+        questions, golden, {"q1": grounding.Outcome(grounding.Failed("x"))}, paired=[]
     )
-    assert metrics["n"] == 0
+    assert metrics["n_numbers"] == 0
     assert metrics["mape_kcal"] is None
     assert metrics["within_10pct_kcal"] == 0.0
     assert metrics["missing_reported"] is None
+
+
+def test_mape_covers_the_questions_both_arms_answered_with_numbers() -> None:
+    questions = [question("q1"), question("q2"), question("q3")]
+    golden = {q: {"kcal": 200.0, "protein_g": 10.0, "carbs_g": 40.0} for q in ("q1", "q2", "q3")}
+    without = {
+        "q1": grounding.Outcome(numbers(200, 10, 40)),
+        "q2": grounding.Outcome(numbers(300, 15, 60)),
+        "q3": grounding.Outcome(grounding.Failed("no JSON object")),
+    }
+    with_ = {
+        "q1": grounding.Outcome(numbers(220, 11, 44)),
+        "q2": grounding.Outcome(grounding.Missing(("idli",), has_numbers=False)),
+        "q3": grounding.Outcome(numbers(200, 10, 40)),
+    }
+    result = grounding.build_result(
+        "fake-model",
+        questions,
+        golden,
+        without,
+        with_,
+        now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
+        commit="abc1234",
+        dataset_version="0123456789ab",
+        min_interval=0.0,
+    )
+
+    # Only q1 has numbers from both arms, so each MAPE is over q1 alone.
+    assert result["n_paired"] == 1
+    assert result["without_tools"]["mape_kcal"] == 0.0
+    assert result["with_tools"]["mape_kcal"] == 10.0
+    # Within 10% keeps each arm's own denominator: q3 failed without tools, q2 with them.
+    assert result["without_tools"]["within_10pct_kcal"] == round(1 / 3, 2)
+    assert result["with_tools"]["within_10pct_kcal"] == round(2 / 3, 2)
+    rows = {row["measure"]: row for row in result["summary"]}
+    # The headline, calorie MAPE, comes first.
+    mape = result["summary"][0]
+    assert (mape["n_without_tools"], mape["n_with_tools"]) == (1, 1)
+    within = rows["Answers within 10% on calories (share)"]
+    assert (within["n_without_tools"], within["n_with_tools"]) == (3, 3)
 
 
 def test_p95_is_the_nearest_rank() -> None:
@@ -586,11 +626,11 @@ def test_an_api_error_is_left_out_of_scoring_and_counted() -> None:
         "m1": grounding.Outcome(grounding.ApiError("http 503")),
     }
 
-    metrics = grounding.score_arm(questions, golden, outcomes)
+    metrics = grounding.score_arm(questions, golden, outcomes, paired=["q1"])
 
     assert metrics["api_errors"] == 2
     assert metrics["failed_answers"] == 0
-    assert metrics["n"] == 1
+    assert metrics["n_numbers"] == 1
     # q2 is not counted as outside 10%: it was never answered.
     assert metrics["within_10pct_kcal"] == 1.0
     assert metrics["mape_kcal"] == 0.0
@@ -644,7 +684,8 @@ def test_tool_errors_and_latency_reach_the_results() -> None:
         "without_tools": {"input": 200, "output": 40},
         "with_tools": {"input": 400, "output": 80},
     }
-    assert result["with_tools"]["n"] == 1
+    assert result["with_tools"]["n_numbers"] == 1
+    assert result["n_paired"] == 1
     assert result["with_tools"]["missing_reported"] == 0.0
 
     rows = {row["id"]: row for row in result["rows"]}
@@ -956,8 +997,9 @@ def test_summary_n_is_each_arms_own_count() -> None:
         min_interval=0.0,
     )
     n = {row["measure"]: (row["n_without_tools"], row["n_with_tools"]) for row in result["summary"]}
-    # MAPE: answers with numbers. Within 10%: questions with items that got a reply.
-    assert n["Mean absolute error on calories (%)"] == (1, 2)
+    # MAPE: questions both arms answered with numbers. Within 10%: each arm's questions with
+    # items that got a reply.
+    assert n["Mean absolute error on calories (%)"] == (1, 1)
     assert n["Answers within 10% on calories (share)"] == (2, 2)
     # m1 had an API error with tools, so no missing dish was scored there.
     assert n["Missing dishes reported (share)"] == (1, 0)
@@ -1053,6 +1095,29 @@ def test_a_run_with_no_answer_in_an_arm_is_an_error(script: Any) -> None:
             grounding.run,
             FakeModel(script),
             [question("q1"), question("q2")],
+            now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
+            commit="abc1234",
+            dataset_version="0123456789ab",
+            min_interval=0.0,
+            toolbox=toolbox,
+        )
+
+
+def test_an_arm_with_only_missing_lists_is_an_error() -> None:
+    def script(history: Sequence[grounding.Message], tools: Sequence[grounding.ToolSpec]) -> Any:
+        if not tools:
+            return reply('{"kcal": 150, "protein_g": 4, "carbs_g": 30}')
+        return reply('{"missing": ["idli"]}')
+
+    @contextlib.asynccontextmanager
+    async def toolbox() -> Any:
+        yield FakeTools()
+
+    with pytest.raises(grounding.GroundingError, match="with_tools arm gave no answer"):
+        run(
+            grounding.run,
+            FakeModel(script),
+            [question("q1"), question("m1", missing=("kheer",))],
             now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
             commit="abc1234",
             dataset_version="0123456789ab",

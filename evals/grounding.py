@@ -22,7 +22,7 @@ import math
 import sys
 import time
 from collections import Counter
-from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -90,6 +90,8 @@ SYSTEM_PROMPT = (
 SERVER_MAIN = "from nutrition_mcp.server import main; main()"
 
 Golden = dict[str, float]
+# Each summary row's n for the two arms, Baseline first.
+N_KEYS = ("n_without_tools", "n_with_tools")
 
 log = logging.getLogger("nutrition_mcp.evals.grounding")
 
@@ -639,39 +641,58 @@ def _share(count: int, total: int) -> float | None:
     return round(count / total, 2) if total else None
 
 
+def paired_ids(
+    questions: Sequence[Question], without: Mapping[str, Outcome], with_: Mapping[str, Outcome]
+) -> list[str]:
+    """The questions with items that both arms answered with numbers, in question order."""
+    return [
+        q.id
+        for q in questions
+        if q.items
+        and isinstance(without[q.id].parsed, Numbers)
+        and isinstance(with_[q.id].parsed, Numbers)
+    ]
+
+
 def score_arm(
-    questions: Sequence[Question], golden: Mapping[str, Golden], outcomes: Mapping[str, Outcome]
+    questions: Sequence[Question],
+    golden: Mapping[str, Golden],
+    outcomes: Mapping[str, Outcome],
+    paired: Collection[str],
 ) -> dict[str, Any]:
     """MAPE and within-10% shares per nutrient, failed answers and missing dishes reported.
 
-    MAPE covers the questions with items whose answer gave numbers (`n`). An answer without
-    numbers, failed or a missing list, is left out of the MAPE and counts as outside 10%; a
-    request the API refused is such a failed answer. A question with an API error (busy or
-    unreachable after the retries) got no answer at all, so it is left out of every measure
-    and only counted in `api_errors`.
+    MAPE covers only the `paired` questions, the ones both arms answered with numbers, so the
+    two arms' errors are means over the same questions and a question one arm skipped cannot
+    move one mean and not the other. The within-10% shares cover every question with items
+    that this arm got a reply to (`n_items`): an answer without numbers, failed or a missing
+    list, counts as outside 10%, and a request the API refused is such a failed answer. A
+    question with an API error (busy or unreachable after the retries) got no answer at all,
+    so it is left out of every measure and only counted in `api_errors`.
     """
     answered = [q for q in questions if not isinstance(outcomes[q.id].parsed, ApiError)]
     with_items = [q for q in answered if q.items]
     expecting_missing = [q for q in answered if q.expect_missing]
-    errors: dict[str, list[float]] = {key: [] for key in ANSWER_KEYS}
+    errors: dict[str, dict[str, float]] = {key: {} for key in ANSWER_KEYS}
     for question in with_items:
         parsed = outcomes[question.id].parsed
         if isinstance(parsed, Numbers):
             for key in ANSWER_KEYS:
-                errors[key].append(ape(golden[question.id][key], parsed.values[key]))
+                errors[key][question.id] = ape(golden[question.id][key], parsed.values[key])
     metrics: dict[str, Any] = {
-        "n": len(errors["kcal"]),
+        # Questions with items this arm answered with numbers, paired or not.
+        "n_numbers": len(errors["kcal"]),
         # The denominators of the shares and counts below, which leave out API errors.
         "n_items": len(with_items),
         "n_missing_dishes": len(expecting_missing),
         "n_replied": len(answered),
     }
     for key, name in METRIC_NAMES.items():
-        found = errors[key]
+        found = [errors[key][qid] for qid in paired]
         metrics[f"mape_{name}"] = round(sum(found) / len(found), 1) if found else None
     for key, name in METRIC_NAMES.items():
         # Rounded first, so float noise cannot push an error of exactly 10% outside.
-        within = sum(round(error, 6) <= WITHIN_PCT for error in errors[key])
+        within = sum(round(error, 6) <= WITHIN_PCT for error in errors[key].values())
         metrics[f"within_10pct_{name}"] = _share(within, len(with_items))
     metrics["failed_answers"] = sum(isinstance(outcomes[q.id].parsed, Failed) for q in questions)
     metrics["missing_answers"] = sum(isinstance(outcomes[q.id].parsed, Missing) for q in with_items)
@@ -739,10 +760,14 @@ def summary_rows(result: Mapping[str, Any]) -> list[dict[str, Any]]:
             "with_tools": with_[metric],
         }
 
+    def paired(measure: str, metric: str) -> dict[str, Any]:
+        # Both arms' errors are over the same questions, so they share one n.
+        return {**row(measure, None, metric), **dict.fromkeys(N_KEYS, result["n_paired"])}
+
     return [
-        row("Mean absolute error on calories (%)", "n", "mape_kcal"),
-        row("Mean absolute error on protein (%)", "n", "mape_protein"),
-        row("Mean absolute error on carbohydrate (%)", "n", "mape_carbs"),
+        paired("Mean absolute error on calories (%)", "mape_kcal"),
+        paired("Mean absolute error on protein (%)", "mape_protein"),
+        paired("Mean absolute error on carbohydrate (%)", "mape_carbs"),
         row("Answers within 10% on calories (share)", "n_items", "within_10pct_kcal"),
         row("Missing dishes reported (share)", "n_missing_dishes", "missing_reported"),
         row("Failed answers (count)", "n_replied", "failed_answers"),
@@ -777,6 +802,7 @@ def build_result(
         if record.is_error
     )
     latency = p95([record.latency_ms for record in records])
+    paired = paired_ids(questions, without, with_)
     result: dict[str, Any] = {
         "suite": "grounding",
         "date": utc.date().isoformat(),
@@ -793,8 +819,10 @@ def build_result(
         "questions_with_items": sum(bool(q.items) for q in questions),
         "questions_expecting_missing": sum(bool(q.expect_missing) for q in questions),
         "tokens": {"without_tools": _tokens(without), "with_tools": _tokens(with_)},
-        "without_tools": score_arm(questions, golden, without),
-        "with_tools": score_arm(questions, golden, with_),
+        # Questions with items both arms answered with numbers: the n of every MAPE.
+        "n_paired": len(paired),
+        "without_tools": score_arm(questions, golden, without, paired),
+        "with_tools": score_arm(questions, golden, with_, paired),
         "tool_calls": len(records),
         "tool_errors": {"count": sum(errors.values()), "by_tool": dict(sorted(errors.items()))},
         "p95_tool_latency_ms": None if latency is None else round(latency, 1),
@@ -818,17 +846,21 @@ def build_result(
 Toolboxes = Callable[[], contextlib.AbstractAsyncContextManager[ToolBox]]
 
 
-def _require_an_answer(arm: str, outcomes: Mapping[str, Outcome]) -> None:
-    """Raise GroundingError when no question in the arm got a readable answer.
+def _require_numbers(
+    arm: str, questions: Sequence[Question], outcomes: Mapping[str, Outcome]
+) -> None:
+    """Raise GroundingError when the arm answered no question with items with numbers.
 
-    Such a run measures the key or the service, not the model, and its results must never
-    replace a real headline.
+    Such a run has no error to report for that arm: it measures the key, the service or a
+    model that never answers, and its results must never replace a real headline.
     """
-    kinds = Counter(type(outcome.parsed).__name__ for outcome in outcomes.values())
-    if not kinds["Numbers"] and not kinds["Missing"]:
+    with_items = [q for q in questions if q.items]
+    kinds = Counter(type(outcomes[q.id].parsed).__name__ for q in with_items)
+    if not kinds["Numbers"]:
         raise GroundingError(
-            f"the {arm} arm got no answer to any of {len(outcomes)} questions "
-            f"(API errors {kinds['ApiError']}, failed answers {kinds['Failed']})"
+            f"the {arm} arm gave no answer with numbers to any of the {len(with_items)} "
+            f"questions with items (API errors {kinds['ApiError']}, failed answers "
+            f"{kinds['Failed']}, missing lists {kinds['Missing']})"
         )
 
 
@@ -863,7 +895,7 @@ async def run(
     if streak.stopped:
         raise GroundingError(streak.stopped)
     for arm, outcomes in (("without_tools", without), ("with_tools", with_)):
-        _require_an_answer(arm, outcomes)
+        _require_numbers(arm, questions, outcomes)
     return build_result(
         model.model,
         questions,

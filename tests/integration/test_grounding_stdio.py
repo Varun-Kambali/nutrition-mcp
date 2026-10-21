@@ -101,7 +101,8 @@ async def test_a_scripted_model_answers_through_the_stdio_server() -> None:
     assert result["p95_tool_latency_ms"] is not None and result["p95_tool_latency_ms"] > 0
     assert result["with_tools"]["mape_kcal"] == 0.0
     assert result["with_tools"]["within_10pct_kcal"] == 1.0
-    assert result["without_tools"]["n"] == 1
+    assert result["without_tools"]["n_numbers"] == 1
+    assert result["n_paired"] == 1
 
 
 async def test_the_server_gets_none_of_the_callers_data_folders(
