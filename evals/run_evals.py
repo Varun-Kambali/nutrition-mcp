@@ -242,10 +242,13 @@ def _ingredient_sources(
     }
 
 
-def data_accuracy(references_path: Path, *, now: datetime, commit: str) -> dict[str, Any]:
+def data_accuracy(
+    references_path: Path, *, now: datetime, commit: str, dirty: bool | None
+) -> dict[str, Any]:
     """Score the bundled dataset, the one the server loads, against the reference file.
 
     `date` and `generated_at` both come from `now` in UTC, so they always name the same day.
+    `dirty` is recorded as given (see git_dirty).
     """
     utc = now.astimezone(UTC)
     folder = loader.bundled_dir()
@@ -259,6 +262,7 @@ def data_accuracy(references_path: Path, *, now: datetime, commit: str) -> dict[
         "date": utc.date().isoformat(),
         "generated_at": utc.isoformat(timespec="seconds"),
         "commit": commit,
+        "dirty": dirty,
         "dataset_version": dataset_version(folder),
         "n": len(rows),
         "per_nutrient": score(rows),
@@ -466,6 +470,25 @@ def git_commit() -> str:
     return completed.stdout.strip()[:7]
 
 
+def git_dirty(root: Path = ROOT) -> bool | None:
+    """Whether any file outside evals/results/ is modified or untracked; None without git.
+
+    A run's own results file is left out, since it waits to be committed after the run.
+    Files git ignores, such as .env and .venv, do not count.
+    """
+    try:
+        completed = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all", "--", ".", ":!evals/results"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return bool(completed.stdout.strip())
+
+
 def _shown(path: Path) -> str:
     return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path)
 
@@ -581,7 +604,9 @@ def run_grounding(limit: int | None, out: Path, min_interval: float) -> int:
                 questions,
                 now=datetime.now(UTC),
                 commit=git_commit(),
+                dirty=git_dirty(),
                 dataset_version=dataset_version(loader.bundled_dir()),
+                questions_version=grounding.questions_version(grounding.QUESTIONS),
                 min_interval=min_interval,
             )
         )
@@ -641,7 +666,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("--min-interval applies to the grounding suite only")
 
     try:
-        result = data_accuracy(REFERENCES, now=datetime.now(UTC), commit=git_commit())
+        result = data_accuracy(
+            REFERENCES, now=datetime.now(UTC), commit=git_commit(), dirty=git_dirty()
+        )
         thresholds = load_thresholds(args.check) if args.check is not None else None
     except (EvalError, loader.DataError) as err:
         print(f"error: {err}", file=sys.stderr)

@@ -253,6 +253,65 @@ def test_parse_reads_a_missing_list() -> None:
     ) == grounding.Missing(("kheer",), has_numbers=False)
 
 
+# Provenance
+
+
+def test_questions_version_follows_the_questions_and_the_prompt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "questions.jsonl"
+    path.write_text('{"id": "a"}\n', encoding="utf-8")
+    version = grounding.questions_version(path)
+    assert len(version) == 12 and set(version) <= set("0123456789abcdef")
+    assert grounding.questions_version(path) == version
+
+    path.write_text('{"id": "b"}\n', encoding="utf-8")
+    edited = grounding.questions_version(path)
+    assert edited != version
+    monkeypatch.setattr(grounding, "SYSTEM_PROMPT", grounding.SYSTEM_PROMPT + " Be brief.")
+    assert grounding.questions_version(path) != edited
+
+
+def test_a_failed_row_records_the_finish_reason() -> None:
+    def script(history: Sequence[grounding.Message], tools: Sequence[grounding.ToolSpec]) -> Any:
+        text = '{"kcal": 150, "protein_g": 4, "carbs_g": 30}'
+        if not tools and history[0].text == "first":
+            # Cut off before the JSON answer.
+            text = "The idlis come to roughly"
+            return grounding.ModelReply(
+                grounding.ModelTurn(text, ()), grounding.Usage(1, 1), "MAX_TOKENS"
+            )
+        return grounding.ModelReply(grounding.ModelTurn(text, ()), grounding.Usage(1, 1), "STOP")
+
+    @contextlib.asynccontextmanager
+    async def toolbox() -> Any:
+        yield FakeTools()
+
+    asked = [
+        grounding.Question(id="q1", question="first", items=question("q1").items),
+        question("q2"),
+    ]
+    result = run(
+        grounding.run,
+        FakeModel(script),
+        asked,
+        now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
+        commit="abc1234",
+        dataset_version="0123456789ab",
+        dirty=True,
+        questions_version="fedcba987654",
+        min_interval=0.0,
+        toolbox=toolbox,
+    )
+    rows = {row["id"]: row for row in result["rows"]}
+    assert rows["q1"]["without_tools"]["failure"] == "no JSON object"
+    assert rows["q1"]["without_tools"]["finish_reason"] == "MAX_TOKENS"
+    # Answers that were read have no finish reason to explain.
+    assert rows["q1"]["with_tools"]["finish_reason"] is None
+    assert rows["q2"]["without_tools"]["finish_reason"] is None
+    assert result["dirty"] is True
+
+
 # Scoring
 
 
@@ -360,6 +419,8 @@ def test_mape_covers_the_questions_both_arms_answered_with_numbers() -> None:
         now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
         commit="abc1234",
         dataset_version="0123456789ab",
+        dirty=False,
+        questions_version="fedcba987654",
         min_interval=0.0,
     )
 
@@ -605,6 +666,8 @@ def test_requests_are_paced_across_questions_arms_and_retries() -> None:
         now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
         commit="abc1234",
         dataset_version="0123456789ab",
+        dirty=False,
+        questions_version="fedcba987654",
         min_interval=4.0,
         toolbox=toolbox,
         clock=clock,
@@ -662,6 +725,8 @@ def test_tool_errors_and_latency_reach_the_results() -> None:
         now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
         commit="abc1234",
         dataset_version="0123456789ab",
+        dirty=False,
+        questions_version="fedcba987654",
         min_interval=0.0,
         toolbox=toolbox,
     )
@@ -676,6 +741,7 @@ def test_tool_errors_and_latency_reach_the_results() -> None:
         "0123456789ab",
         2,
     )
+    assert (result["dirty"], result["questions_version"]) == (False, "fedcba987654")
     assert result["tool_calls"] == 4
     assert result["tool_errors"] == {"count": 4, "by_tool": {"get_nutrition": 2, "search_food": 2}}
     assert result["p95_tool_latency_ms"] == 1.5
@@ -846,7 +912,7 @@ def test_response_to_reply() -> None:
         ],
     )
     response = types.GenerateContentResponse(
-        candidates=[types.Candidate(content=content)],
+        candidates=[types.Candidate(content=content, finish_reason=types.FinishReason.STOP)],
         usage_metadata=types.GenerateContentResponseUsageMetadata(
             prompt_token_count=120, candidates_token_count=30, thoughts_token_count=12
         ),
@@ -860,12 +926,14 @@ def test_response_to_reply() -> None:
     assert result.turn.raw is content
     # Thinking tokens are billed as output.
     assert result.usage == grounding.Usage(120, 42)
+    assert result.finish_reason == "STOP"
 
 
 def test_an_empty_response_is_an_empty_turn() -> None:
     result = grounding.reply_from_response(types.GenerateContentResponse())
     assert result.turn == grounding.ModelTurn("", ())
     assert result.usage == grounding.Usage(0, 0)
+    assert result.finish_reason is None
 
 
 def test_history_to_contents() -> None:
@@ -1021,6 +1089,8 @@ def test_summary_n_is_each_arms_own_count() -> None:
         now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
         commit="abc1234",
         dataset_version="0123456789ab",
+        dirty=False,
+        questions_version="fedcba987654",
         min_interval=0.0,
     )
     n = {row["measure"]: (row["n_without_tools"], row["n_with_tools"]) for row in result["summary"]}
@@ -1062,6 +1132,8 @@ def test_a_run_stops_after_consecutive_request_failures(
             now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
             commit="abc1234",
             dataset_version="0123456789ab",
+            dirty=False,
+            questions_version="fedcba987654",
             min_interval=0.0,
             toolbox=toolbox,
             sleep=sleep,
@@ -1091,6 +1163,8 @@ def test_an_answer_resets_the_api_error_count() -> None:
         now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
         commit="abc1234",
         dataset_version="0123456789ab",
+        dirty=False,
+        questions_version="fedcba987654",
         min_interval=0.0,
         toolbox=toolbox,
     )
@@ -1125,6 +1199,8 @@ def test_a_run_with_no_answer_in_an_arm_is_an_error(script: Any) -> None:
             now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
             commit="abc1234",
             dataset_version="0123456789ab",
+            dirty=False,
+            questions_version="fedcba987654",
             min_interval=0.0,
             toolbox=toolbox,
         )
@@ -1148,6 +1224,8 @@ def test_an_arm_with_only_missing_lists_is_an_error() -> None:
             now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
             commit="abc1234",
             dataset_version="0123456789ab",
+            dirty=False,
+            questions_version="fedcba987654",
             min_interval=0.0,
             toolbox=toolbox,
         )

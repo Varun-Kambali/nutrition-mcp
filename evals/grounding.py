@@ -16,6 +16,7 @@ reads it. An answer it cannot read is a failed answer, recorded and counted, nev
 """
 
 import contextlib
+import hashlib
 import json
 import logging
 import math
@@ -118,6 +119,16 @@ class Question(BaseModel):
         if bool(self.items) == bool(self.expect_missing):
             raise ValueError("give either items or expect_missing, not both and not neither")
         return self
+
+
+def questions_version(path: Path) -> str:
+    """First 12 hex characters of SHA-256 over the questions file, then the system prompt.
+
+    Either one changes what the model is asked, so either one changes the version.
+    """
+    digest = hashlib.sha256(path.read_bytes())
+    digest.update(SYSTEM_PROMPT.encode("utf-8"))
+    return digest.hexdigest()[:12]
 
 
 def load_questions(path: Path) -> list[Question]:
@@ -342,6 +353,8 @@ class Usage:
 class ModelReply:
     turn: ModelTurn
     usage: Usage
+    # Why the model stopped ("STOP", "MAX_TOKENS", "SAFETY"), when the response says.
+    finish_reason: str | None = None
 
 
 class ModelError(Exception):
@@ -453,6 +466,8 @@ class Outcome:
     parsed: Parsed
     turns: int = 0
     capped: bool = False
+    # The finish reason of the last reply, which explains a failed answer.
+    finish_reason: str | None = None
     tool_calls: list[ToolCallRecord] = field(default_factory=list)
     input_tokens: int = 0
     output_tokens: int = 0
@@ -525,12 +540,15 @@ async def answer(
         except RetryableModelError as err:
             outcome.parsed = ApiError(err.kind)
             outcome.turns = turn
+            outcome.finish_reason = None
             return outcome
         except ModelError as err:
             outcome.parsed = Failed("request refused", model_error=err.kind)
             outcome.turns = turn
+            outcome.finish_reason = None
             return outcome
         outcome.turns = turn
+        outcome.finish_reason = reply.finish_reason
         outcome.input_tokens += reply.usage.input_tokens
         outcome.output_tokens += reply.usage.output_tokens
         history.append(reply.turn)
@@ -721,6 +739,7 @@ def _arm_row(outcome: Outcome, golden: Golden | None) -> dict[str, Any]:
         "failure": parsed.reason if isinstance(parsed, Failed) else None,
         "model_error": parsed.model_error if isinstance(parsed, Failed) else None,
         "api_error": parsed.kind if isinstance(parsed, ApiError) else None,
+        "finish_reason": outcome.finish_reason if isinstance(parsed, Failed) else None,
         "ape": None,
         "turns": outcome.turns,
         "turns_capped": outcome.capped,
@@ -804,9 +823,16 @@ def build_result(
     *,
     now: datetime,
     commit: str,
+    dirty: bool | None,
     dataset_version: str,
+    questions_version: str,
     min_interval: float,
 ) -> dict[str, Any]:
+    """The results dict for run_evals.write_results.
+
+    `dirty` says whether files outside evals/results/ differed from `commit` when the run
+    started (None when git could not tell), so a result from uncommitted code is marked.
+    """
     utc = now.astimezone(UTC)
     records = [record for outcome in with_.values() for record in outcome.tool_calls]
     errors = Counter(
@@ -821,7 +847,9 @@ def build_result(
         "date": utc.date().isoformat(),
         "generated_at": utc.isoformat(timespec="seconds"),
         "commit": commit,
+        "dirty": dirty,
         "dataset_version": dataset_version,
+        "questions_version": questions_version,
         "model": model,
         "tier": "free",
         "cost_usd": 0.0,
@@ -883,7 +911,9 @@ async def run(
     *,
     now: datetime,
     commit: str,
+    dirty: bool | None,
     dataset_version: str,
+    questions_version: str,
     min_interval: float,
     toolbox: Toolboxes = stdio_toolbox,
     clock: Clock = time.monotonic,
@@ -917,7 +947,9 @@ async def run(
         with_,
         now=now,
         commit=commit,
+        dirty=dirty,
         dataset_version=dataset_version,
+        questions_version=questions_version,
         min_interval=min_interval,
     )
 
@@ -1032,6 +1064,7 @@ def reply_from_response(response: "types.GenerateContentResponse") -> ModelReply
         for part in parts
         if part.function_call is not None
     )
+    reason = response.candidates[0].finish_reason if response.candidates else None
     usage = response.usage_metadata
     tokens = Usage(
         input_tokens=(usage.prompt_token_count or 0) if usage else 0,
@@ -1039,7 +1072,8 @@ def reply_from_response(response: "types.GenerateContentResponse") -> ModelReply
         if usage
         else 0,
     )
-    return ModelReply(ModelTurn(text, calls, content), tokens)
+    finish_reason = None if reason is None else str(reason.value)
+    return ModelReply(ModelTurn(text, calls, content), tokens, finish_reason)
 
 
 def model_error(err: "genai_errors.APIError") -> ModelError:

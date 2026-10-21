@@ -1,4 +1,5 @@
 import json
+import subprocess
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -215,7 +216,7 @@ def test_dataset_version_is_stable_and_follows_the_data(tiny_dataset: Path) -> N
 
 
 def test_data_accuracy_results_shape(tiny_dataset: Path, references_csv: Path) -> None:
-    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
 
     assert result["suite"] == "data_accuracy"
     assert result["date"] == "2026-10-20"
@@ -258,20 +259,20 @@ def test_a_reference_to_an_unknown_dish_is_an_error(tiny_dataset: Path, tmp_path
         encoding="utf-8",
     )
     with pytest.raises(run_evals.EvalError, match="no_such_dish"):
-        run_evals.data_accuracy(path, now=NOW, commit="abc1234")
+        run_evals.data_accuracy(path, now=NOW, commit="abc1234", dirty=False)
 
 
 def test_references_need_the_expected_header(tiny_dataset: Path, tmp_path: Path) -> None:
     path = tmp_path / "references.csv"
     path.write_text("dish_id,kcal\ndal_a,100\n", encoding="utf-8")
     with pytest.raises(run_evals.EvalError, match="header"):
-        run_evals.data_accuracy(path, now=NOW, commit="abc1234")
+        run_evals.data_accuracy(path, now=NOW, commit="abc1234", dirty=False)
 
 
 def test_results_file_is_named_by_date_suite_and_commit(
     tiny_dataset: Path, references_csv: Path, tmp_path: Path
 ) -> None:
-    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
     path = run_evals.write_results(result, tmp_path / "results")
     assert path.name == "2026-10-20_data-accuracy_abc1234.json"
     assert json.loads(path.read_text(encoding="utf-8")) == result
@@ -311,7 +312,7 @@ def test_summary_keeps_the_grounding_rows_when_data_accuracy_rewrites_it(
 ) -> None:
     out = tmp_path / "results"
     _grounding_file(out)
-    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
     run_evals.write_results(result, out)
 
     summary = run_evals.write_summary(out).read_text(encoding="utf-8")
@@ -338,8 +339,10 @@ def test_summary_uses_the_latest_results_file_of_a_suite(
     tiny_dataset: Path, references_csv: Path, tmp_path: Path
 ) -> None:
     out = tmp_path / "results"
-    older = run_evals.data_accuracy(references_csv, now=NOW - timedelta(hours=1), commit="aaa1111")
-    newer = run_evals.data_accuracy(references_csv, now=NOW, commit="bbb2222")
+    older = run_evals.data_accuracy(
+        references_csv, now=NOW - timedelta(hours=1), commit="aaa1111", dirty=False
+    )
+    newer = run_evals.data_accuracy(references_csv, now=NOW, commit="bbb2222", dirty=False)
     run_evals.write_results(newer, out)
     run_evals.write_results(older, out)
 
@@ -358,7 +361,7 @@ def test_summary_names_a_results_file_it_cannot_use(tmp_path: Path) -> None:
 def test_results_are_dated_in_utc(tiny_dataset: Path, references_csv: Path) -> None:
     # 23:30 in UTC-5 is already the next day in UTC; date and generated_at have to agree.
     evening = datetime(2026, 10, 20, 23, 30, tzinfo=timezone(timedelta(hours=-5)))
-    result = run_evals.data_accuracy(references_csv, now=evening, commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=evening, commit="abc1234", dirty=False)
     assert result["date"] == "2026-10-21"
     assert result["generated_at"] == "2026-10-21T04:30:00+00:00"
 
@@ -378,7 +381,7 @@ def test_summary_names_a_data_accuracy_file_without_scores(
     tiny_dataset: Path, references_csv: Path, tmp_path: Path
 ) -> None:
     out = tmp_path / "results"
-    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
     del result["per_nutrient"]["kcal"]
     run_evals.write_results(result, out)
     with pytest.raises(run_evals.EvalError, match=r"data-accuracy_abc1234\.json"):
@@ -408,7 +411,7 @@ def test_thresholds_must_be_numbers(tmp_path: Path, entry: str) -> None:
 def test_the_report_prints_mape_to_one_decimal(
     tiny_dataset: Path, references_csv: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
     result["per_nutrient"]["kcal"]["mape"] = 25.0
     run_evals.print_report(result)
     kcal = next(line for line in capsys.readouterr().out.splitlines() if line.startswith("kcal "))
@@ -470,7 +473,9 @@ def test_the_headline_is_the_first_row_of_the_first_table(
     # shows "<measure>: <Baseline> -> <This project>" when those two columns exist.
     out = tmp_path / "results"
     _grounding_file(out)
-    run_evals.write_results(run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234"), out)
+    run_evals.write_results(
+        run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False), out
+    )
 
     lines = run_evals.write_summary(out).read_text(encoding="utf-8").splitlines()
 
@@ -527,6 +532,8 @@ def test_the_site_shows_the_calorie_error_from_a_real_grounding_result(tmp_path:
         now=NOW,
         commit="abc1234",
         dataset_version="0123456789ab",
+        dirty=False,
+        questions_version="fedcba987654",
         min_interval=0.0,
     )
     out = tmp_path / "results"
@@ -545,7 +552,7 @@ def test_the_site_shows_the_calorie_error_from_a_real_grounding_result(tmp_path:
 def test_summary_without_a_grounding_run_has_only_the_data_accuracy_table(
     tiny_dataset: Path, references_csv: Path, tmp_path: Path
 ) -> None:
-    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234")
+    result = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
     alone, both = tmp_path / "alone", tmp_path / "both"
     run_evals.write_results(result, alone)
     run_evals.write_results(result, both)
@@ -585,6 +592,53 @@ def test_summary_names_a_grounding_file_without_a_model(tmp_path: Path) -> None:
 def test_grounding_results_are_named_by_model(tmp_path: Path, model: str, name: str) -> None:
     result = {"suite": "grounding", "date": "2026-10-21", "commit": "abc1234", "model": model}
     assert run_evals.write_results(result, tmp_path).name == name
+
+
+def git(root: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@example.org", *args],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+
+
+def test_dirty_means_a_change_outside_the_results_folder(tmp_path: Path) -> None:
+    git(tmp_path, "init", "-q")
+    (tmp_path / "evals" / "results").mkdir(parents=True)
+    (tmp_path / "data.csv").write_text("a\n", encoding="utf-8")
+    git(tmp_path, "add", ".")
+    git(tmp_path, "commit", "-q", "-m", "start")
+    assert run_evals.git_dirty(tmp_path) is False
+
+    # A results file waiting to be committed is what a run produces, not a change it ran on.
+    (tmp_path / "evals" / "results" / "new.json").write_text("{}\n", encoding="utf-8")
+    assert run_evals.git_dirty(tmp_path) is False
+
+    (tmp_path / "data.csv").write_text("b\n", encoding="utf-8")
+    assert run_evals.git_dirty(tmp_path) is True
+    git(tmp_path, "checkout", "--", "data.csv")
+    (tmp_path / "notes.txt").write_text("x\n", encoding="utf-8")
+    assert run_evals.git_dirty(tmp_path) is True
+
+
+def test_dirty_is_unknown_outside_a_git_checkout(tmp_path: Path) -> None:
+    assert run_evals.git_dirty(tmp_path / "no_such_folder") is None
+
+
+def test_a_data_accuracy_run_records_whether_the_tree_was_dirty(
+    tiny_dataset: Path,
+    references_csv: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    restore_logging: None,
+) -> None:
+    monkeypatch.setattr(run_evals, "REFERENCES", references_csv)
+    monkeypatch.setattr(run_evals, "git_dirty", lambda: True)
+    out = tmp_path / "results"
+    assert run_evals.main(["--suite", "data_accuracy", "--out", str(out)]) == 0
+    [results] = out.glob("*.json")
+    assert json.loads(results.read_text(encoding="utf-8"))["dirty"] is True
 
 
 def test_the_env_example_placeholder_counts_as_no_key(
@@ -677,6 +731,8 @@ def test_a_grounding_run_writes_the_results_file_and_summary(
     assert data["n"] == 2 and data["model"] == "gemini-test"
     assert data["min_request_interval_s"] == 0.0
     assert data["dataset_version"] == run_evals.dataset_version(loader.bundled_dir())
+    assert data["questions_version"] == grounding.questions_version(grounding.QUESTIONS)
+    assert data["dirty"] is run_evals.git_dirty()
     summary = (out / "summary.md").read_text(encoding="utf-8")
     assert "| Calorie error against the dataset totals, MAPE (%) |" in summary
     report = capsys.readouterr().out
