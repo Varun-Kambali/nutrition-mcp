@@ -135,4 +135,4 @@ Because `grounding` uses the bundled data as ground truth, it measures whether t
 - How each source's nutrient definitions map onto the server's, written up in `docs/data.md`.
 - Fuzzy-match thresholds and the transliteration rules, tuned against tests.
 - The activity multipliers, goal adjustments and calorie floor in `targets.py`, from widely cited sources and recorded in an ADR.
-- Which Gemini model the grounding evaluation uses, chosen from the free tier at run time and recorded in each results file.
+- The model for the grounding evaluation: gemini-3.1-flash-lite on the free tier, at the provider's default temperature. Each results file records the model, and `EVAL_MODEL` overrides it for a run.
