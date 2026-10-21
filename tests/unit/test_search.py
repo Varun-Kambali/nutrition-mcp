@@ -5,7 +5,13 @@ from nutrition_mcp.loader import build_registry
 from nutrition_mcp.models import Diet, Food, Nutrients, Region
 from nutrition_mcp.registry import Registry
 from nutrition_mcp.schemas import FoodSummary, SearchResult
-from nutrition_mcp.search import NOT_FOUND_NOTE, _has_every_word, normalise, search_foods
+from nutrition_mcp.search import (
+    FILTERED_NOT_FOUND_NOTE,
+    NOT_FOUND_NOTE,
+    _has_every_word,
+    normalise,
+    search_foods,
+)
 from nutrition_mcp.units import valid_units
 
 SETTINGS = Settings(default_katori_g=150.0)
@@ -267,7 +273,7 @@ def test_filters_that_leave_no_foods_give_an_empty_result() -> None:
     assert ids(search_foods(pool, SETTINGS, "fish curry", "east", None, None)) == ["a"]
     result = search_foods(pool, SETTINGS, "fish curry", "east", "vegan", None)
     assert result == SearchResult(
-        query="fish curry", results=[], total=0, suggestions=[], note=NOT_FOUND_NOTE
+        query="fish curry", results=[], total=0, suggestions=[], note=FILTERED_NOT_FOUND_NOTE
     )
 
 
@@ -293,6 +299,26 @@ def test_the_note_says_to_report_the_food_missing_instead_of_substituting() -> N
     # The three ways the first run found something else to answer with.
     for substitute in ("a suggestion", "a broader match", "other foods put together"):
         assert substitute in NOT_FOUND_NOTE
+
+
+@pytest.mark.parametrize(
+    ("query", "region", "diet", "kind"),
+    [
+        ("sambar", "north", None, None),
+        ("dimer dalna", None, "veg", None),
+        ("sambar", None, None, "ingredient"),
+    ],
+)
+def test_an_empty_result_under_a_filter_does_not_say_the_food_is_missing(
+    reg: Registry, query: str, region: str | None, diet: str | None, kind: str | None
+) -> None:
+    # The food is in the data, outside the filter. Saying "not in the data" here would have
+    # the model report it missing.
+    assert search_foods(reg, SETTINGS, query, None, None, None).results != []
+    result = search_foods(reg, SETTINGS, query, region, diet, kind)
+    assert result.results == []
+    assert result.note == FILTERED_NOT_FOUND_NOTE
+    assert "Search again without those filters" in FILTERED_NOT_FOUND_NOTE
 
 
 def test_a_search_with_results_has_no_note(reg: Registry) -> None:

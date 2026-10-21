@@ -256,6 +256,18 @@ async def test_an_empty_search_tells_the_model_to_report_the_food_missing(client
     assert found["note"] in block.text
 
 
+async def test_an_empty_search_under_a_filter_asks_for_a_search_without_it(client: Client) -> None:
+    # The roti is a dish, so it is in the data but not among the ingredients. Pinned like the
+    # note above.
+    found = ok(await client.call_tool("search_food", {"query": "roti", "kind": "ingredient"}))
+    assert found["results"] == []
+    assert found["note"] == (
+        "Not found with the region, diet or kind given, so the food may still be in the data. "
+        "Search again without those filters before reporting it as missing, and do not answer "
+        "with a suggestion in its place."
+    )
+
+
 async def test_search_food_filters_by_kind(client: Client) -> None:
     found = ok(await client.call_tool("search_food", {"query": "toor dal", "kind": "ingredient"}))
     assert {food["kind"] for food in found["results"]} == {"ingredient"}
