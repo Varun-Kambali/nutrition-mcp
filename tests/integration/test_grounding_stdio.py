@@ -7,6 +7,7 @@ import grounding
 import pytest
 
 from nutrition_mcp.schemas import MealItemIn
+from nutrition_mcp.server import INSTRUCTIONS
 
 pytestmark = pytest.mark.anyio
 
@@ -32,12 +33,17 @@ class ScriptedModel:
 
     model = "scripted-model"
 
+    def __init__(self) -> None:
+        # The system prompt of each request, and whether the request offered tools.
+        self.prompts: list[tuple[str, bool]] = []
+
     async def generate(
         self,
         system: str,
         history: Sequence[grounding.Message],
         tools: Sequence[grounding.ToolSpec],
     ) -> grounding.ModelReply:
+        self.prompts.append((system, bool(tools)))
         if not tools:
             return reply('{"kcal": 300, "protein_g": 12, "carbs_g": 45}')
         last = history[-1]
@@ -73,8 +79,9 @@ class ScriptedModel:
 
 
 async def test_a_scripted_model_answers_through_the_stdio_server() -> None:
+    model = ScriptedModel()
     result = await grounding.run(
-        ScriptedModel(),
+        model,
         [QUESTION],
         now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
         commit="abc1234",
@@ -105,6 +112,17 @@ async def test_a_scripted_model_answers_through_the_stdio_server() -> None:
     assert result["with_tools"]["within_10pct_kcal"] == 1.0
     assert result["without_tools"]["n_numbers"] == 1
     assert result["n_paired"] == 1
+
+    # With tools, the model is told what the server says at connection, as a client would
+    # pass it on; without tools there is no server, so the prompt is the task alone.
+    assert result["server_instructions"] is True
+    for system, offered_tools in model.prompts:
+        if offered_tools:
+            assert system.startswith(grounding.SYSTEM_PROMPT)
+            assert system.endswith(INSTRUCTIONS)
+        else:
+            assert system == grounding.SYSTEM_PROMPT
+    assert {offered for _, offered in model.prompts} == {True, False}
 
 
 async def test_the_server_gets_none_of_the_callers_data_folders(
