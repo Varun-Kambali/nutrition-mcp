@@ -9,9 +9,11 @@ from typing import Any
 
 import anyio
 import grounding
+import httpx
 import pytest
 from google.genai import errors as genai_errors
 from google.genai import types
+from mcp import MCPError
 
 from nutrition_mcp.config import Settings
 from nutrition_mcp.loader import build_registry
@@ -760,3 +762,27 @@ def test_gemini_client_turns_api_errors_into_model_errors() -> None:
     )
     with pytest.raises(grounding.RetryableModelError, match="http 429"):
         run(client.generate, grounding.SYSTEM_PROMPT, [grounding.UserText("q")], [])
+
+
+def test_a_network_failure_is_retryable() -> None:
+    class Unreachable:
+        async def generate_content(self, **request: Any) -> None:
+            raise httpx.ConnectError("connection refused")
+
+    client = grounding.GeminiClient(
+        "gemini-test", SimpleNamespace(aio=SimpleNamespace(models=Unreachable()))
+    )
+    with pytest.raises(grounding.RetryableModelError, match="network ConnectError"):
+        run(client.generate, grounding.SYSTEM_PROMPT, [grounding.UserText("q")], [])
+
+
+def test_a_tool_call_that_breaks_is_a_tool_error() -> None:
+    class Broken:
+        async def call_tool(self, name: str, arguments: dict[str, Any]) -> None:
+            raise MCPError(code=-32001, message="Request 'tools/call' timed out")
+
+    tools = grounding.McpToolBox(Broken(), [])
+    result, record = run(tools.call, grounding.ToolCall("search_food", {"query": "idli"}))
+    assert result.is_error and record.is_error
+    assert result.response == {"error": "tool call failed: MCPError"}
+    assert record.latency_ms >= 0
