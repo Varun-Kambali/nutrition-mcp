@@ -1,6 +1,6 @@
 # Case study: nutrition-mcp
 
-Draft written at kickoff on 2026-10-19, before any code. The results section fills in as the evaluations run.
+Draft written at kickoff on 2026-10-19, before any code, and updated as each milestone lands. The results section holds the first run of each evaluation, recorded on 2026-10-20 and 2026-10-21.
 
 ## Why: the problem
 
@@ -67,22 +67,33 @@ Each decision gets an ADR in [decisions/](decisions/) as it is built.
 
 The tools sit on top of that data. Every result carries the grams it used and how it got them ("1 katori = 150 g (default katori)"), the sources behind the numbers, and which nutrients are incomplete and why. Search results list every unit a food accepts with its grams, so the model never converts a glass of milk itself. Errors are written for the model to act on: an unknown unit lists the valid ones, an unknown food gets close matches, and a bad meal item is named by its position. The server logs one line per call with the tool, time taken and outcome, and never the inputs, so nothing a person asks is kept. Calorie and protein targets use the Mifflin-St Jeor equation with cited constants, and [ADR 0005](decisions/0005-targets-formula.md) says which ones are conventions with no primary source.
 
+The two evaluations check two different claims ([ADR 0006](decisions/0006-two-evaluations.md)). Data accuracy needs no model. For each of the 18 dishes that have an independent record (a CoFID 2021 homemade dish or a USDA survey food), it compares the values the server computes per 100 g with that record and reports the mean absolute percentage error (MAPE). kcal, protein and available carbohydrate are gated in CI; iron and calcium are only reported. Grounding asks a Gemini model 30 questions twice with the same prompt, once from memory and once with the server's tools over stdio. Each question's golden answer is the server's own total for the foods it names, and 4 of the questions name a dish that is not in the data, where the right answer is that the dish is missing. The model ends with a JSON answer, so scoring needs no judge model, and the error is the MAPE over the 26 questions that both runs answered with numbers. Grounding calls a model, so it runs on demand; data accuracy runs on every pull request.
+
 ## Results
 
-Not measured yet. These rows come from `evals/results/summary.md` once the evaluations have run.
+The first run of each evaluation, copied from `evals/results/summary.md`. The grounding run is gemini-3.1-flash-lite on the free tier at the provider's default temperature, recorded on 2026-10-21 at commit 8262476 ([results file](../evals/results/2026-10-21_gemini-3.1-flash-lite_8262476.json)). The data-accuracy run was recorded on 2026-10-20 at commit 32aa03d ([results file](../evals/results/2026-10-20_data-accuracy_32aa03d.json)). Errors are the mean absolute percentage error (MAPE).
 
 | Metric | Without tools | With tools | How measured |
 |---|---|---|---|
-| Mean absolute error on calories, [N] questions | [X]% | [Y]% | grounding eval |
-| Mean absolute error on carbohydrate, [N] questions | [ ] | [ ] | grounding eval |
-| Answers within 10% on calories | [ ] | [ ] | grounding eval |
-| Mean absolute error against independent references, [N] dishes | n/a | [ ] | data-accuracy eval |
-| p95 tool latency | n/a | [ ] ms | grounding eval |
+| Calorie error against the dataset totals, MAPE (%), 26 questions | 16.0 | 0.0 | grounding eval |
+| Protein error against the dataset totals, MAPE (%), 26 questions | 13.2 | 0.0 | grounding eval |
+| Carbohydrate error against the dataset totals, MAPE (%), 26 questions | 20.2 | 0.0 | grounding eval |
+| Answers within 10% on calories (share), 26 questions | 0.38 | 1.0 | grounding eval |
+| Missing dishes reported (share), 4 questions | n/a | 0.5 | grounding eval |
+| Tool errors (count), 89 tool calls | n/a | 0 | grounding eval |
+| p95 tool latency (ms), 89 tool calls | n/a | 10.4 | grounding eval |
+| Energy (kcal) MAPE against independent references (%), 18 dishes | n/a | 18.7 | data-accuracy eval |
+| Protein (g) MAPE against independent references (%), 18 dishes | n/a | 24.8 | data-accuracy eval |
+| Available carbohydrate (g) MAPE against independent references (%), 18 dishes | n/a | 16.7 | data-accuracy eval |
+| Iron (mg) MAPE against independent references (%), 18 dishes | n/a | 44.2 | data-accuracy eval |
+| Calcium (mg) MAPE against independent references (%), 18 dishes | n/a | 46.1 | data-accuracy eval |
+
+The 0.0 is by construction. The golden answers are the server's own totals, so it shows that with the tools the model picked the right food and unit and used the computed total on every one of the 26 questions, while the same model from memory was off by 16.0% on calories and had 0.38 of its calorie answers within 10%. It does not show that the totals are right: the data-accuracy rows measure that, against independent records, and the limits below say more.
 
 ## Limits, and what better inputs would change
 
 - **Dish values depend on my recipes.** Home cooking varies, and oil varies most of all: one extra spoon of ghee changes a meal more than most errors in the composition data. Every answer states its oil and portion assumptions so the user can adjust.
-- **Energy is on two bases.** USDA counts fibre as carbohydrate when it computes kcal, and CoFID gives fibre no energy. For the USDA pulses that fibre is 11% to 25% of their kcal, so a dish built from USDA pulses or atta reads high next to a CoFID reference dish even when the recipe is right. The data-accuracy evaluation has to show the energy basis of each side of a comparison.
+- **Energy is on two bases.** USDA counts fibre as carbohydrate when it computes kcal, and CoFID gives fibre no energy. For the USDA pulses that fibre is 11% to 25% of their kcal, so a dish built from USDA pulses or atta reads high next to a CoFID reference dish even when the recipe is right. The data-accuracy results list the sources behind each side of a comparison, so the energy basis of each can be read off.
 - **Split dals have no fibre value.** Toor, moong, urad and chana dal come from CoFID records that report no fibre, so every dish made with them reports fibre as incomplete until a source with fibre for split dals is found.
 - **Some ingredients have no open source.** Jaggery, ragi and poha have no record in USDA or CoFID. A dish that needs one of them as a core ingredient is dropped or replaced with another dish. A dish that uses only a small, optional amount, such as the jaggery in bisi bele bath, leaves it out and says so in its assumptions.
 - **Micronutrients are rougher than macronutrients.** They vary with variety, soil and storage, and heat destroys much of the folate, vitamin C and B vitamins. In v1, dish micronutrients are totals of the raw ingredients, and they are labelled that way.
@@ -94,6 +105,10 @@ Not measured yet. These rows come from `evals/results/summary.md` once the evalu
 - **Search is literal about words.** A prefix doesn't match ("pan" doesn't find paneer), queries in Devanagari or other scripts aren't transliterated, and names from different languages can fold to similar spellings and collide. Every result shows its kind and regions, and the model is told to check the name.
 - **Rankings per 100 g favour seasonings.** Ranked per 100 g or per 100 kcal, spices, fats and salt can top a list, such as cumin for iron or ghee for low sugar. Ranking dishes, or ranking per serving, gives answers closer to what people eat.
 - **Targets are estimates for a population.** The Mifflin-St Jeor equation comes out below ICMR-NIN's reference energy figures for Indian adults, and protein per kg of actual body weight overstates needs at a high body weight. [ADR 0005](decisions/0005-targets-formula.md) gives the comparison.
+- **The grounding 0.0 shows tool use, not correct data.** Golden answers are the server's own totals, so 0.0 means the model picked the right food and unit and used the computed total on every one of the 26 questions, and says nothing about whether the totals match what the dishes contain. The from-memory errors (16.0, 13.2 and 20.2) are also distance from those totals, not from the dishes.
+- **Computed dish values differ from independent records.** Against the 18 dishes that have one, the data-accuracy run puts the mean error at 18.7% for kcal, 24.8% for protein and 16.7% for available carbohydrate, and at 44.2% for iron and 46.1% for calcium. Part of each gap is a difference between a UK or US record and the bundled recipe (water, fat, an enriched grain) or in energy basis rather than wrong data, and with 18 dishes one dish moves an average. [ADR 0006](decisions/0006-two-evaluations.md) names the largest cases.
+- **A missing dish is not always reported as missing.** Of the 4 grounding questions that name a dish that is not in the data, the model with tools reported chicken curry and kheer as missing, for a share of 0.5. For pulao it made 5 searches without finding a pulao, then answered with the numbers for jeera rice, the quiet substitution this project exists to prevent. For masala dosa it made 7 searches and reached the 8-turn cap without an answer, which is the one failed answer in the run.
+- **One run, one model, no server instructions.** The grounding run is a single pass of gemini-3.1-flash-lite on the free tier at the provider's default temperature, so answers vary from run to run. It passed the model the tools but not the instructions the server sends when a client connects, so for clients that pass them on, the measured gain is a lower bound, and the missing-dish behaviours above may differ.
 - **Better data improves accuracy without code changes.** With a licensed IFCT copy or lab-tested recipes loaded, the data-accuracy evaluation would show how much.
 
 ## What I learned
