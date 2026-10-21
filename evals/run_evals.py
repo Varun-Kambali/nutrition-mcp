@@ -17,8 +17,8 @@ model, so it runs on demand only (`make eval`, which loads .env). EVAL_MODEL ove
 default model. A run writes evals/results/YYYY-MM-DD_<model>_<commit>.json and rebuilds
 summary.md; --limit N asks only the first N questions, and --min-interval sets the least
 time between two model requests.
-A run that stops after API errors in a row, or that gets no readable answer in one of its
-arms, exits 1 and writes nothing, so it cannot replace a real headline.
+A run that stops after failed model requests in a row, or that gets no readable answer in
+one of its arms, exits 1 and writes nothing, so it cannot replace a real headline.
 
 Every results file is JSON with `suite`, `date`, `generated_at`, `commit` and
 `dataset_version`. summary.md is rebuilt from the newest file of each suite (the latest
@@ -402,8 +402,9 @@ def _grounding_lines(path: Path, data: Mapping[str, Any]) -> list[str]:
         "model calling this server's tools over stdio. Golden answers are computed by the",
         "server's own query functions from the bundled data. An error is the mean absolute",
         "percentage error over the answers that gave numbers; an answer without numbers is left",
-        "out of it and counts as outside 10%. A question whose model request failed after its",
-        "retries is an API error: it is counted on its own row and left out of every other one.",
+        "out of it and counts as outside 10%, as does a request the API refused. A question whose",
+        "request was still rate-limited or unreachable after its retries is an API error: it is",
+        "counted on its own row and left out of every other one.",
         "Shares run from 0 to 1. n is the number of questions behind each value, Baseline first,",
         "or of tool calls for latency. The model runs at the provider's default temperature, so",
         "answers vary from run to run.",

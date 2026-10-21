@@ -490,11 +490,25 @@ def test_a_model_that_stays_busy_gives_an_api_error() -> None:
     assert len(model.requests) == len(grounding.RETRY_DELAYS) + 1
 
 
-def test_a_model_error_is_not_retried() -> None:
+def test_a_refused_request_is_a_failed_answer_not_retried() -> None:
+    # A 400, 403 or 404 says the request is wrong (a bad key, a schema the API rejects), not
+    # that the API is busy, so the model is scored as failing to answer.
     model = FakeModel(lambda history, tools: grounding.ModelError("http 400"))
     outcome = run(grounding.answer, model, question("q1"), None)
-    assert outcome.parsed == grounding.ApiError("http 400")
+    assert outcome.parsed == grounding.Failed("request refused", model_error="http 400")
     assert len(model.requests) == 1
+
+
+def test_a_request_refused_after_a_tool_call_is_a_failed_answer() -> None:
+    def script(history: Sequence[grounding.Message], tools: Sequence[grounding.ToolSpec]) -> Any:
+        if len(history) == 1:
+            return reply("", grounding.ToolCall("search_food", {"query": "idli"}, "c1"))
+        return grounding.ModelError("http 404")
+
+    outcome = run(grounding.answer, FakeModel(script), question("q1"), FakeTools())
+    assert outcome.parsed == grounding.Failed("request refused", model_error="http 404")
+    assert outcome.turns == 2
+    assert [record.name for record in outcome.tool_calls] == ["search_food"]
 
 
 class FakeClock:
@@ -951,12 +965,25 @@ def test_summary_n_is_each_arms_own_count() -> None:
     assert n["API errors (count)"] == (3, 3)
 
 
-def test_a_run_stops_after_consecutive_api_errors() -> None:
-    model = FakeModel(lambda history, tools: grounding.ModelError("http 400"))
+@pytest.mark.parametrize(
+    ("error", "requests_per_question"),
+    [
+        # A refused request is a failed answer, but five in a row still stop the run.
+        (grounding.ModelError("http 400"), 1),
+        (grounding.RetryableModelError("http 429"), len(grounding.RETRY_DELAYS) + 1),
+    ],
+)
+def test_a_run_stops_after_consecutive_request_failures(
+    error: grounding.ModelError, requests_per_question: int
+) -> None:
+    model = FakeModel(lambda history, tools: error)
 
     @contextlib.asynccontextmanager
     async def toolbox() -> Any:
         yield FakeTools()
+
+    async def sleep(seconds: float) -> None:
+        pass
 
     with pytest.raises(grounding.GroundingError, match="in a row"):
         run(
@@ -968,8 +995,10 @@ def test_a_run_stops_after_consecutive_api_errors() -> None:
             dataset_version="0123456789ab",
             min_interval=0.0,
             toolbox=toolbox,
+            sleep=sleep,
         )
-    assert len(model.requests) == grounding.MAX_CONSECUTIVE_API_ERRORS == 5
+    assert grounding.MAX_CONSECUTIVE_API_ERRORS == 5
+    assert len(model.requests) == 5 * requests_per_question
 
 
 def test_an_answer_resets_the_api_error_count() -> None:
@@ -996,8 +1025,13 @@ def test_an_answer_resets_the_api_error_count() -> None:
         min_interval=0.0,
         toolbox=toolbox,
     )
-    assert result["without_tools"]["api_errors"] == 4
-    assert result["with_tools"]["api_errors"] == 4
+    for arm in ("without_tools", "with_tools"):
+        assert result[arm]["failed_answers"] == 4
+        assert result[arm]["api_errors"] == 0
+    rows = {row["id"]: row for row in result["rows"]}
+    assert rows["q1"]["without_tools"]["failure"] == "request refused"
+    assert rows["q1"]["without_tools"]["model_error"] == "http 400"
+    assert rows["q5"]["without_tools"]["model_error"] is None
 
 
 @pytest.mark.parametrize(

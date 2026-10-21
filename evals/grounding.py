@@ -62,8 +62,9 @@ RETRY_DELAYS = (5.0, 10.0, 20.0, 40.0)
 TOOL_TIMEOUT_S = 30.0
 # google-genai sets no request timeout of its own. A request that times out is retried.
 REQUEST_TIMEOUT_MS = 120_000
-# Questions in a row, across both arms, that end in an API error before the run stops. By then
-# the key, the quota or the service is at fault, and the rest would fail the same way.
+# Questions in a row, across both arms, whose model request failed (an API error, or a request
+# the API refused) before the run stops. By then the key, the quota, the model id or the
+# service is at fault, and the rest would fail the same way.
 MAX_CONSECUTIVE_API_ERRORS = 5
 # Percentage error at or under which an answer counts as within 10%.
 WITHIN_PCT = 10.0
@@ -199,11 +200,13 @@ class Missing:
 @dataclass(frozen=True, slots=True)
 class Failed:
     reason: str
+    # The kind of error ("http 400") when the API refused the request, which ends the answer.
+    model_error: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class ApiError:
-    """No answer, because the model request failed after its retries. Not scored at all."""
+    """No answer, because the API was busy or unreachable after the retries. Not scored."""
 
     kind: str
 
@@ -505,7 +508,10 @@ async def answer(
 ) -> Outcome:
     """Ask one question, running the model's tool calls until it answers or hits MAX_TURNS.
 
-    A request that still fails after its retries ends the question with an ApiError.
+    A request the API was too busy for or could not be reached about, after its retries, ends
+    the question with an ApiError. A request the API refused (400, 403, 404 and the like) ends
+    it as a failed answer that records the error kind: the model, its id or the request is at
+    fault, not the quota.
     """
     pacer = pacer if pacer is not None else Pacer(0.0, sleep=sleep)
     specs = list(tools.specs) if tools is not None else []
@@ -514,8 +520,12 @@ async def answer(
     for turn in range(1, MAX_TURNS + 1):
         try:
             reply = await _generate(model, history, specs, pacer, sleep)
-        except ModelError as err:
+        except RetryableModelError as err:
             outcome.parsed = ApiError(err.kind)
+            outcome.turns = turn
+            return outcome
+        except ModelError as err:
+            outcome.parsed = Failed("request refused", model_error=err.kind)
             outcome.turns = turn
             return outcome
         outcome.turns = turn
@@ -539,7 +549,10 @@ async def answer(
 
 
 class _ApiErrorStreak:
-    """Counts questions in a row that ended in an API error; at the limit, the run stops.
+    """Counts questions in a row whose model request failed; at the limit, the run stops.
+
+    Both API errors and refused requests count, so a bad key or a schema the API rejects
+    stops the run as surely as a spent quota.
 
     It records why rather than raising: run() raises once the server has closed, because the
     MCP client's task group would wrap an error raised inside it in an ExceptionGroup.
@@ -551,14 +564,18 @@ class _ApiErrorStreak:
         self.stopped: str | None = None
 
     def record(self, parsed: Parsed) -> None:
-        if not isinstance(parsed, ApiError):
+        if isinstance(parsed, ApiError):
+            kind = parsed.kind
+        elif isinstance(parsed, Failed) and parsed.model_error is not None:
+            kind = parsed.model_error
+        else:
             self.count = 0
             return
         self.count += 1
         if self.count >= self.limit:
             self.stopped = (
-                f"stopped after {self.count} questions in a row with API errors (last: "
-                f"{parsed.kind}); check the key, the quota and the model id"
+                f"stopped after {self.count} questions in a row whose model requests failed "
+                f"(last: {kind}); check the key, the quota and the model id"
             )
 
 
@@ -628,9 +645,10 @@ def score_arm(
     """MAPE and within-10% shares per nutrient, failed answers and missing dishes reported.
 
     MAPE covers the questions with items whose answer gave numbers (`n`). An answer without
-    numbers, failed or a missing list, is left out of the MAPE and counts as outside 10%. A
-    question with an API error got no answer at all, so it is left out of every measure and
-    only counted in `api_errors`.
+    numbers, failed or a missing list, is left out of the MAPE and counts as outside 10%; a
+    request the API refused is such a failed answer. A question with an API error (busy or
+    unreachable after the retries) got no answer at all, so it is left out of every measure
+    and only counted in `api_errors`.
     """
     answered = [q for q in questions if not isinstance(outcomes[q.id].parsed, ApiError)]
     with_items = [q for q in answered if q.items]
@@ -680,6 +698,7 @@ def _arm_row(outcome: Outcome, golden: Golden | None) -> dict[str, Any]:
         "answer": parsed.values if isinstance(parsed, Numbers) else None,
         "missing": list(parsed.foods) if isinstance(parsed, Missing) else None,
         "failure": parsed.reason if isinstance(parsed, Failed) else None,
+        "model_error": parsed.model_error if isinstance(parsed, Failed) else None,
         "api_error": parsed.kind if isinstance(parsed, ApiError) else None,
         "ape": None,
         "turns": outcome.turns,
