@@ -325,6 +325,51 @@ def test_a_search_with_results_has_no_note(reg: Registry) -> None:
     assert search_foods(reg, SETTINGS, "sambar", None, None, None).note is None
 
 
+# Plurals. A query that finds nothing as typed is tried again in the singular, the way units
+# are read ("rotis", "pieces").
+
+
+@pytest.mark.parametrize(
+    ("query", "food_id"),
+    [
+        ("rotis", "chapati"),
+        ("plain dosas", "plain_dosa"),
+        ("batata vadas", "batata_vada"),
+        ("Rotis", "chapati"),
+    ],
+)
+def test_a_plural_finds_the_food(reg: Registry, query: str, food_id: str) -> None:
+    result = search_foods(reg, SETTINGS, query, None, None, None)
+    assert ids(result)[:1] == [food_id]
+    assert result.note is None
+    # The result keeps the query as it was asked.
+    assert result.query == query
+
+
+def test_a_plural_with_es_finds_the_food() -> None:
+    pool = Registry({"m": make_food("m", "Mango"), "p": make_food("p", "Pav")}, {})
+    assert ids(search_foods(pool, SETTINGS, "mangoes", None, None, None)) == ["m"]
+    assert ids(search_foods(pool, SETTINGS, "pavs", None, None, None)) == ["p"]
+
+
+def test_a_plural_finds_every_food_the_singular_finds(reg: Registry) -> None:
+    dals = search_foods(reg, SETTINGS, "dal", None, None, None, 50)
+    assert ids(search_foods(reg, SETTINGS, "dals", None, None, None, 50)) == ids(dals)
+
+
+def test_the_singular_is_tried_only_when_the_query_finds_nothing() -> None:
+    # A food whose own name ends in s is found as typed, and the singular is never tried.
+    pool = Registry({"c": make_food("c", "Chaas"), "h": make_food("h", "Chaa")}, {})
+    assert ids(search_foods(pool, SETTINGS, "chaas", None, None, None)) == ["c"]
+
+
+@pytest.mark.parametrize("query", ["kheers", "pulaos", "masala dosas"])
+def test_a_plural_of_a_dish_not_in_the_data_is_still_not_found(reg: Registry, query: str) -> None:
+    result = search_foods(reg, SETTINGS, query, None, None, None)
+    assert result.results == []
+    assert result.note == NOT_FOUND_NOTE
+
+
 def test_suggestions_are_capped_at_five() -> None:
     # Six names are close to the query, and none holds both of its words.
     names = ["Dahi bonda", "Dal vada", "Medu vada", "Methi vada", "Sabudana vada", "Palak vada"]
