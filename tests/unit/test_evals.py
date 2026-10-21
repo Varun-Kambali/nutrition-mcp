@@ -419,6 +419,13 @@ def test_the_report_prints_mape_to_one_decimal(
     assert " 25.0 " in kcal
 
 
+LOOSE = (
+    "[data_accuracy.kcal]\nmax_mape = 30.0\nmin_n = 2\n"
+    "[data_accuracy.protein_g]\nmax_mape = 30.0\nmin_n = 2\n"
+    "[data_accuracy.carbs_available_g]\nmax_mape = 30.0\nmin_n = 1\n"
+)
+
+
 def test_check_mode_writes_nothing_and_exits_by_the_thresholds(
     tiny_dataset: Path,
     references_csv: Path,
@@ -429,18 +436,14 @@ def test_check_mode_writes_nothing_and_exits_by_the_thresholds(
 ) -> None:
     monkeypatch.setattr(run_evals, "REFERENCES", references_csv)
     out = tmp_path / "results"
+    # The committed result for the data as it is, which the check also compares with.
+    committed = run_evals.write_results(
+        run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False), out
+    )
     loose = tmp_path / "loose.toml"
-    loose.write_text(
-        "[data_accuracy.kcal]\nmax_mape = 30.0\nmin_n = 2\n"
-        "[data_accuracy.protein_g]\nmax_mape = 30.0\nmin_n = 2\n"
-        "[data_accuracy.carbs_available_g]\nmax_mape = 30.0\nmin_n = 1\n",
-        encoding="utf-8",
-    )
+    loose.write_text(LOOSE, encoding="utf-8")
     tight = tmp_path / "tight.toml"
-    tight.write_text(
-        loose.read_text(encoding="utf-8").replace("max_mape = 30.0", "max_mape = 1.0", 1),
-        encoding="utf-8",
-    )
+    tight.write_text(LOOSE.replace("max_mape = 30.0", "max_mape = 1.0", 1), encoding="utf-8")
     args = ["--suite", "data_accuracy", "--out", str(out), "--check"]
 
     assert run_evals.main([*args, str(loose)]) == 0
@@ -449,7 +452,54 @@ def test_check_mode_writes_nothing_and_exits_by_the_thresholds(
     report = capsys.readouterr().out
     assert "FAIL kcal: MAPE 27.5 is above max_mape 1.0" in report
     assert "FAIL protein_g" not in report
-    assert not out.exists()
+    assert list(out.iterdir()) == [committed]
+
+
+def test_check_mode_fails_when_the_committed_result_is_for_other_data(
+    tiny_dataset: Path,
+    references_csv: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setattr(run_evals, "REFERENCES", references_csv)
+    out = tmp_path / "results"
+    old = run_evals.data_accuracy(references_csv, now=NOW, commit="abc1234", dirty=False)
+    run_evals.write_results(old, out)
+    # The data changes after the result was committed, still inside the thresholds.
+    dish = tiny_dataset / "dishes" / "dal_a.yaml"
+    dish.write_text(dish.read_text(encoding="utf-8").replace("400", "410"), encoding="utf-8")
+    thresholds = tmp_path / "loose.toml"
+    thresholds.write_text(LOOSE, encoding="utf-8")
+
+    args = ["--suite", "data_accuracy", "--out", str(out), "--check", str(thresholds)]
+    assert run_evals.main(args) == 1
+
+    report = capsys.readouterr().out
+    current = run_evals.dataset_version(tiny_dataset)
+    stale = next(line for line in report.splitlines() if line.startswith("FAIL "))
+    assert old["dataset_version"] in stale and current in stale
+    assert "make eval-data" in stale and "commit" in stale
+    assert "FAIL kcal" not in report
+
+
+def test_check_mode_fails_without_a_data_accuracy_result(
+    tiny_dataset: Path,
+    references_csv: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    monkeypatch.setattr(run_evals, "REFERENCES", references_csv)
+    thresholds = tmp_path / "loose.toml"
+    thresholds.write_text(LOOSE, encoding="utf-8")
+    out = tmp_path / "results"
+    _grounding_file(out)
+    args = ["--suite", "data_accuracy", "--out", str(out), "--check", str(thresholds)]
+    assert run_evals.main(args) == 1
+    assert "make eval-data" in capsys.readouterr().out
 
 
 def test_a_normal_run_writes_the_results_file_and_summary(

@@ -9,7 +9,8 @@ Usage:
 same dishes as eaten (evals/datasets/references.csv, built by scripts/build_references.py). It
 makes no model calls. A normal run writes evals/results/YYYY-MM-DD_data-accuracy_<commit>.json
 and rebuilds summary.md. With --check it compares the result with a thresholds file, writes
-nothing, and exits 1 when a gated nutrient fails; CI runs it that way on every pull request.
+nothing, and exits 1 when a gated nutrient fails or when the newest data-accuracy results
+file is for other data than the bundled data; CI runs it that way on every pull request.
 
 `grounding` asks a Gemini model each question in evals/datasets/questions.jsonl from memory
 and again with this server's tools (evals/grounding.py). It needs GEMINI_API_KEY and calls the
@@ -392,6 +393,25 @@ def _latest_results(out: Path) -> dict[str, tuple[Path, dict[str, Any]]]:
     return latest
 
 
+def check_current(out: Path, version: str) -> list[str]:
+    """One message when the newest data-accuracy results file in `out` is not for `version`.
+
+    The published numbers come from that file, so data changed without a new run would leave
+    summary.md and the README describing data that no longer ships.
+    """
+    latest = _latest_results(out).get("data_accuracy")
+    rerun = "run `make eval-data` and commit the result"
+    if latest is None:
+        return [f"{_shown(out)} has no data-accuracy results file; {rerun}"]
+    path, data = latest
+    if data["dataset_version"] != version:
+        return [
+            f"{path.name} is for dataset {data['dataset_version']}, but the bundled data is "
+            f"now {version}; {rerun}"
+        ]
+    return []
+
+
 def _cell(value: Any) -> str:
     # json.dumps writes a number the way the results file holds it.
     return "n/a" if value is None else json.dumps(value)
@@ -733,6 +753,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if thresholds is not None:
         failures = check_thresholds(result["per_nutrient"], thresholds)
+        try:
+            failures += check_current(args.out, result["dataset_version"])
+        except EvalError as err:
+            failures.append(str(err))
         print()
         for failure in failures:
             print(f"FAIL {failure}")
