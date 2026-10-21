@@ -207,6 +207,14 @@ def test_parse_takes_the_last_object_fenced_or_bare() -> None:
     assert grounding.parse_final_json(text) == numbers(410.5, 9.25, 62)
 
 
+@pytest.mark.parametrize("missing", ["[]", "null"])
+def test_an_empty_missing_list_next_to_numbers_is_no_missing_list(missing: str) -> None:
+    text = f'{{"kcal": 350, "protein_g": 12, "carbs_g": 50, "missing": {missing}}}'
+    assert grounding.parse_final_json(text) == numbers(350, 12, 50)
+    # With no numbers either, there is no answer.
+    assert isinstance(grounding.parse_final_json(f'{{"missing": {missing}}}'), grounding.Failed)
+
+
 def test_parse_accepts_numeric_strings() -> None:
     text = '{"kcal": "350", "protein_g": " 12.5 ", "carbs_g": 50.0}'
     assert grounding.parse_final_json(text) == numbers(350, 12.5, 50)

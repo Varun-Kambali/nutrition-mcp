@@ -253,14 +253,16 @@ def parse_final_json(text: str) -> Parsed:
     """The answer in the last JSON object of a reply: three numbers, a missing list, or why not.
 
     Numbers may be JSON numbers or numeric strings. A key that is absent, a value that is not
-    a finite number of 0 or more, or a reply with no JSON object makes a failed answer.
+    a finite number of 0 or more, or a reply with no JSON object makes a failed answer. An
+    empty or null `missing` counts as no missing list, so a key left empty next to the
+    numbers does not throw the numbers away.
     """
     found = _last_object(text)
     if found is None:
         return Failed("no JSON object")
-    if "missing" in found:
-        foods = found["missing"]
-        if not isinstance(foods, list) or not foods or not all(isinstance(f, str) for f in foods):
+    foods = found.get("missing")
+    if foods is not None and foods != []:
+        if not isinstance(foods, list) or not all(isinstance(f, str) for f in foods):
             return Failed("missing is not a list of food names")
         # A null or a non-number next to the list is no number given.
         given = any(_number(found.get(key)) is not None for key in ANSWER_KEYS)
