@@ -1,12 +1,14 @@
 # nutrition-mcp
 
-Work in progress. The server and its five tools run over stdio, the data-accuracy evaluation runs in CI, and the first grounding run is recorded under Results; the demo comes next. This README fills in as each part ships; the reasoning behind the project is in the [case study](docs/case-study.md).
+Work in progress. The server and its five tools run over stdio, the data-accuracy evaluation runs in CI, and the first grounding run is recorded under Results. This README fills in as each part ships; the reasoning behind the project is in the [case study](docs/case-study.md).
 
 An MCP server that gives any assistant or agent sourced nutrition, glycemic load and micronutrient data for Indian dishes and ingredients, for any amount in grams or household measures.
 
 [![CI](https://github.com/Varun-Kambali/nutrition-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Varun-Kambali/nutrition-mcp/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) · **[Case study](docs/case-study.md)**
 
-Demo: not recorded yet.
+![A lunch question answered through the server](docs/media/demo.gif)
+
+A lunch question in an MCP client, with the wait for the model sped up. The model looks the foods up with `search_food` and takes every number in the table from `compute_meal`. The two rough additions in the notes below the table, for ghee on the rotis and for curd or paneer, are the model's own estimates.
 
 ## Problem
 
