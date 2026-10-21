@@ -606,13 +606,16 @@ def ape(golden: float, value: float) -> float:
 def reports_missing(question: Question, parsed: Parsed) -> bool:
     """Whether the answer is a missing list, with no numbers, naming every expected dish.
 
-    A name counts when it appears inside an entry, ignoring case, so "veg pulao" reports
-    "pulao".
+    An entry names a dish when, trimmed and ignoring case, either one contains the other: "veg
+    pulao" reports "pulao", and "chicken" reports "chicken curry". An empty entry names none.
     """
     if not isinstance(parsed, Missing) or parsed.has_numbers:
         return False
-    named = [food.lower() for food in parsed.foods]
-    return all(any(dish.lower() in entry for entry in named) for dish in question.expect_missing)
+    named = [entry for entry in (food.strip().lower() for food in parsed.foods) if entry]
+    return all(
+        any(dish in entry or entry in dish for entry in named)
+        for dish in (name.strip().lower() for name in question.expect_missing)
+    )
 
 
 def _share(count: int, total: int) -> float | None:

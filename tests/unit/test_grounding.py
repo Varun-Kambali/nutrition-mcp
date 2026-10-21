@@ -271,7 +271,12 @@ def question(qid: str, *, missing: tuple[str, ...] = ()) -> grounding.Question:
     [
         (grounding.Missing(("Chicken Curry (home style)",), has_numbers=False), True),
         (grounding.Missing(("rice", "chicken curry"), has_numbers=False), True),
-        (grounding.Missing(("chicken",), has_numbers=False), False),
+        (grounding.Missing(("chicken curry recipe",), has_numbers=False), True),
+        # The entry may also be part of the dish's name.
+        (grounding.Missing(("chicken",), has_numbers=False), True),
+        (grounding.Missing(("  CHICKEN ",), has_numbers=False), True),
+        (grounding.Missing(("rice",), has_numbers=False), False),
+        (grounding.Missing(("", "  "), has_numbers=False), False),
         (grounding.Missing(("chicken curry",), has_numbers=True), False),
         (grounding.Numbers({"kcal": 300.0, "protein_g": 20.0, "carbs_g": 10.0}), False),
         (grounding.Failed("no JSON object"), False),
