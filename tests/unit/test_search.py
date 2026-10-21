@@ -343,6 +343,51 @@ def test_an_exact_word_beats_a_one_edit_word(reg: Registry, query: str) -> None:
     assert "sugar" not in found
 
 
+@pytest.mark.parametrize(
+    ("query", "food_id"),
+    [
+        # "chickpea" is spelled exactly in chana masala's alias "chickpea curry".
+        ("chickpea", "kabuli_chana"),
+        ("kabuli chickpea", "kabuli_chana"),
+        # "shorshe", an alias of mustard seeds, folds to "sorse"; the oil's alias is "sorsher tel".
+        ("sorshe tel", "mustard_oil"),
+        # "khichadi", an alias of sabudana khichdi, is one letter longer than "khichdi".
+        ("khichadi", "bengali_khichuri"),
+    ],
+)
+def test_a_letter_added_or_dropped_still_matches_beside_an_exact_word(
+    reg: Registry, query: str, food_id: str
+) -> None:
+    assert food_id in ids(search_foods(reg, SETTINGS, query, None, None, None, limit=50))
+
+
+def test_mirch_and_mirchi_match_each_other() -> None:
+    pool = Registry({"a": make_food("a", "Hari mirch"), "b": make_food("b", "Mirchi powder")}, {})
+    assert ids(search_foods(pool, SETTINGS, "hari mirchi", None, None, None)) == ["a"]
+    assert ids(search_foods(pool, SETTINGS, "mirch powder", None, None, None)) == ["b"]
+
+
+@pytest.mark.parametrize(("query", "food_id"), [("dalma", "dalma"), ("dalna", "dimer_dalna")])
+def test_a_changed_letter_gives_way_to_the_exact_word(
+    reg: Registry, query: str, food_id: str
+) -> None:
+    # "dalma" and "dalna" are one letter apart and the same length: two different dishes.
+    assert ids(search_foods(reg, SETTINGS, query, None, None, None, limit=50)) == [food_id]
+
+
+def test_an_exact_word_rules_out_only_a_changed_letter() -> None:
+    pool = Registry(
+        {
+            "a": make_food("a", "Samber rice"),
+            "b": make_food("b", "Sambar"),
+            "c": make_food("c", "Sambers"),
+        },
+        {},
+    )
+    # "sambar" changes a letter of "samber"; "sambers" adds one.
+    assert ids(search_foods(pool, SETTINGS, "samber", None, None, None)) == ["a", "c"]
+
+
 def test_a_typo_is_found_when_no_food_has_the_typed_word() -> None:
     pool = Registry({"a": make_food("a", "Sambar")}, {})
     assert ids(search_foods(pool, SETTINGS, "samber", None, None, None)) == ["a"]

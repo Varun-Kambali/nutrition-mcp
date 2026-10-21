@@ -11,11 +11,15 @@ A food is a result only when one candidate passes two checks:
 - Every query word matches a word in that candidate. Two words match when they are equal,
   or when both have 5 or more letters, start with the same letter and are one edit apart
   (one letter inserted, deleted or changed): "masla" matches "masala", "samber" matches
-  "sambar". The one-edit match applies to a query word only when no food in the searched
-  foods spells it exactly in a name, ID or alias. "chilli" is spelled exactly by green
-  chilli, so it does not also match sugar through its alias "cheeni" ("chini", one edit
-  from "chili"). The check runs on the foods left after the filters, so a food a filter
-  removes cannot take a typo's match away.
+  "sambar". When a food in the searched foods spells a query word exactly in a name, ID or
+  alias, a word with one letter changed no longer matches it, because two words of the same
+  length one letter apart are often two foods: "chilli" is spelled exactly by green chilli,
+  so it does not also match sugar through its alias "cheeni" ("chini", one letter changed
+  from "chili"), and "dalma" does not match "dalna". A letter added or dropped still
+  matches, because that is usually a plural or a spelling variant of the same food:
+  "chickpea" finds the alias "chickpeas" although chana masala spells "chickpea" exactly,
+  and "sorshe tel" finds "sorsher tel". The check runs on the foods left after the
+  filters, so a food a filter removes cannot take a typo's match away.
 - That candidate scores at least RESULT_MIN_SCORE.
 
 The word check is what keeps a dish that is not in the data from returning a different one.
@@ -128,9 +132,16 @@ def _names(food: Food) -> set[str]:
 def _has_every_word(
     query_words: list[str], name_words: list[str], spelled_exactly: set[str]
 ) -> bool:
-    """Whether every query word is in the name; a word in `spelled_exactly` must be equal."""
+    """Whether every query word is in the name.
+
+    A word in `spelled_exactly` matches an equal word, or one a letter longer or shorter, but
+    not one with a letter changed.
+    """
     return all(
-        word in name_words
+        any(
+            other == word or (len(other) != len(word) and _one_edit_apart(word, other))
+            for other in name_words
+        )
         if word in spelled_exactly
         else any(_one_edit_apart(word, other) for other in name_words)
         for word in query_words
