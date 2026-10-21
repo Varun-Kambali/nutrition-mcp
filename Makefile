@@ -14,8 +14,11 @@ lint:
 test:
 	uv run pytest --cov=src --cov-fail-under=$(COV_MIN)
 
+# uv reads .env only when the file exists, so `make eval` also works with the key exported.
+ENV_FILE := $(if $(wildcard .env),--env-file .env)
+
 eval:
-	uv run python evals/run_evals.py --suite grounding
+	uv run $(ENV_FILE) --group eval python evals/run_evals.py --suite grounding
 
 eval-data:
 	uv run python evals/run_evals.py --suite data_accuracy
