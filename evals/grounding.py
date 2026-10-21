@@ -832,8 +832,8 @@ def build_result(
 ) -> dict[str, Any]:
     """The results dict for run_evals.write_results.
 
-    `dirty` says whether files outside evals/results/ differed from `commit` when the run
-    started (None when git could not tell), so a result from uncommitted code is marked.
+    `dirty` says whether any file outside evals/results/ was modified or untracked when the
+    run started (None when git could not tell), so a result from uncommitted work is marked.
     `limit` is the --limit the run was given, if any, and `questions_total` the number of
     questions in the file (`questions` when not given); a limited run is never a headline.
     """
