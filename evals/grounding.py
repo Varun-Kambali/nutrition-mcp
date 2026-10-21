@@ -4,31 +4,90 @@ Each question in evals/datasets/questions.jsonl lists the food ids, amounts and 
 it. The golden answer is what `queries.meal_totals` computes for those items from the bundled
 data, so a model that calls the tools and copies their totals matches it exactly. A question
 about a dish that is not in the data has no items and names the dish in `expect_missing`.
+
+The model answers every question twice with the same system prompt: once with no tools (from
+memory), and once with the tools of a `nutrition-mcp` server started over stdio. The tool loop
+is run here rather than by google-genai's automatic MCP support, so each `call_tool` can be
+timed and its errors counted. The harness talks to the model through `ModelClient`, so tests
+use a fake and only `GeminiClient` calls the network.
+
+Scoring needs no judge model: the prompt asks for a final JSON object, and `parse_final_json`
+reads it. An answer it cannot read is a failed answer, recorded and counted, never a crash.
 """
 
+import contextlib
 import json
-from collections.abc import Sequence
+import logging
+import math
+import sys
+import time
+from collections import Counter
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, Protocol
 
+import anyio
+from mcp import Client, MCPError, StdioServerParameters
+from mcp.types import CallToolResult, TextContent
 from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 
 from nutrition_mcp.config import Settings
 from nutrition_mcp.loader import build_registry
 from nutrition_mcp.queries import meal_totals
 from nutrition_mcp.schemas import MealItemIn
+from nutrition_mcp.server import TOOL_NAMES
+
+if TYPE_CHECKING:
+    from google import genai
+    from google.genai import errors as genai_errors
+    from google.genai import types
 
 ROOT = Path(__file__).resolve().parent.parent
 QUESTIONS = ROOT / "evals" / "datasets" / "questions.jsonl"
 
+DEFAULT_MODEL = "gemini-3.1-flash-lite"
+TEMPERATURE = 0.0
+# Model turns per question in the with-tools arm. Search, then compute, then answer takes 3.
+MAX_TURNS = 8
+# Waits before each retry of a request the API turned away as busy (429 or 5xx). Free-tier
+# limits are counted per minute, so the waits add up to more than a minute.
+RETRY_DELAYS = (5.0, 10.0, 20.0, 40.0)
+TOOL_TIMEOUT_S = 30.0
+# Percentage error at or under which an answer counts as within 10%.
+WITHIN_PCT = 10.0
+
 # The keys of a final answer, and the meal total each one is scored against.
 ANSWER_KEYS = ("kcal", "protein_g", "carbs_g")
 GOLDEN_SOURCE = {"kcal": "kcal", "protein_g": "protein_g", "carbs_g": "carbs_available_g"}
+METRIC_NAMES = {"kcal": "kcal", "protein_g": "protein", "carbs_g": "carbs"}
+
+SYSTEM_PROMPT = (
+    "You answer questions about the nutrition of Indian food. For everything the question "
+    "lists, in the amounts it gives, work out the total energy in kcal, the total protein in "
+    "grams and the total available carbohydrate in grams. Available carbohydrate is total "
+    "carbohydrate minus dietary fibre. Give your best estimate when you are unsure of a "
+    "value. End your reply with one JSON object and nothing after it, in this form: "
+    '{"kcal": <number>, "protein_g": <number>, "carbs_g": <number>}. If a food in the '
+    "question cannot be found, end instead with "
+    '{"missing": ["<food as named in the question>"]} and give no numbers.'
+)
+
+# The server runs from the interpreter running the evaluation, the way the `nutrition-mcp`
+# console script starts it, so both use the same installed package.
+SERVER_MAIN = "from nutrition_mcp.server import main; main()"
 
 Golden = dict[str, float]
+
+log = logging.getLogger("nutrition_mcp.evals.grounding")
 
 
 class GroundingError(Exception):
     """A problem with the questions file or a golden answer. The message names the row."""
+
+
+# Questions and golden answers
 
 
 class Question(BaseModel):
@@ -86,8 +145,9 @@ def bundled_settings() -> Settings:
 def golden_answers(questions: Sequence[Question]) -> dict[str, Golden]:
     """kcal, protein and available carbohydrate for each question that lists items.
 
-    Raises GroundingError when an item cannot be worked out or a total is missing or flagged
-    incomplete, since a floor is no answer to score against.
+    Raises GroundingError when an item cannot be worked out, or when a total is missing,
+    flagged incomplete or 0: a floor is no answer to score against, and 0 has no percentage
+    error.
     """
     reg = build_registry([])
     settings = bundled_settings()
@@ -104,6 +164,722 @@ def golden_answers(questions: Sequence[Question]) -> dict[str, Golden]:
             value = meal.total.get(source)
             if value is None or source in meal.total_incomplete:
                 raise GroundingError(f"question {question.id}: {source} is missing or incomplete")
+            if value <= 0:
+                raise GroundingError(f"question {question.id}: {source} is 0")
             answer[key] = value
         golden[question.id] = answer
     return golden
+
+
+# Parsing the final answer
+
+
+@dataclass(frozen=True, slots=True)
+class Numbers:
+    values: dict[str, float]
+
+
+@dataclass(frozen=True, slots=True)
+class Missing:
+    foods: tuple[str, ...]
+    # Numbers given next to the missing list; such an answer does not count as reporting it.
+    has_numbers: bool
+
+
+@dataclass(frozen=True, slots=True)
+class Failed:
+    reason: str
+
+
+Parsed = Numbers | Missing | Failed
+
+
+def _last_object(text: str) -> dict[str, Any] | None:
+    """The JSON object that ends last in the text, fenced or bare.
+
+    Every "{" is tried as the start of an object. Of those that decode, the one ending last
+    wins, and on a tie the one starting first, so an object nested in the answer never
+    stands in for it.
+    """
+    decoder = json.JSONDecoder()
+    best: tuple[int, int, dict[str, Any]] | None = None
+    start = text.find("{")
+    while start != -1:
+        try:
+            value, end = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            pass
+        else:
+            if isinstance(value, dict) and (best is None or end > best[0]):
+                best = (end, start, value)
+        start = text.find("{", start + 1)
+    return None if best is None else best[2]
+
+
+def _number(value: Any) -> float | None:
+    # bool is an int in Python, and `true` is no number of kcal.
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        number = float(value)
+    elif isinstance(value, str):
+        try:
+            number = float(value.strip())
+        except ValueError:
+            return None
+    else:
+        return None
+    return number if math.isfinite(number) and number >= 0 else None
+
+
+def parse_final_json(text: str) -> Parsed:
+    """The answer in the last JSON object of a reply: three numbers, a missing list, or why not.
+
+    Numbers may be JSON numbers or numeric strings. A key that is absent, a value that is not
+    a finite number of 0 or more, or a reply with no JSON object makes a failed answer.
+    """
+    found = _last_object(text)
+    if found is None:
+        return Failed("no JSON object")
+    if "missing" in found:
+        foods = found["missing"]
+        if not isinstance(foods, list) or not foods or not all(isinstance(f, str) for f in foods):
+            return Failed("missing is not a list of food names")
+        return Missing(tuple(foods), has_numbers=any(key in found for key in ANSWER_KEYS))
+    values: dict[str, float] = {}
+    for key in ANSWER_KEYS:
+        if key not in found:
+            return Failed(f"no {key}")
+        number = _number(found[key])
+        if number is None:
+            return Failed(f"{key} is not a number of 0 or more")
+        values[key] = number
+    return Numbers(values)
+
+
+# Talking to a model and to the tools
+
+
+@dataclass(frozen=True, slots=True)
+class ToolSpec:
+    """A tool as the model sees it: the server's name, description and input schema."""
+
+    name: str
+    description: str
+    parameters: dict[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
+class ToolCall:
+    name: str
+    args: dict[str, Any]
+    id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class UserText:
+    text: str
+
+
+@dataclass(frozen=True, slots=True)
+class ModelTurn:
+    text: str
+    calls: tuple[ToolCall, ...]
+    # The client's own record of the turn, sent back as it came. Gemini needs this: its
+    # function calls carry thought signatures that must return unchanged.
+    raw: Any = field(default=None, compare=False)
+
+
+@dataclass(frozen=True, slots=True)
+class ToolResult:
+    call: ToolCall
+    # {"output": <structured result>} or {"error": <text>}, the keys Gemini documents.
+    response: dict[str, Any]
+    is_error: bool
+
+
+@dataclass(frozen=True, slots=True)
+class ToolResults:
+    results: tuple[ToolResult, ...]
+
+
+Message = UserText | ModelTurn | ToolResults
+
+
+@dataclass(frozen=True, slots=True)
+class Usage:
+    input_tokens: int
+    output_tokens: int
+
+
+@dataclass(frozen=True, slots=True)
+class ModelReply:
+    turn: ModelTurn
+    usage: Usage
+
+
+class ModelError(Exception):
+    """A request the model API refused. `kind` names it (such as "http 400") and nothing more,
+    so neither the key nor the request can reach a log or a results file."""
+
+    def __init__(self, kind: str) -> None:
+        super().__init__(kind)
+        self.kind = kind
+
+
+class RetryableModelError(ModelError):
+    """The API was busy (429 or 5xx) or unreachable; the same request may work later."""
+
+
+class ModelClient(Protocol):
+    @property
+    def model(self) -> str: ...
+
+    async def generate(
+        self, system: str, history: Sequence[Message], tools: Sequence[ToolSpec]
+    ) -> ModelReply: ...
+
+
+@dataclass(frozen=True, slots=True)
+class ToolCallRecord:
+    name: str
+    arguments: dict[str, Any]
+    is_error: bool
+    latency_ms: float
+
+
+class ToolBox(Protocol):
+    @property
+    def specs(self) -> Sequence[ToolSpec]: ...
+
+    async def call(self, call: ToolCall) -> tuple[ToolResult, ToolCallRecord]: ...
+
+
+def _error_text(result: CallToolResult) -> str:
+    text = " ".join(block.text for block in result.content if isinstance(block, TextContent))
+    return text or "the tool returned an error with no text"
+
+
+class McpToolBox:
+    """The server's tools through an MCP client, each call timed on the client side."""
+
+    def __init__(self, client: Client, specs: Sequence[ToolSpec]) -> None:
+        self._client = client
+        self.specs = list(specs)
+
+    async def call(self, call: ToolCall) -> tuple[ToolResult, ToolCallRecord]:
+        started = time.perf_counter()
+        try:
+            result = await self._client.call_tool(call.name, call.args)
+        except (MCPError, ValidationError) as err:
+            # A timeout or a broken connection: the model hears of it as a tool error.
+            response: dict[str, Any] = {"error": f"tool call failed: {type(err).__name__}"}
+            is_error = True
+        else:
+            is_error = bool(result.is_error)
+            if is_error:
+                response = {"error": _error_text(result)}
+            elif result.structured_content is not None:
+                response = {"output": result.structured_content}
+            else:
+                response = {"output": {"text": _error_text(result)}}
+        latency_ms = (time.perf_counter() - started) * 1000
+        record = ToolCallRecord(call.name, dict(call.args), is_error, latency_ms)
+        return ToolResult(call, response, is_error), record
+
+
+@contextlib.asynccontextmanager
+async def stdio_toolbox() -> AsyncIterator[ToolBox]:
+    """Start the server over stdio with the bundled data only, and list its tools.
+
+    The SDK passes the server only a few safe variables (HOME, PATH and the like) plus `env`,
+    so NUTRITION_MCP_DATA_DIRS and the API key stay behind and the server's answers come from
+    the same data as the golden answers.
+    """
+    params = StdioServerParameters(
+        command=sys.executable,
+        args=["-c", SERVER_MAIN],
+        env={"NUTRITION_MCP_LOG_LEVEL": "WARNING"},
+    )
+    async with Client(params, read_timeout_seconds=TOOL_TIMEOUT_S) as client:
+        listed = (await client.list_tools()).tools
+        specs = [ToolSpec(tool.name, tool.description or "", tool.input_schema) for tool in listed]
+        yield McpToolBox(client, specs)
+
+
+# Answering questions
+
+
+@dataclass(slots=True)
+class Outcome:
+    """How one arm answered one question."""
+
+    parsed: Parsed
+    turns: int = 0
+    capped: bool = False
+    tool_calls: list[ToolCallRecord] = field(default_factory=list)
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
+Sleep = Callable[[float], Awaitable[None]]
+
+
+async def _generate(
+    model: ModelClient, history: Sequence[Message], specs: Sequence[ToolSpec], sleep: Sleep
+) -> ModelReply:
+    for delay in (*RETRY_DELAYS, None):
+        try:
+            return await model.generate(SYSTEM_PROMPT, history, specs)
+        except RetryableModelError as err:
+            if delay is None:
+                raise
+            log.warning("model busy (%s), retrying in %g s", err.kind, delay)
+            await sleep(delay)
+    raise AssertionError("unreachable: the last delay is None")
+
+
+async def answer(
+    model: ModelClient, question: Question, tools: ToolBox | None, *, sleep: Sleep = anyio.sleep
+) -> Outcome:
+    """Ask one question, running the model's tool calls until it answers or hits MAX_TURNS."""
+    specs = list(tools.specs) if tools is not None else []
+    history: list[Message] = [UserText(question.question)]
+    outcome = Outcome(Failed("turn cap reached"))
+    for turn in range(1, MAX_TURNS + 1):
+        try:
+            reply = await _generate(model, history, specs, sleep)
+        except ModelError as err:
+            outcome.parsed = Failed(f"model error: {err.kind}")
+            outcome.turns = turn
+            return outcome
+        outcome.turns = turn
+        outcome.input_tokens += reply.usage.input_tokens
+        outcome.output_tokens += reply.usage.output_tokens
+        history.append(reply.turn)
+        if tools is None or not reply.turn.calls:
+            outcome.parsed = parse_final_json(reply.turn.text)
+            return outcome
+        results: list[ToolResult] = []
+        for call in reply.turn.calls:
+            result, record = await tools.call(call)
+            results.append(result)
+            outcome.tool_calls.append(record)
+        history.append(ToolResults(tuple(results)))
+    outcome.capped = True
+    return outcome
+
+
+def _label(parsed: Parsed) -> str:
+    if isinstance(parsed, Numbers):
+        return "answered"
+    if isinstance(parsed, Missing):
+        return "reported missing"
+    return f"failed ({parsed.reason})"
+
+
+async def run_arm(
+    model: ModelClient,
+    questions: Sequence[Question],
+    tools: ToolBox | None,
+    *,
+    sleep: Sleep = anyio.sleep,
+) -> dict[str, Outcome]:
+    arm = "without_tools" if tools is None else "with_tools"
+    outcomes: dict[str, Outcome] = {}
+    for question in questions:
+        outcome = await answer(model, question, tools, sleep=sleep)
+        # Ids and outcomes only: questions and answers stay out of the logs.
+        log.info("%s %s: %s", arm, question.id, _label(outcome.parsed))
+        outcomes[question.id] = outcome
+    return outcomes
+
+
+# Scoring
+
+
+def ape(golden: float, value: float) -> float:
+    """Absolute percentage error of `value` against a golden value above 0."""
+    return abs(value - golden) / golden * 100
+
+
+def reports_missing(question: Question, parsed: Parsed) -> bool:
+    """Whether the answer is a missing list, with no numbers, naming every expected dish.
+
+    A name counts when it appears inside an entry, ignoring case, so "veg pulao" reports
+    "pulao".
+    """
+    if not isinstance(parsed, Missing) or parsed.has_numbers:
+        return False
+    named = [food.lower() for food in parsed.foods]
+    return all(any(dish.lower() in entry for entry in named) for dish in question.expect_missing)
+
+
+def _share(count: int, total: int) -> float | None:
+    return round(count / total, 2) if total else None
+
+
+def score_arm(
+    questions: Sequence[Question], golden: Mapping[str, Golden], outcomes: Mapping[str, Outcome]
+) -> dict[str, Any]:
+    """MAPE and within-10% shares per nutrient, failed answers and missing dishes reported.
+
+    MAPE covers the questions with items whose answer gave numbers (`n`). An answer without
+    numbers, failed or a missing list, is left out of the MAPE and counts as outside 10%.
+    """
+    with_items = [q for q in questions if q.items]
+    expecting_missing = [q for q in questions if q.expect_missing]
+    errors: dict[str, list[float]] = {key: [] for key in ANSWER_KEYS}
+    for question in with_items:
+        parsed = outcomes[question.id].parsed
+        if isinstance(parsed, Numbers):
+            for key in ANSWER_KEYS:
+                errors[key].append(ape(golden[question.id][key], parsed.values[key]))
+    metrics: dict[str, Any] = {"n": len(errors["kcal"])}
+    for key, name in METRIC_NAMES.items():
+        found = errors[key]
+        metrics[f"mape_{name}"] = round(sum(found) / len(found), 1) if found else None
+    for key, name in METRIC_NAMES.items():
+        # Rounded first, so float noise cannot push an error of exactly 10% outside.
+        within = sum(round(error, 6) <= WITHIN_PCT for error in errors[key])
+        metrics[f"within_10pct_{name}"] = _share(within, len(with_items))
+    metrics["failed_answers"] = sum(isinstance(outcomes[q.id].parsed, Failed) for q in questions)
+    metrics["missing_answers"] = sum(isinstance(outcomes[q.id].parsed, Missing) for q in with_items)
+    reported = sum(reports_missing(q, outcomes[q.id].parsed) for q in expecting_missing)
+    metrics["missing_reported"] = _share(reported, len(expecting_missing))
+    return metrics
+
+
+def p95(values: Sequence[float]) -> float | None:
+    """The 95th percentile by nearest rank: the value at rank ceil(0.95 n) in sorted order."""
+    if not values:
+        return None
+    ordered = sorted(values)
+    return ordered[math.ceil(0.95 * len(ordered)) - 1]
+
+
+# The results file
+
+
+def _arm_row(outcome: Outcome, golden: Golden | None) -> dict[str, Any]:
+    parsed = outcome.parsed
+    row: dict[str, Any] = {
+        "answer": parsed.values if isinstance(parsed, Numbers) else None,
+        "missing": list(parsed.foods) if isinstance(parsed, Missing) else None,
+        "failure": parsed.reason if isinstance(parsed, Failed) else None,
+        "ape": None,
+        "turns": outcome.turns,
+        "turns_capped": outcome.capped,
+        "tool_calls": [
+            {
+                "name": record.name,
+                "arguments": record.arguments,
+                "is_error": record.is_error,
+                "latency_ms": round(record.latency_ms, 2),
+            }
+            for record in outcome.tool_calls
+        ],
+    }
+    if golden is not None and isinstance(parsed, Numbers):
+        row["ape"] = {key: round(ape(golden[key], parsed.values[key]), 1) for key in ANSWER_KEYS}
+    return row
+
+
+def _tokens(outcomes: Mapping[str, Outcome]) -> dict[str, int]:
+    return {
+        "input": sum(outcome.input_tokens for outcome in outcomes.values()),
+        "output": sum(outcome.output_tokens for outcome in outcomes.values()),
+    }
+
+
+def summary_rows(result: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """The rows summary.md shows, headline first, each value copied from the arms."""
+    without, with_ = result["without_tools"], result["with_tools"]
+    asked = result["questions_with_items"]
+
+    def row(measure: str, n: int, metric: str) -> dict[str, Any]:
+        return {
+            "measure": measure,
+            "n": n,
+            "without_tools": without[metric],
+            "with_tools": with_[metric],
+        }
+
+    return [
+        row("Mean absolute error on calories (%)", asked, "mape_kcal"),
+        row("Mean absolute error on protein (%)", asked, "mape_protein"),
+        row("Mean absolute error on carbohydrate (%)", asked, "mape_carbs"),
+        row("Answers within 10% on calories (share)", asked, "within_10pct_kcal"),
+        row(
+            "Missing dishes reported (share)",
+            result["questions_expecting_missing"],
+            "missing_reported",
+        ),
+        row("Failed answers (count)", result["n"], "failed_answers"),
+        {
+            "measure": "p95 tool latency (ms)",
+            "n": result["tool_calls"],
+            "without_tools": None,
+            "with_tools": result["p95_tool_latency_ms"],
+        },
+    ]
+
+
+def build_result(
+    model: str,
+    questions: Sequence[Question],
+    golden: Mapping[str, Golden],
+    without: Mapping[str, Outcome],
+    with_: Mapping[str, Outcome],
+    *,
+    now: datetime,
+    commit: str,
+    dataset_version: str,
+) -> dict[str, Any]:
+    utc = now.astimezone(UTC)
+    records = [record for outcome in with_.values() for record in outcome.tool_calls]
+    errors = Counter(
+        record.name if record.name in TOOL_NAMES else "unknown"
+        for record in records
+        if record.is_error
+    )
+    latency = p95([record.latency_ms for record in records])
+    result: dict[str, Any] = {
+        "suite": "grounding",
+        "date": utc.date().isoformat(),
+        "generated_at": utc.isoformat(timespec="seconds"),
+        "commit": commit,
+        "dataset_version": dataset_version,
+        "model": model,
+        "tier": "free",
+        "cost_usd": 0.0,
+        "temperature": TEMPERATURE,
+        "max_turns": MAX_TURNS,
+        "n": len(questions),
+        "questions_with_items": sum(bool(q.items) for q in questions),
+        "questions_expecting_missing": sum(bool(q.expect_missing) for q in questions),
+        "tokens": {"without_tools": _tokens(without), "with_tools": _tokens(with_)},
+        "without_tools": score_arm(questions, golden, without),
+        "with_tools": score_arm(questions, golden, with_),
+        "tool_calls": len(records),
+        "tool_errors": {"count": sum(errors.values()), "by_tool": dict(sorted(errors.items()))},
+        "p95_tool_latency_ms": None if latency is None else round(latency, 1),
+        "turns_capped": sum(outcome.capped for outcome in with_.values()),
+    }
+    result["summary"] = summary_rows(result)
+    result["rows"] = [
+        {
+            "id": question.id,
+            "question": question.question,
+            "golden": golden.get(question.id),
+            "expect_missing": list(question.expect_missing),
+            "without_tools": _arm_row(without[question.id], golden.get(question.id)),
+            "with_tools": _arm_row(with_[question.id], golden.get(question.id)),
+        }
+        for question in questions
+    ]
+    return result
+
+
+Toolboxes = Callable[[], contextlib.AbstractAsyncContextManager[ToolBox]]
+
+
+async def run(
+    model: ModelClient,
+    questions: Sequence[Question],
+    *,
+    now: datetime,
+    commit: str,
+    dataset_version: str,
+    toolbox: Toolboxes = stdio_toolbox,
+    sleep: Sleep = anyio.sleep,
+) -> dict[str, Any]:
+    """Both arms over the questions, as a results dict for run_evals.write_results.
+
+    Golden answers are worked out and the server is started before the first model request,
+    so a bad question or a server that will not start costs no requests.
+    """
+    golden = golden_answers(questions)
+    async with toolbox() as tools:
+        without = await run_arm(model, questions, None, sleep=sleep)
+        with_ = await run_arm(model, questions, tools, sleep=sleep)
+    return build_result(
+        model.model,
+        questions,
+        golden,
+        without,
+        with_,
+        now=now,
+        commit=commit,
+        dataset_version=dataset_version,
+    )
+
+
+# Gemini through google-genai. The import waits until a client is built, because CI's
+# data-accuracy job installs no eval group and still imports run_evals.
+
+# The JSON Schema keywords kept in a function declaration: the subset Gemini documents for
+# schemas. Others, such as exclusiveMinimum, are dropped; the descriptions still state them.
+_SCHEMA_KEYWORDS = frozenset(
+    {
+        "$defs",
+        "$ref",
+        "additionalProperties",
+        "anyOf",
+        "default",
+        "description",
+        "enum",
+        "format",
+        "items",
+        "maxItems",
+        "maximum",
+        "minItems",
+        "minimum",
+        "properties",
+        "required",
+        "title",
+        "type",
+    }
+)
+_SCHEMA_MAPS = frozenset({"properties", "$defs"})
+
+
+def gemini_schema(schema: Mapping[str, Any]) -> dict[str, Any]:
+    """A copy of a JSON Schema with only the keywords Gemini documents, at every depth."""
+    kept: dict[str, Any] = {}
+    for key, value in schema.items():
+        if key not in _SCHEMA_KEYWORDS:
+            continue
+        if key in _SCHEMA_MAPS and isinstance(value, Mapping):
+            kept[key] = {name: gemini_schema(inner) for name, inner in value.items()}
+        elif key == "anyOf" and isinstance(value, list):
+            kept[key] = [gemini_schema(inner) for inner in value]
+        elif key in {"items", "additionalProperties"} and isinstance(value, Mapping):
+            kept[key] = gemini_schema(value)
+        else:
+            kept[key] = value
+    return kept
+
+
+def function_declaration(spec: ToolSpec) -> "types.FunctionDeclaration":
+    from google.genai import types
+
+    return types.FunctionDeclaration(
+        name=spec.name,
+        description=spec.description,
+        parameters_json_schema=gemini_schema(spec.parameters),
+    )
+
+
+def to_contents(history: Sequence[Message]) -> list["types.Content"]:
+    """The conversation as google-genai contents. Tool results go back in a user turn."""
+    from google.genai import types
+
+    contents: list[types.Content] = []
+    for message in history:
+        if isinstance(message, UserText):
+            contents.append(types.Content(role="user", parts=[types.Part(text=message.text)]))
+        elif isinstance(message, ModelTurn):
+            if isinstance(message.raw, types.Content):
+                contents.append(message.raw)
+                continue
+            parts = [types.Part(text=message.text)] if message.text else []
+            parts += [
+                types.Part(
+                    function_call=types.FunctionCall(id=call.id, name=call.name, args=call.args)
+                )
+                for call in message.calls
+            ]
+            contents.append(types.Content(role="model", parts=parts))
+        else:
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part(
+                            function_response=types.FunctionResponse(
+                                id=result.call.id, name=result.call.name, response=result.response
+                            )
+                        )
+                        for result in message.results
+                    ],
+                )
+            )
+    return contents
+
+
+def reply_from_response(response: "types.GenerateContentResponse") -> ModelReply:
+    """The first candidate's text and function calls, with token counts.
+
+    Thought parts are left out of the text. Thinking tokens count as output, as they are billed.
+    """
+    content = response.candidates[0].content if response.candidates else None
+    parts = (content.parts or []) if content is not None else []
+    text = "".join(part.text for part in parts if part.text and not part.thought)
+    calls = tuple(
+        ToolCall(
+            part.function_call.name or "",
+            dict(part.function_call.args or {}),
+            part.function_call.id,
+        )
+        for part in parts
+        if part.function_call is not None
+    )
+    usage = response.usage_metadata
+    tokens = Usage(
+        input_tokens=(usage.prompt_token_count or 0) if usage else 0,
+        output_tokens=((usage.candidates_token_count or 0) + (usage.thoughts_token_count or 0))
+        if usage
+        else 0,
+    )
+    return ModelReply(ModelTurn(text, calls, content), tokens)
+
+
+def model_error(err: "genai_errors.APIError") -> ModelError:
+    """The status code alone: the error's text can quote the request."""
+    kind = f"http {err.code}"
+    if err.code == 429 or err.code >= 500:
+        return RetryableModelError(kind)
+    return ModelError(kind)
+
+
+class GeminiClient:
+    """ModelClient over google-genai's async API, with automatic function calling off."""
+
+    def __init__(self, model: str, client: "genai.Client") -> None:
+        self._model = model
+        self._client = client
+
+    @property
+    def model(self) -> str:
+        return self._model
+
+    async def generate(
+        self, system: str, history: Sequence[Message], tools: Sequence[ToolSpec]
+    ) -> ModelReply:
+        import httpx
+        from google.genai import errors, types
+
+        config = types.GenerateContentConfig(
+            system_instruction=system,
+            temperature=TEMPERATURE,
+            tools=[types.Tool(function_declarations=[function_declaration(t) for t in tools])]
+            if tools
+            else None,
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+        )
+        try:
+            response = await self._client.aio.models.generate_content(
+                model=self._model, contents=to_contents(history), config=config
+            )
+        except errors.APIError as err:
+            raise model_error(err) from None
+        except httpx.TransportError as err:
+            raise RetryableModelError(f"network {type(err).__name__}") from None
+        return reply_from_response(response)
+
+
+def gemini_client(model: str, api_key: str) -> GeminiClient:
+    from google import genai
+
+    return GeminiClient(model, genai.Client(api_key=api_key))

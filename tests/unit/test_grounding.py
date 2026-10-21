@@ -1,8 +1,17 @@
+import contextlib
+import functools
 import json
+from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
+import anyio
 import grounding
 import pytest
+from google.genai import errors as genai_errors
+from google.genai import types
 
 from nutrition_mcp.config import Settings
 from nutrition_mcp.loader import build_registry
@@ -154,3 +163,597 @@ def test_question_ids_must_be_unique(tmp_path: Path) -> None:
     path.write_text(json.dumps(row) + "\n" + json.dumps(row) + "\n", encoding="utf-8")
     with pytest.raises(grounding.GroundingError, match="line 2"):
         grounding.load_questions(path)
+
+
+def test_a_golden_value_of_zero_is_an_error() -> None:
+    # Salt has no energy, protein or carbohydrate, and 0 has no percentage error.
+    question = grounding.Question(
+        id="t1", question="5 g of salt", items=(MealItemIn(food_id="salt", amount=5, unit="g"),)
+    )
+    with pytest.raises(grounding.GroundingError, match="t1"):
+        grounding.golden_answers([question])
+
+
+# Parsing the final answer
+
+
+def numbers(kcal: float, protein_g: float, carbs_g: float) -> grounding.Numbers:
+    return grounding.Numbers({"kcal": kcal, "protein_g": protein_g, "carbs_g": carbs_g})
+
+
+def test_parse_final_json() -> None:
+    text = 'Adding it up gives this.\n{"kcal": 350, "protein_g": 12, "carbs_g": 50}\nEnjoy.'
+    assert grounding.parse_final_json(text) == numbers(350, 12, 50)
+
+    # Missing keys are a failed answer, not a crash.
+    failed = grounding.parse_final_json('{"kcal": 350, "protein_g": 12}')
+    assert isinstance(failed, grounding.Failed)
+    assert "carbs_g" in failed.reason
+
+
+def test_parse_takes_the_last_object_fenced_or_bare() -> None:
+    text = (
+        'First guess {"kcal": 1, "protein_g": 1, "carbs_g": 1}, then the tools:\n'
+        '```json\n{"kcal": 410.5, "protein_g": 9.25, "carbs_g": 62}\n```'
+    )
+    assert grounding.parse_final_json(text) == numbers(410.5, 9.25, 62)
+
+
+def test_parse_accepts_numeric_strings() -> None:
+    text = '{"kcal": "350", "protein_g": " 12.5 ", "carbs_g": 50.0}'
+    assert grounding.parse_final_json(text) == numbers(350, 12.5, 50)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "About 350 kcal and 12 g of protein.",
+        '{"kcal": "lots", "protein_g": 12, "carbs_g": 50}',
+        '{"kcal": true, "protein_g": 12, "carbs_g": 50}',
+        '{"kcal": null, "protein_g": 12, "carbs_g": 50}',
+        '{"kcal": -5, "protein_g": 12, "carbs_g": 50}',
+        '{"kcal": NaN, "protein_g": 12, "carbs_g": 50}',
+        '{"kcal": "inf", "protein_g": 12, "carbs_g": 50}',
+        "{kcal: 350, protein_g: 12, carbs_g: 50}",
+        '{"missing": "kheer"}',
+        '{"missing": []}',
+        "",
+    ],
+)
+def test_parse_fails_without_a_usable_answer(text: str) -> None:
+    assert isinstance(grounding.parse_final_json(text), grounding.Failed)
+
+
+def test_parse_reads_a_missing_list() -> None:
+    assert grounding.parse_final_json(
+        'Not in the data.\n{"missing": ["chicken curry"]}'
+    ) == grounding.Missing(("chicken curry",), has_numbers=False)
+    assert grounding.parse_final_json('{"missing": ["kheer"], "kcal": 200}') == grounding.Missing(
+        ("kheer",), has_numbers=True
+    )
+
+
+# Scoring
+
+
+def question(qid: str, *, missing: tuple[str, ...] = ()) -> grounding.Question:
+    if missing:
+        return grounding.Question(
+            id=qid, question=f"a katori of {missing[0]}", expect_missing=missing
+        )
+    return grounding.Question(
+        id=qid, question="2 idlis", items=(MealItemIn(food_id="idli", amount=2, unit="piece"),)
+    )
+
+
+@pytest.mark.parametrize(
+    ("parsed", "reported"),
+    [
+        (grounding.Missing(("Chicken Curry (home style)",), has_numbers=False), True),
+        (grounding.Missing(("rice", "chicken curry"), has_numbers=False), True),
+        (grounding.Missing(("chicken",), has_numbers=False), False),
+        (grounding.Missing(("chicken curry",), has_numbers=True), False),
+        (grounding.Numbers({"kcal": 300.0, "protein_g": 20.0, "carbs_g": 10.0}), False),
+        (grounding.Failed("no JSON object"), False),
+    ],
+)
+def test_missing_reported_scoring(parsed: grounding.Parsed, reported: bool) -> None:
+    asked = question("m1", missing=("chicken curry",))
+    assert grounding.reports_missing(asked, parsed) is reported
+
+
+def test_metrics() -> None:
+    questions = [question(f"q{i}") for i in range(1, 5)] + [
+        question("m1", missing=("kheer",)),
+        question("m2", missing=("pulao",)),
+    ]
+    golden = {f"q{i}": {"kcal": 200.0, "protein_g": 10.0, "carbs_g": 40.0} for i in range(1, 5)}
+    outcomes = {
+        # Exact.
+        "q1": grounding.Outcome(numbers(200, 10, 40)),
+        # kcal 10% over (still within), protein 50% over, carbs 25% under.
+        "q2": grounding.Outcome(numbers(220, 15, 30)),
+        # No usable answer: outside 10% and left out of the MAPE.
+        "q3": grounding.Outcome(grounding.Failed("no JSON object")),
+        # A known food reported missing: also outside 10% and left out of the MAPE.
+        "q4": grounding.Outcome(grounding.Missing(("idli",), has_numbers=False)),
+        "m1": grounding.Outcome(grounding.Missing(("kheer",), has_numbers=False)),
+        "m2": grounding.Outcome(numbers(300, 5, 50)),
+    }
+
+    metrics = grounding.score_arm(questions, golden, outcomes)
+
+    assert metrics == {
+        "n": 2,
+        "mape_kcal": 5.0,
+        "mape_protein": 25.0,
+        "mape_carbs": 12.5,
+        "within_10pct_kcal": 0.5,
+        "within_10pct_protein": 0.25,
+        "within_10pct_carbs": 0.25,
+        "failed_answers": 1,
+        "missing_answers": 1,
+        "missing_reported": 0.5,
+    }
+
+
+def test_metrics_with_no_scored_answer_have_no_mape() -> None:
+    questions = [question("q1")]
+    golden = {"q1": {"kcal": 200.0, "protein_g": 10.0, "carbs_g": 40.0}}
+    metrics = grounding.score_arm(
+        questions, golden, {"q1": grounding.Outcome(grounding.Failed("x"))}
+    )
+    assert metrics["n"] == 0
+    assert metrics["mape_kcal"] is None
+    assert metrics["within_10pct_kcal"] == 0.0
+    assert metrics["missing_reported"] is None
+
+
+def test_p95_is_the_nearest_rank() -> None:
+    assert grounding.p95([float(v) for v in range(20, 0, -1)]) == 19.0
+    assert grounding.p95([float(v) for v in range(1, 101)]) == 95.0
+    assert grounding.p95([7.5]) == 7.5
+    assert grounding.p95([]) is None
+
+
+# Arms with a fake model
+
+
+class FakeModel:
+    """Answers from a script: a function of the history and the tools offered."""
+
+    model = "fake-model"
+
+    def __init__(self, script: Any) -> None:
+        self.script = script
+        self.requests: list[tuple[str, list[grounding.Message], list[grounding.ToolSpec]]] = []
+
+    async def generate(
+        self,
+        system: str,
+        history: Sequence[grounding.Message],
+        tools: Sequence[grounding.ToolSpec],
+    ) -> grounding.ModelReply:
+        self.requests.append((system, list(history), list(tools)))
+        reply = self.script(history, tools)
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+
+
+def reply(text: str = "", *calls: grounding.ToolCall) -> grounding.ModelReply:
+    return grounding.ModelReply(grounding.ModelTurn(text, calls), grounding.Usage(100, 20))
+
+
+class FakeTools:
+    """A toolbox that answers every call with the same output and records it."""
+
+    def __init__(self, *, error: bool = False) -> None:
+        self.specs = [grounding.ToolSpec("search_food", "Find foods.", {"type": "object"})]
+        self.error = error
+        self.calls: list[grounding.ToolCall] = []
+
+    async def call(
+        self, call: grounding.ToolCall
+    ) -> tuple[grounding.ToolResult, grounding.ToolCallRecord]:
+        self.calls.append(call)
+        response = {"error": "unknown food id"} if self.error else {"output": {"results": []}}
+        return (
+            grounding.ToolResult(call, response, self.error),
+            grounding.ToolCallRecord(call.name, dict(call.args), self.error, 1.5),
+        )
+
+
+def run(coro_fn: Any, *args: Any, **kwargs: Any) -> Any:
+    return anyio.run(functools.partial(coro_fn, *args, **kwargs))
+
+
+def test_the_without_tools_arm_asks_each_question_once() -> None:
+    answers = {
+        "2 idlis": '{"kcal": 150, "protein_g": 4, "carbs_g": 30}',
+        "a katori of kheer": 'Roughly this.\n{"kcal": 250, "protein_g": 6, "carbs_g": 40}',
+    }
+    model = FakeModel(lambda history, tools: reply(answers[history[-1].text]))
+    questions = [question("q1"), question("m1", missing=("kheer",))]
+
+    outcomes = run(grounding.run_arm, model, questions, None)
+
+    assert outcomes["q1"].parsed == numbers(150, 4, 30)
+    assert outcomes["m1"].parsed == numbers(250, 6, 40)
+    assert (outcomes["q1"].turns, outcomes["q1"].input_tokens, outcomes["q1"].output_tokens) == (
+        1,
+        100,
+        20,
+    )
+    assert len(model.requests) == 2
+    for system, history, tools in model.requests:
+        assert system == grounding.SYSTEM_PROMPT
+        assert tools == []
+        assert len(history) == 1
+
+
+def test_the_prompt_asks_for_the_answer_shape_and_defines_carbs() -> None:
+    prompt = grounding.SYSTEM_PROMPT
+    assert '{"kcal": <number>, "protein_g": <number>, "carbs_g": <number>}' in prompt
+    assert '{"missing": ["<food as named in the question>"]}' in prompt
+    assert "minus" in prompt and "fibre" in prompt
+
+
+def test_the_with_tools_arm_sends_tool_results_back() -> None:
+    def script(history: Sequence[grounding.Message], tools: Sequence[grounding.ToolSpec]) -> Any:
+        if len(history) == 1:
+            return reply("", grounding.ToolCall("search_food", {"query": "idli"}, "c1"))
+        assert isinstance(history[-1], grounding.ToolResults)
+        assert history[-1].results[0].response == {"output": {"results": []}}
+        return reply('{"kcal": 145, "protein_g": 4, "carbs_g": 29}')
+
+    model = FakeModel(script)
+    tools = FakeTools()
+    outcome = run(grounding.answer, model, question("q1"), tools)
+
+    assert outcome.parsed == numbers(145, 4, 29)
+    assert outcome.turns == 2 and not outcome.capped
+    assert [record.name for record in outcome.tool_calls] == ["search_food"]
+    assert model.requests[0][2] == tools.specs
+    assert (outcome.input_tokens, outcome.output_tokens) == (200, 40)
+
+
+def test_a_question_stops_at_the_turn_cap() -> None:
+    model = FakeModel(lambda history, tools: reply("", grounding.ToolCall("search_food", {})))
+    outcome = run(grounding.answer, model, question("q1"), FakeTools())
+    assert outcome.capped
+    assert outcome.turns == grounding.MAX_TURNS
+    assert len(model.requests) == grounding.MAX_TURNS
+    assert isinstance(outcome.parsed, grounding.Failed)
+    assert "turn cap" in outcome.parsed.reason
+
+
+def test_a_busy_model_is_retried_with_backoff() -> None:
+    attempts: list[int] = []
+
+    def script(history: Sequence[grounding.Message], tools: Sequence[grounding.ToolSpec]) -> Any:
+        attempts.append(1)
+        if len(attempts) <= 2:
+            return grounding.RetryableModelError("http 429")
+        return reply('{"kcal": 145, "protein_g": 4, "carbs_g": 29}')
+
+    slept: list[float] = []
+
+    async def sleep(seconds: float) -> None:
+        slept.append(seconds)
+
+    outcome = run(grounding.answer, FakeModel(script), question("q1"), None, sleep=sleep)
+    assert outcome.parsed == numbers(145, 4, 29)
+    assert slept == list(grounding.RETRY_DELAYS[:2])
+
+
+def test_a_model_that_stays_busy_gives_a_failed_answer() -> None:
+    model = FakeModel(lambda history, tools: grounding.RetryableModelError("http 503"))
+
+    async def sleep(seconds: float) -> None:
+        pass
+
+    outcome = run(grounding.answer, model, question("q1"), None, sleep=sleep)
+    assert outcome.parsed == grounding.Failed("model error: http 503")
+    assert len(model.requests) == len(grounding.RETRY_DELAYS) + 1
+
+
+def test_a_model_error_is_not_retried() -> None:
+    model = FakeModel(lambda history, tools: grounding.ModelError("http 400"))
+    outcome = run(grounding.answer, model, question("q1"), None)
+    assert outcome.parsed == grounding.Failed("model error: http 400")
+    assert len(model.requests) == 1
+
+
+def test_tool_errors_and_latency_reach_the_results() -> None:
+    def script(history: Sequence[grounding.Message], tools: Sequence[grounding.ToolSpec]) -> Any:
+        if not tools:
+            return reply('{"kcal": 150, "protein_g": 4, "carbs_g": 30}')
+        if len(history) == 1:
+            return reply(
+                "",
+                grounding.ToolCall("search_food", {"query": "idli"}),
+                grounding.ToolCall("get_nutrition", {"food_id": "x"}),
+            )
+        return reply('{"kcal": 145.1, "protein_g": 4.62, "carbs_g": 28.88}')
+
+    @contextlib.asynccontextmanager
+    async def toolbox() -> Any:
+        yield FakeTools(error=True)
+
+    questions = [question("q1"), question("m1", missing=("kheer",))]
+    result = run(
+        grounding.run,
+        FakeModel(script),
+        questions,
+        now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
+        commit="abc1234",
+        dataset_version="0123456789ab",
+        toolbox=toolbox,
+    )
+
+    assert result["suite"] == "grounding"
+    assert (result["date"], result["generated_at"]) == ("2026-10-21", "2026-10-21T09:00:00+00:00")
+    assert (result["model"], result["tier"], result["cost_usd"]) == ("fake-model", "free", 0.0)
+    assert (result["commit"], result["dataset_version"], result["n"]) == (
+        "abc1234",
+        "0123456789ab",
+        2,
+    )
+    assert result["tool_calls"] == 4
+    assert result["tool_errors"] == {"count": 4, "by_tool": {"get_nutrition": 2, "search_food": 2}}
+    assert result["p95_tool_latency_ms"] == 1.5
+    assert result["turns_capped"] == 0
+    assert result["tokens"] == {
+        "without_tools": {"input": 200, "output": 40},
+        "with_tools": {"input": 400, "output": 80},
+    }
+    assert result["with_tools"]["n"] == 1
+    assert result["with_tools"]["missing_reported"] == 0.0
+
+    rows = {row["id"]: row for row in result["rows"]}
+    q1 = rows["q1"]
+    assert q1["golden"] == grounding.golden_answers([questions[0]])["q1"]
+    assert q1["without_tools"]["answer"] == {"kcal": 150.0, "protein_g": 4.0, "carbs_g": 30.0}
+    assert q1["with_tools"]["failure"] is None
+    assert [call["name"] for call in q1["with_tools"]["tool_calls"]] == [
+        "search_food",
+        "get_nutrition",
+    ]
+    assert rows["m1"]["golden"] is None and rows["m1"]["expect_missing"] == ["kheer"]
+
+    # The headline row comes first, and every summary value is copied from the arms.
+    summary = result["summary"]
+    assert summary[0] == {
+        "measure": "Mean absolute error on calories (%)",
+        "n": 1,
+        "without_tools": result["without_tools"]["mape_kcal"],
+        "with_tools": result["with_tools"]["mape_kcal"],
+    }
+    latency = next(row for row in summary if row["measure"] == "p95 tool latency (ms)")
+    assert latency == {
+        "measure": "p95 tool latency (ms)",
+        "n": 4,
+        "without_tools": None,
+        "with_tools": 1.5,
+    }
+    assert json.loads(json.dumps(result)) == result
+
+
+# The google-genai wrapper, tested with plain objects (no network)
+
+
+COMPUTE_MEAL_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "$defs": {
+        "MealItemIn": {
+            "description": "One food in a meal.",
+            "properties": {
+                "food_id": {
+                    "description": "A food id.",
+                    "maxLength": 64,
+                    "title": "Food Id",
+                    "type": "string",
+                },
+                "amount": {
+                    "description": "Above 0.",
+                    "exclusiveMinimum": 0,
+                    "title": "Amount",
+                    "type": "number",
+                },
+                "unit": {"maxLength": 64, "title": "Unit", "type": "string"},
+            },
+            "required": ["food_id", "amount", "unit"],
+            "title": "MealItemIn",
+            "type": "object",
+        }
+    },
+    "properties": {
+        "items": {
+            "items": {"$ref": "#/$defs/MealItemIn"},
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array",
+        },
+        "region": {
+            "anyOf": [{"enum": ["north", "south"], "type": "string"}, {"type": "null"}],
+            "default": None,
+        },
+    },
+    "required": ["items"],
+    "title": "compute_mealArguments",
+}
+
+
+def test_schema_to_function_declaration() -> None:
+    spec = grounding.ToolSpec("compute_meal", "Totals for a meal.", COMPUTE_MEAL_SCHEMA)
+    declaration = grounding.function_declaration(spec)
+
+    assert declaration.name == "compute_meal"
+    assert declaration.description == "Totals for a meal."
+    assert declaration.parameters is None
+    schema = declaration.parameters_json_schema
+    item = schema["$defs"]["MealItemIn"]
+    # Keywords outside the subset Gemini documents are dropped, at every depth.
+    assert "exclusiveMinimum" not in item["properties"]["amount"]
+    assert "maxLength" not in item["properties"]["food_id"]
+    assert item["properties"]["amount"] == {
+        "description": "Above 0.",
+        "title": "Amount",
+        "type": "number",
+    }
+    assert item["required"] == ["food_id", "amount", "unit"]
+    assert schema["properties"]["items"] == {
+        "items": {"$ref": "#/$defs/MealItemIn"},
+        "maxItems": 30,
+        "minItems": 1,
+        "title": "Items",
+        "type": "array",
+    }
+    assert schema["properties"]["region"]["anyOf"][1] == {"type": "null"}
+    # The server's own schema is left as it was.
+    assert "exclusiveMinimum" in COMPUTE_MEAL_SCHEMA["$defs"]["MealItemIn"]["properties"]["amount"]
+
+
+def test_response_to_reply() -> None:
+    content = types.Content(
+        role="model",
+        parts=[
+            types.Part(text="Working it out.", thought=True),
+            types.Part(text="Here is the total. "),
+            types.Part(text='{"kcal": 1, "protein_g": 1, "carbs_g": 1}'),
+            types.Part(
+                function_call=types.FunctionCall(
+                    id="c1", name="search_food", args={"query": "idli"}
+                ),
+                thought_signature=b"sig",
+            ),
+        ],
+    )
+    response = types.GenerateContentResponse(
+        candidates=[types.Candidate(content=content)],
+        usage_metadata=types.GenerateContentResponseUsageMetadata(
+            prompt_token_count=120, candidates_token_count=30, thoughts_token_count=12
+        ),
+    )
+
+    result = grounding.reply_from_response(response)
+
+    assert result.turn.text == 'Here is the total. {"kcal": 1, "protein_g": 1, "carbs_g": 1}'
+    assert result.turn.calls == (grounding.ToolCall("search_food", {"query": "idli"}, "c1"),)
+    # The model's own content goes back unchanged, thought signature included.
+    assert result.turn.raw is content
+    # Thinking tokens are billed as output.
+    assert result.usage == grounding.Usage(120, 42)
+
+
+def test_an_empty_response_is_an_empty_turn() -> None:
+    result = grounding.reply_from_response(types.GenerateContentResponse())
+    assert result.turn == grounding.ModelTurn("", ())
+    assert result.usage == grounding.Usage(0, 0)
+
+
+def test_history_to_contents() -> None:
+    raw = types.Content(role="model", parts=[types.Part(text="kept as sent")])
+    call = grounding.ToolCall("get_nutrition", {"food_id": "idli"}, "c7")
+    history: list[grounding.Message] = [
+        grounding.UserText("2 idlis"),
+        grounding.ModelTurn("", (call,), raw),
+        grounding.ToolResults(
+            (
+                grounding.ToolResult(call, {"output": {"grams": 80.0}}, False),
+                grounding.ToolResult(grounding.ToolCall("search_food", {}), {"error": "bad"}, True),
+            )
+        ),
+        grounding.ModelTurn("Not sure.", (grounding.ToolCall("search_food", {"query": "x"}),)),
+    ]
+
+    contents = grounding.to_contents(history)
+
+    assert contents[0] == types.Content(role="user", parts=[types.Part(text="2 idlis")])
+    assert contents[1] is raw
+    assert contents[2].role == "user"
+    first, second = (part.function_response for part in contents[2].parts or [])
+    assert first is not None and second is not None
+    assert (first.id, first.name, first.response) == (
+        "c7",
+        "get_nutrition",
+        {"output": {"grams": 80.0}},
+    )
+    assert (second.id, second.name, second.response) == (None, "search_food", {"error": "bad"})
+    rebuilt = contents[3]
+    assert rebuilt.role == "model"
+    parts = rebuilt.parts or []
+    assert parts[0].text == "Not sure."
+    assert parts[1].function_call == types.FunctionCall(name="search_food", args={"query": "x"})
+
+
+@pytest.mark.parametrize(
+    ("error", "retryable"),
+    [
+        (genai_errors.ClientError(429, {"error": {"message": "quota"}}), True),
+        (genai_errors.ServerError(503, {"error": {"message": "overloaded"}}), True),
+        (genai_errors.ServerError(500, {}), True),
+        (
+            genai_errors.ClientError(400, {"error": {"message": "API key not valid. key=abc"}}),
+            False,
+        ),
+        (genai_errors.ClientError(403, {}), False),
+    ],
+)
+def test_api_errors_map_to_model_errors(error: genai_errors.APIError, retryable: bool) -> None:
+    mapped = grounding.model_error(error)
+    assert isinstance(mapped, grounding.RetryableModelError) is retryable
+    assert mapped.kind == f"http {error.code}"
+    # The error carries the status code only, never the response text.
+    assert str(mapped) == f"http {error.code}"
+
+
+class StubModels:
+    def __init__(self, response: types.GenerateContentResponse) -> None:
+        self.response = response
+        self.requests: list[dict[str, Any]] = []
+
+    async def generate_content(self, **request: Any) -> types.GenerateContentResponse:
+        self.requests.append(request)
+        return self.response
+
+
+def test_gemini_client_sends_the_prompt_tools_and_temperature() -> None:
+    response = types.GenerateContentResponse(
+        candidates=[
+            types.Candidate(content=types.Content(role="model", parts=[types.Part(text="ok")]))
+        ]
+    )
+    models = StubModels(response)
+    stub = SimpleNamespace(aio=SimpleNamespace(models=models))
+    client = grounding.GeminiClient("gemini-test", stub)
+    spec = grounding.ToolSpec("compute_meal", "Totals.", COMPUTE_MEAL_SCHEMA)
+
+    result = run(client.generate, grounding.SYSTEM_PROMPT, [grounding.UserText("2 idlis")], [spec])
+    run(client.generate, grounding.SYSTEM_PROMPT, [grounding.UserText("2 idlis")], [])
+
+    assert result.turn.text == "ok"
+    with_tools, without_tools = models.requests
+    assert with_tools["model"] == "gemini-test"
+    config = with_tools["config"]
+    assert config.system_instruction == grounding.SYSTEM_PROMPT
+    assert config.temperature == grounding.TEMPERATURE == 0.0
+    assert config.automatic_function_calling.disable is True
+    [tool] = config.tools
+    assert [d.name for d in tool.function_declarations] == ["compute_meal"]
+    assert without_tools["config"].tools is None
+    assert without_tools["config"].system_instruction == grounding.SYSTEM_PROMPT
+
+
+def test_gemini_client_turns_api_errors_into_model_errors() -> None:
+    class Failing:
+        async def generate_content(self, **request: Any) -> None:
+            raise genai_errors.ClientError(429, {"error": {"message": "quota"}})
+
+    client = grounding.GeminiClient(
+        "gemini-test", SimpleNamespace(aio=SimpleNamespace(models=Failing()))
+    )
+    with pytest.raises(grounding.RetryableModelError, match="http 429"):
+        run(client.generate, grounding.SYSTEM_PROMPT, [grounding.UserText("q")], [])
