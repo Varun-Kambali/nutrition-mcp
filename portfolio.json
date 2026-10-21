@@ -7,5 +7,5 @@
   "summary": "Any MCP client can ask it for the nutrition of an Indian dish or ingredient in grams or in household measures such as a katori or a roti, and every answer states its source and the portion it assumed. Dish values are computed in code from openly licensed ingredient data and standard recipes, so the arithmetic never depends on the model.",
   "measures": "Calorie, protein and carbohydrate error with and without the tools, and computed dish values against independent references",
   "evalRow": "Calorie error against the dataset totals, MAPE (%)",
-  "skills": ["mcp", "ci-evals", "evalsets", "structured", "python", "cicd"]
+  "skills": ["mcp", "ci-evals", "evalsets", "structured", "python", "cicd", "docker", "data-pipelines"]
 }
