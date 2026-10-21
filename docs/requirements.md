@@ -1,6 +1,6 @@
 # Requirements
 
-Status: draft, 2026-10-19. Boxes are ticked as each feature ships. The reasoning behind the project is in [case-study.md](case-study.md); the design is in [architecture.md](architecture.md).
+Status: done for v1, 2026-10-21. Every MVP box is ticked. The reasoning behind the project is in [case-study.md](case-study.md); the design is in [architecture.md](architecture.md).
 
 ## Problem
 
@@ -56,7 +56,7 @@ All tools are read-only, return structured output from Pydantic models, and are 
 
 ### Transport and packaging
 
-- [ ] stdio transport, working in Claude Desktop and Claude Code, with copy-paste config in the README.
+- [x] stdio transport, working in Claude Desktop and Claude Code, with copy-paste config in the README.
 - [x] Runs from a clone with `uv`, and straight from GitHub with `uvx --from git+https://github.com/Varun-Kambali/nutrition-mcp nutrition-mcp`. No PyPI release is needed for v1.
 - [x] Logs are structured JSON on stderr, because stdout carries the protocol.
 
