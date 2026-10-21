@@ -1,7 +1,5 @@
 # nutrition-mcp
 
-Work in progress. The server and its five tools run over stdio, the data-accuracy evaluation runs in CI, and the first grounding run is recorded under Results. This README fills in as each part ships; the reasoning behind the project is in the [case study](docs/case-study.md).
-
 An MCP server that gives any assistant or agent sourced nutrition, glycemic load and micronutrient data for Indian dishes and ingredients, for any amount in grams or household measures.
 
 [![CI](https://github.com/Varun-Kambali/nutrition-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Varun-Kambali/nutrition-mcp/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) · **[Case study](docs/case-study.md)**
@@ -22,7 +20,7 @@ Assistants answer nutrition questions about Indian food from memory, with no sou
 - Glycemic load where an openly licensed value exists, and missing, never guessed, where it doesn't.
 - Daily calorie and protein targets, labelled as estimates.
 
-The full list of planned features is in [docs/requirements.md](docs/requirements.md).
+Every feature, with what it must do, is in [docs/requirements.md](docs/requirements.md).
 
 ## Results
 
@@ -77,6 +75,7 @@ The server reads dataset folders at startup, validates them, computes each dish'
 | Protocol | MCP Python SDK 2.x | Typed tools over stdio for any MCP client |
 | Data models | Pydantic | Validation at every boundary |
 | Name matching | rapidfuzz | Fuzzy matching for spelling variants |
+| Container | Docker | A slim image that runs as a non-root user; CI builds it and calls its tools |
 | CI | GitHub Actions | Lint, tests, image build and secret scan on every push |
 
 ## Quickstart
@@ -147,6 +146,53 @@ The five tools, all read-only, and the sources resource:
 
 Nutrient values are rounded to 2 decimals, so 0.0 can be a small amount; a value the source does not report is null, never 0. The details given to `compute_targets` pass through the model your client uses before they reach the server. The server stores nothing and does not log tool inputs. Logs are JSON lines on stderr; `NUTRITION_MCP_LOG_LEVEL` sets the level: `DEBUG`, `INFO` (the default), `WARNING`, `ERROR` or `CRITICAL`.
 
+## Your own data
+
+The bundled data is a starting point. A team with a licensed food table or lab-tested recipes can load its own folders next to it, with no change to the tools. List the folders in `NUTRITION_MCP_DATA_DIRS`, separated by `:` (`;` on Windows), in the `env` of the client config:
+
+```json
+{
+  "mcpServers": {
+    "nutrition": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/Varun-Kambali/nutrition-mcp", "nutrition-mcp"],
+      "env": { "NUTRITION_MCP_DATA_DIRS": "/path/to/my-data" }
+    }
+  }
+}
+```
+
+A folder has the same three parts as the bundled data, each with a JSON Schema:
+
+| File | Holds | Schema |
+|---|---|---|
+| `sources.yaml` | Each source: id, name, URL, license, version, retrieval date and attribution | [`schemas/sources.json`](schemas/sources.json) |
+| `ingredients.csv` | One row per ingredient: names, diet, source and record, and the 16 nutrients per 100 g, with an empty cell for a value the source does not report | [`schemas/ingredient.json`](schemas/ingredient.json) |
+| `dishes/<id>.yaml` | One recipe per file: raw grams of each ingredient, cooked weight, servings, regions, diet, household measures and the fat assumption | [`schemas/dish.json`](schemas/dish.json) |
+
+A dish can use the bundled ingredients, so `ingredients.csv` may hold only its header. Leave water out of a recipe: `cooked_weight_g` accounts for it. For example, `dishes/office_dal.yaml`:
+
+```yaml
+id: office_dal
+name: Office canteen dal
+aliases: [canteen dal]
+regions: [south]
+diet: veg
+servings: 4
+cooked_weight_g: 800
+ingredients:
+  - ingredient_id: toor_dal
+    grams: 150
+  - ingredient_id: ghee
+    grams: 20
+measures:
+  katori: 180
+assumptions: 5 g ghee per serving in the tadka.
+source_id: my_kitchen
+```
+
+The server computes the dish's nutrition from its ingredients, as it does for the bundled dishes. A bad row, an unknown ingredient or an id that is already loaded stops startup with an error on stderr that names the file. The fields are described in [docs/architecture.md](docs/architecture.md#data-format-bundled-and-custom).
+
 ## Evaluation
 
 Two evaluations, kept apart because one checks the data and the other checks a model using it ([ADR 0006](docs/decisions/0006-two-evaluations.md)):
@@ -160,15 +206,20 @@ Two evaluations, kept apart because one checks the data and the other checks a m
 
 ## Deployment
 
-The server runs on the user's machine over stdio. There is no hosted endpoint.
+The server runs on the user's machine: the MCP client starts it and talks to it over stdio, so there is nothing to host and no demo endpoint. A remote server with authentication, rate limits and a spend cap is outside v1 ([requirements](docs/requirements.md#non-goals-for-v1)).
+
+To run it in a container, build the image with `docker build -t nutrition-mcp .` in a clone, then give the client `docker` as the command and `["run", "-i", "--rm", "nutrition-mcp"]` as the arguments.
 
 ## Project structure
 
 ```
-src/nutrition_mcp/   server code
-evals/               evaluation runner, datasets and results
-tests/               unit and integration tests
-docs/                case study, requirements, architecture
+src/nutrition_mcp/           server, loader, queries and search
+src/nutrition_mcp/data/      bundled dataset, with its sources and licenses
+schemas/                     JSON Schemas for a dataset folder
+evals/                       evaluation runners, datasets and results
+data_build/, scripts/        the reviewed maps and scripts that build the bundled data
+tests/                       unit and integration tests, and the container test
+docs/                        case study, requirements, architecture, data notes, decisions
 ```
 
 ## Design decisions
