@@ -1,8 +1,10 @@
 import json
+import shutil
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+import grounding
 import pytest
 import run_evals
 
@@ -11,6 +13,7 @@ from nutrition_mcp.nutrients import NUTRIENT_KEYS, REFERENCE_NUTRIENTS
 
 NUTRIENTS = ("kcal", "protein_g", "carbs_available_g", "iron_mg", "calcium_mg")
 NOW = datetime(2026, 10, 20, 9, 0, tzinfo=UTC)
+DATA_ACCURACY_FILE = "2026-10-20_data-accuracy_32aa03d.json"
 
 SOURCES_YAML = """\
 - id: cofid_2021
@@ -283,7 +286,21 @@ def _grounding_file(folder: Path) -> None:
         "generated_at": "2026-10-19T10:00:00+00:00",
         "commit": "fff0000",
         "dataset_version": "0123456789ab",
-        "summary": [{"measure": "kcal MAPE with tools (%)", "n": 30, "value": 4.2}],
+        "model": "test-model",
+        "summary": [
+            {
+                "measure": "Mean absolute error on calories (%)",
+                "n": 26,
+                "without_tools": 31.2,
+                "with_tools": 4.2,
+            },
+            {
+                "measure": "p95 tool latency (ms)",
+                "n": 70,
+                "without_tools": None,
+                "with_tools": 12.5,
+            },
+        ],
     }
     (folder / "2026-10-19_test-model_fff0000.json").write_text(json.dumps(fake), encoding="utf-8")
 
@@ -299,12 +316,17 @@ def test_summary_keeps_the_grounding_rows_when_data_accuracy_rewrites_it(
     summary = run_evals.write_summary(out).read_text(encoding="utf-8")
 
     lines = [line for line in summary.splitlines() if line.startswith("| ")]
-    grounding = [line for line in lines if "kcal MAPE with tools" in line]
+    grounding = [line for line in lines if "fff0000" in line]
     accuracy = [line for line in lines if "abc1234" in line]
-    assert len(grounding) == 1 and "| 30 | 4.2 |" in grounding[0] and "fff0000" in grounding[0]
+    assert grounding[0] == (
+        "| Mean absolute error on calories (%) | 31.2 | 4.2 | 26 | test-model | 2026-10-19 "
+        "| fff0000 | 0123456789ab "
+        "| [2026-10-19_test-model_fff0000.json](2026-10-19_test-model_fff0000.json) |"
+    )
+    assert grounding[1].startswith("| p95 tool latency (ms) | n/a | 12.5 | 70 |")
     assert len(accuracy) == len(NUTRIENTS)
     # Grounding first, then data accuracy.
-    assert lines.index(grounding[0]) < lines.index(accuracy[0])
+    assert lines.index(grounding[-1]) < lines.index(accuracy[0])
     kcal = next(line for line in accuracy if "kcal" in line)
     assert "| 2 | 27.5 |" in kcal
     assert result["dataset_version"] in kcal and "2026-10-20" in kcal
@@ -439,8 +461,136 @@ def test_a_normal_run_writes_the_results_file_and_summary(
     assert "_data-accuracy_" in names[0]
 
 
-def test_grounding_is_not_implemented_yet(
-    capsys: pytest.CaptureFixture[str], restore_logging: None
+def test_the_headline_is_the_first_row_of_the_first_table(tmp_path: Path) -> None:
+    # The portfolio site reads the first data row of the first table in summary.md, and
+    # shows "<measure>: <Baseline> -> <This project>" when those two columns exist.
+    out = tmp_path / "results"
+    _grounding_file(out)
+    shutil.copy(run_evals.RESULTS / DATA_ACCURACY_FILE, out)
+
+    lines = run_evals.write_summary(out).read_text(encoding="utf-8").splitlines()
+
+    first = next(i for i, line in enumerate(lines) if line.startswith("| "))
+    header = [cell.strip() for cell in lines[first].strip("|").split("|")]
+    assert header[:4] == ["Measure", "Baseline", "This project", "n"]
+    assert lines[first + 1].startswith("|---")
+    assert lines[first + 2].startswith("| Mean absolute error on calories (%) | 31.2 | 4.2 |")
+
+
+def test_summary_without_a_grounding_run_is_unchanged(tmp_path: Path) -> None:
+    out = tmp_path / "results"
+    out.mkdir()
+    shutil.copy(run_evals.RESULTS / DATA_ACCURACY_FILE, out)
+    summary = run_evals.write_summary(out).read_text(encoding="utf-8")
+    assert summary == (run_evals.RESULTS / "summary.md").read_text(encoding="utf-8")
+
+
+def test_summary_names_a_grounding_file_without_a_model(tmp_path: Path) -> None:
+    out = tmp_path / "results"
+    _grounding_file(out)
+    path = out / "2026-10-19_test-model_fff0000.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    del data["model"]
+    path.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(run_evals.EvalError, match=r"2026-10-19_test-model_fff0000\.json"):
+        run_evals.write_summary(out)
+
+
+@pytest.mark.parametrize(
+    ("model", "name"),
+    [
+        ("gemini-3.1-flash-lite", "2026-10-21_gemini-3.1-flash-lite_abc1234.json"),
+        ("models/gemini 3", "2026-10-21_models-gemini-3_abc1234.json"),
+    ],
+)
+def test_grounding_results_are_named_by_model(tmp_path: Path, model: str, name: str) -> None:
+    result = {"suite": "grounding", "date": "2026-10-21", "commit": "abc1234", "model": model}
+    assert run_evals.write_results(result, tmp_path).name == name
+
+
+def test_grounding_needs_the_api_key(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
 ) -> None:
-    assert run_evals.main(["--suite", "grounding"]) == 2
-    assert "not implemented yet" in capsys.readouterr().err
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    def no_model(*args: Any) -> None:
+        raise AssertionError("no model client may be built without a key")
+
+    monkeypatch.setattr(grounding, "gemini_client", no_model)
+    out = tmp_path / "results"
+    assert run_evals.main(["--suite", "grounding", "--out", str(out)]) == 1
+    assert "GEMINI_API_KEY is not set" in capsys.readouterr().err
+    assert not out.exists()
+
+
+@pytest.mark.parametrize("args", [["--check", "evals/thresholds.toml"], ["--limit", "0"]])
+def test_grounding_rejects_options_it_cannot_use(
+    args: list[str], restore_logging: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        run_evals.main(["--suite", "grounding", *args])
+    assert exit_info.value.code == 2
+
+
+class AnswersAtOnce:
+    """A model that answers every question from memory, tools or not."""
+
+    def __init__(self, model: str) -> None:
+        self.model = model
+
+    async def generate(self, system: str, history: Any, tools: Any) -> grounding.ModelReply:
+        text = '{"kcal": 300, "protein_g": 12, "carbs_g": 45}'
+        return grounding.ModelReply(grounding.ModelTurn(text, ()), grounding.Usage(80, 15))
+
+
+def test_a_grounding_run_writes_the_results_file_and_summary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    restore_logging: None,
+) -> None:
+    # A stand-in value: the fake model below is all that receives it.
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+    monkeypatch.setenv("EVAL_MODEL", "gemini-test")
+    built: list[tuple[str, str]] = []
+
+    def fake_client(model: str, api_key: str) -> AnswersAtOnce:
+        built.append((model, api_key))
+        return AnswersAtOnce(model)
+
+    monkeypatch.setattr(grounding, "gemini_client", fake_client)
+    monkeypatch.setattr(run_evals, "git_commit", lambda: "abc1234")
+    out = tmp_path / "results"
+
+    assert run_evals.main(["--suite", "grounding", "--limit", "2", "--out", str(out)]) == 0
+
+    assert built == [("gemini-test", "stand-in")]
+    [results] = [path for path in out.iterdir() if path.suffix == ".json"]
+    assert results.name.endswith("_gemini-test_abc1234.json")
+    data = json.loads(results.read_text(encoding="utf-8"))
+    assert data["n"] == 2 and data["model"] == "gemini-test"
+    assert data["dataset_version"] == run_evals.dataset_version(loader.bundled_dir())
+    summary = (out / "summary.md").read_text(encoding="utf-8")
+    assert "| Mean absolute error on calories (%) |" in summary
+    report = capsys.readouterr().out
+    assert "Mean absolute error on calories (%)" in report
+    assert "stand-in" not in report
+
+
+def test_eval_model_defaults_in_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, restore_logging: None
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "stand-in")
+    monkeypatch.delenv("EVAL_MODEL", raising=False)
+    built: list[str] = []
+
+    def fake_client(model: str, api_key: str) -> AnswersAtOnce:
+        built.append(model)
+        return AnswersAtOnce(model)
+
+    monkeypatch.setattr(grounding, "gemini_client", fake_client)
+    assert run_evals.main(["--suite", "grounding", "--limit", "1", "--out", str(tmp_path)]) == 0
+    assert built == [grounding.DEFAULT_MODEL] == ["gemini-3.1-flash-lite"]

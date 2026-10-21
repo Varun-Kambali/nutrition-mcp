@@ -3,7 +3,7 @@
 Usage:
   uv run python evals/run_evals.py --suite data_accuracy
   uv run python evals/run_evals.py --suite data_accuracy --check evals/thresholds.toml
-  uv run python evals/run_evals.py --suite grounding [--limit N]
+  uv run --group eval python evals/run_evals.py --suite grounding [--limit N]
 
 `data_accuracy` compares the dish values the server computes with independent records of the
 same dishes as eaten (evals/datasets/references.csv, built by scripts/build_references.py). It
@@ -11,20 +11,29 @@ makes no model calls. A normal run writes evals/results/YYYY-MM-DD_data-accuracy
 and rebuilds summary.md. With --check it compares the result with a thresholds file, writes
 nothing, and exits 1 when a gated nutrient fails; CI runs it that way on every pull request.
 
+`grounding` asks a Gemini model each question in evals/datasets/questions.jsonl from memory
+and again with this server's tools (evals/grounding.py). It needs GEMINI_API_KEY and calls the
+model, so it runs on demand only (`make eval`, which loads .env). EVAL_MODEL overrides the
+default model. A run writes evals/results/YYYY-MM-DD_<model>_<commit>.json and rebuilds
+summary.md; --limit N asks only the first N questions.
+
 Every results file is JSON with `suite`, `date`, `generated_at`, `commit` and
 `dataset_version`. summary.md is rebuilt from the newest file of each suite (the latest
-`generated_at`), grounding rows first. A suite other than data_accuracy lists its summary rows
-under `summary`, each with `measure`, `n` and `value`.
+`generated_at`), grounding first. A grounding file also names its `model` and lists its
+summary rows under `summary`, each with `measure`, `n`, `without_tools` and `with_tools`.
 
 The report goes to stdout as plain text; logs go to stderr as JSON.
 """
 
 import argparse
 import csv
+import functools
 import hashlib
 import json
 import logging
 import math
+import os
+import re
 import subprocess
 import sys
 import tomllib
@@ -33,6 +42,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+import anyio
+import grounding
 
 from nutrition_mcp import loader
 from nutrition_mcp.log import configure_logging
@@ -59,6 +71,8 @@ SUITES = ("data_accuracy", "grounding")
 # Every results file has these, whatever its suite; summary.md is built from them.
 RESULT_FIELDS = ("suite", "date", "generated_at", "commit", "dataset_version")
 LABELS = {spec.key: f"{spec.label} ({spec.unit})" for spec in NUTRIENTS}
+API_KEY_VAR = "GEMINI_API_KEY"
+MODEL_VAR = "EVAL_MODEL"
 
 log = logging.getLogger("nutrition_mcp.evals")
 
@@ -299,10 +313,17 @@ def check_thresholds(
     return failures
 
 
+def _file_label(result: Mapping[str, Any]) -> str:
+    if result["suite"] == "grounding":
+        # A model id can hold a "/" or a space, which have no place in a file name.
+        return re.sub(r"[^A-Za-z0-9._-]+", "-", str(result["model"]))
+    return str(result["suite"]).replace("_", "-")
+
+
 def write_results(result: Mapping[str, Any], out: Path) -> Path:
+    """Write a results file named by date, then suite (or model, for grounding), then commit."""
     out.mkdir(parents=True, exist_ok=True)
-    suite = str(result["suite"]).replace("_", "-")
-    path = out / f"{result['date']}_{suite}_{result['commit']}.json"
+    path = out / f"{result['date']}_{_file_label(result)}_{result['commit']}.json"
     path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     return path
 
@@ -333,8 +354,6 @@ def _cell(value: Any) -> str:
 
 def _summary_rows(path: Path, data: Mapping[str, Any]) -> list[tuple[str, Any, Any]]:
     try:
-        if data["suite"] != "data_accuracy":
-            return [(row["measure"], row["n"], row["value"]) for row in data["summary"]]
         rows = []
         for key in EVALUATED:
             scored = data["per_nutrient"][key]
@@ -347,6 +366,44 @@ def _summary_rows(path: Path, data: Mapping[str, Any]) -> list[tuple[str, Any, A
         raise EvalError(f"{path}: summary data has the wrong shape for summary.md") from None
 
 
+def _grounding_lines(path: Path, data: Mapping[str, Any]) -> list[str]:
+    """The grounding table, one row per summary measure, the headline first.
+
+    The value columns are named Baseline and This project, as in the README template: the
+    portfolio site reads the first row of the first table in this file and shows it as
+    "measure: baseline -> this project".
+    """
+    try:
+        cells = [
+            (row["measure"], row["without_tools"], row["with_tools"], row["n"])
+            for row in data["summary"]
+        ]
+        shared = (
+            f"| {data['model']} | {data['date']} | {data['commit']} | {data['dataset_version']} "
+            f"| [{path.name}]({path.name}) |"
+        )
+    except KeyError as err:
+        raise EvalError(f"{path}: missing {err.args[0]!r}, needed for summary.md") from None
+    except TypeError:
+        raise EvalError(f"{path}: summary data has the wrong shape for summary.md") from None
+    lines = [
+        "Grounding asks a model each question in `evals/datasets/questions.jsonl` twice with the",
+        "same prompt. Baseline is the model answering from memory; This project is the same",
+        "model calling this server's tools over stdio. Golden answers are computed by the",
+        "server's own query functions from the bundled data. An error is the mean absolute",
+        "percentage error over the answers that gave numbers; an answer without numbers is left",
+        "out of it and counts as outside 10%. Shares run from 0 to 1. n is the number of",
+        "questions behind a row, or of tool calls for latency.",
+        "",
+        "| Measure | Baseline | This project | n | Model | Date | Commit | Dataset version "
+        "| Results file |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    for measure, without, with_, n in cells:
+        lines.append(f"| {measure} | {_cell(without)} | {_cell(with_)} | {_cell(n)} {shared}")
+    return [*lines, ""]
+
+
 def write_summary(out: Path) -> Path:
     """Rebuild summary.md from the newest results file of each suite, grounding first."""
     latest = _latest_results(out)
@@ -356,6 +413,10 @@ def write_summary(out: Path) -> Path:
         "Rebuilt by `evals/run_evals.py` from the newest results file of each suite. Do not",
         "edit by hand. Each number is copied from the results file named on its row.",
         "",
+    ]
+    if "grounding" in latest:
+        lines += _grounding_lines(*latest["grounding"])
+    lines += [
         "Data accuracy compares the values computed for each bundled dish with an independent",
         "record of the same dish (`evals/datasets/references.csv`). n is the number of dishes",
         "used for a nutrient, and the value is the mean absolute percentage error against the",
@@ -365,13 +426,11 @@ def write_summary(out: Path) -> Path:
         "| Suite | Measure | n | Value | Date | Commit | Dataset version | Results file |",
         "|---|---|---|---|---|---|---|---|",
     ]
-    for suite in ("grounding", "data_accuracy"):
-        if suite not in latest:
-            continue
-        path, data = latest[suite]
+    if "data_accuracy" in latest:
+        path, data = latest["data_accuracy"]
         for measure, n, value in _summary_rows(path, data):
             lines.append(
-                f"| {suite.replace('_', ' ')} | {measure} | {_cell(n)} | {_cell(value)} "
+                f"| data accuracy | {measure} | {_cell(n)} | {_cell(value)} "
                 f"| {data['date']} | {data['commit']} | {data['dataset_version']} "
                 f"| [{path.name}]({path.name}) |"
             )
@@ -431,6 +490,91 @@ def print_report(result: Mapping[str, Any]) -> None:
         )
 
 
+def _print_table(rows: Sequence[Sequence[str]]) -> None:
+    widths = [max(len(row[i]) for row in rows) for i in range(len(rows[0]))]
+    for row in rows:
+        print(
+            "  ".join(cell.ljust(width) for cell, width in zip(row, widths, strict=True)).rstrip()
+        )
+
+
+def print_grounding_report(result: Mapping[str, Any]) -> None:
+    print(
+        f"Grounding: {result['n']} questions, model {result['model']}, "
+        f"dataset {result['dataset_version']}, commit {result['commit']}"
+    )
+    print()
+    _print_table(
+        [
+            ("measure", "without tools", "with tools", "n"),
+            *(
+                (
+                    row["measure"],
+                    _cell(row["without_tools"]),
+                    _cell(row["with_tools"]),
+                    str(row["n"]),
+                )
+                for row in result["summary"]
+            ),
+        ]
+    )
+    errors = result["tool_errors"]
+    by_tool = ", ".join(f"{name} {count}" for name, count in errors["by_tool"].items())
+    tokens = result["tokens"]
+    print()
+    print(
+        f"Tool calls {result['tool_calls']}, tool errors {errors['count']}"
+        f"{f' ({by_tool})' if by_tool else ''}, questions stopped at the turn cap "
+        f"{result['turns_capped']}"
+    )
+    print(
+        f"Tokens in/out: without tools {tokens['without_tools']['input']}/"
+        f"{tokens['without_tools']['output']}, with tools {tokens['with_tools']['input']}/"
+        f"{tokens['with_tools']['output']}"
+    )
+
+
+def run_grounding(limit: int | None, out: Path) -> int:
+    """Run the grounding suite, write its results file and rebuild summary.md.
+
+    The key is checked first, so a run without one starts no server and builds no client.
+    """
+    api_key = os.environ.get(API_KEY_VAR)
+    if not api_key:
+        print(
+            f"error: {API_KEY_VAR} is not set. Put it in .env (see .env.example), which "
+            "`make eval` loads, or set it in the environment.",
+            file=sys.stderr,
+        )
+        return 1
+    model = os.environ.get(MODEL_VAR) or grounding.DEFAULT_MODEL
+    try:
+        questions = grounding.load_questions(grounding.QUESTIONS)[:limit]
+        result = anyio.run(
+            functools.partial(
+                grounding.run,
+                grounding.gemini_client(model, api_key),
+                questions,
+                now=datetime.now(UTC),
+                commit=git_commit(),
+                dataset_version=dataset_version(loader.bundled_dir()),
+            )
+        )
+    except (grounding.GroundingError, loader.DataError) as err:
+        print(f"error: {err}", file=sys.stderr)
+        return 1
+    log.info("grounding asked %d questions of %s", result["n"], result["model"])
+    print_grounding_report(result)
+    try:
+        path = write_results(result, out)
+        summary = write_summary(out)
+    except EvalError as err:
+        print(f"error: {err}", file=sys.stderr)
+        return 1
+    print(f"\nWrote {_shown(path)} and {_shown(summary)}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     configure_logging("INFO")
     parser = argparse.ArgumentParser(description="Run an evaluation suite.")
@@ -448,8 +592,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.suite == "grounding":
-        print("the grounding suite is not implemented yet", file=sys.stderr)
-        return 2
+        if args.check is not None:
+            parser.error("--check applies to the data_accuracy suite only")
+        if args.limit is not None and args.limit < 1:
+            parser.error("--limit must be 1 or more")
+        return run_grounding(args.limit, args.out)
     if args.limit is not None:
         parser.error("--limit applies to the grounding suite only")
 
