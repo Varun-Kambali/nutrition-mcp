@@ -1,5 +1,6 @@
 import contextlib
 import functools
+import itertools
 import json
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -296,6 +297,7 @@ def test_metrics() -> None:
         "failed_answers": 1,
         "missing_answers": 1,
         "missing_reported": 0.5,
+        "api_errors": 0,
     }
 
 
@@ -452,22 +454,109 @@ def test_a_busy_model_is_retried_with_backoff() -> None:
     assert slept == list(grounding.RETRY_DELAYS[:2])
 
 
-def test_a_model_that_stays_busy_gives_a_failed_answer() -> None:
+def test_a_model_that_stays_busy_gives_an_api_error() -> None:
     model = FakeModel(lambda history, tools: grounding.RetryableModelError("http 503"))
 
     async def sleep(seconds: float) -> None:
         pass
 
     outcome = run(grounding.answer, model, question("q1"), None, sleep=sleep)
-    assert outcome.parsed == grounding.Failed("model error: http 503")
+    assert outcome.parsed == grounding.ApiError("http 503")
     assert len(model.requests) == len(grounding.RETRY_DELAYS) + 1
 
 
 def test_a_model_error_is_not_retried() -> None:
     model = FakeModel(lambda history, tools: grounding.ModelError("http 400"))
     outcome = run(grounding.answer, model, question("q1"), None)
-    assert outcome.parsed == grounding.Failed("model error: http 400")
+    assert outcome.parsed == grounding.ApiError("http 400")
     assert len(model.requests) == 1
+
+
+class FakeClock:
+    """Time that moves only when something sleeps, so pacing runs instantly."""
+
+    def __init__(self) -> None:
+        self.now = 1000.0
+        self.slept: list[float] = []
+
+    def __call__(self) -> float:
+        return self.now
+
+    async def sleep(self, seconds: float) -> None:
+        self.slept.append(seconds)
+        self.now += seconds
+
+
+def test_the_pacer_keeps_the_minimum_interval() -> None:
+    clock = FakeClock()
+    pacer = grounding.Pacer(4.0, clock=clock, sleep=clock.sleep)
+
+    async def scenario() -> None:
+        await pacer.wait()  # the first request goes at once
+        await pacer.wait()  # straight after: waits the whole interval
+        clock.now += 10.0
+        await pacer.wait()  # long after: no wait
+        clock.now += 1.5
+        await pacer.wait()  # part of the interval has passed
+
+    anyio.run(scenario)
+    assert clock.slept == [4.0, 2.5]
+
+
+def test_requests_are_paced_across_questions_arms_and_retries() -> None:
+    clock = FakeClock()
+    started: list[float] = []
+    busy = [True]
+
+    def script(history: Sequence[grounding.Message], tools: Sequence[grounding.ToolSpec]) -> Any:
+        started.append(clock.now)
+        if busy[0]:
+            busy[0] = False
+            return grounding.RetryableModelError("http 429")
+        return reply('{"kcal": 150, "protein_g": 4, "carbs_g": 30}')
+
+    @contextlib.asynccontextmanager
+    async def toolbox() -> Any:
+        yield FakeTools()
+
+    result = run(
+        grounding.run,
+        FakeModel(script),
+        [question("q1"), question("q2")],
+        now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
+        commit="abc1234",
+        dataset_version="0123456789ab",
+        min_interval=4.0,
+        toolbox=toolbox,
+        clock=clock,
+        sleep=clock.sleep,
+    )
+
+    # One retry, then two questions in each arm: five request starts.
+    assert len(started) == 5
+    assert all(later - earlier >= 4.0 for earlier, later in itertools.pairwise(started))
+    assert result["min_request_interval_s"] == 4.0
+
+
+def test_an_api_error_is_left_out_of_scoring_and_counted() -> None:
+    questions = [question("q1"), question("q2"), question("m1", missing=("kheer",))]
+    golden = {q: {"kcal": 200.0, "protein_g": 10.0, "carbs_g": 40.0} for q in ("q1", "q2")}
+    outcomes = {
+        "q1": grounding.Outcome(numbers(200, 10, 40)),
+        "q2": grounding.Outcome(grounding.ApiError("http 429")),
+        "m1": grounding.Outcome(grounding.ApiError("http 503")),
+    }
+
+    metrics = grounding.score_arm(questions, golden, outcomes)
+
+    assert metrics["api_errors"] == 2
+    assert metrics["failed_answers"] == 0
+    assert metrics["n"] == 1
+    # q2 is not counted as outside 10%: it was never answered.
+    assert metrics["within_10pct_kcal"] == 1.0
+    assert metrics["mape_kcal"] == 0.0
+    # The only missing-dish question had an API error, so there is no share to report.
+    assert metrics["missing_reported"] is None
 
 
 def test_tool_errors_and_latency_reach_the_results() -> None:
@@ -494,10 +583,13 @@ def test_tool_errors_and_latency_reach_the_results() -> None:
         now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
         commit="abc1234",
         dataset_version="0123456789ab",
+        min_interval=0.0,
         toolbox=toolbox,
     )
 
     assert result["suite"] == "grounding"
+    # Left to the provider's default, as Google advises for Gemini 3 models.
+    assert result["temperature"] == "default"
     assert (result["date"], result["generated_at"]) == ("2026-10-21", "2026-10-21T09:00:00+00:00")
     assert (result["model"], result["tier"], result["cost_usd"]) == ("fake-model", "free", 0.0)
     assert (result["commit"], result["dataset_version"], result["n"]) == (
@@ -534,6 +626,13 @@ def test_tool_errors_and_latency_reach_the_results() -> None:
         "n": 1,
         "without_tools": result["without_tools"]["mape_kcal"],
         "with_tools": result["with_tools"]["mape_kcal"],
+    }
+    api_errors = next(row for row in summary if row["measure"] == "API errors (count)")
+    assert api_errors == {
+        "measure": "API errors (count)",
+        "n": 2,
+        "without_tools": 0,
+        "with_tools": 0,
     }
     latency = next(row for row in summary if row["measure"] == "p95 tool latency (ms)")
     assert latency == {
@@ -725,7 +824,7 @@ class StubModels:
         return self.response
 
 
-def test_gemini_client_sends_the_prompt_tools_and_temperature() -> None:
+def test_gemini_client_sends_the_prompt_and_tools_and_no_temperature() -> None:
     response = types.GenerateContentResponse(
         candidates=[
             types.Candidate(content=types.Content(role="model", parts=[types.Part(text="ok")]))
@@ -744,7 +843,8 @@ def test_gemini_client_sends_the_prompt_tools_and_temperature() -> None:
     assert with_tools["model"] == "gemini-test"
     config = with_tools["config"]
     assert config.system_instruction == grounding.SYSTEM_PROMPT
-    assert config.temperature == grounding.TEMPERATURE == 0.0
+    # Not set, so the provider's default applies.
+    assert config.temperature is None
     assert config.automatic_function_calling.disable is True
     [tool] = config.tools
     assert [d.name for d in tool.function_declarations] == ["compute_meal"]

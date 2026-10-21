@@ -3,7 +3,7 @@
 Usage:
   uv run python evals/run_evals.py --suite data_accuracy
   uv run python evals/run_evals.py --suite data_accuracy --check evals/thresholds.toml
-  uv run --group eval python evals/run_evals.py --suite grounding [--limit N]
+  uv run --group eval python evals/run_evals.py --suite grounding [--limit N] [--min-interval S]
 
 `data_accuracy` compares the dish values the server computes with independent records of the
 same dishes as eaten (evals/datasets/references.csv, built by scripts/build_references.py). It
@@ -15,7 +15,8 @@ nothing, and exits 1 when a gated nutrient fails; CI runs it that way on every p
 and again with this server's tools (evals/grounding.py). It needs GEMINI_API_KEY and calls the
 model, so it runs on demand only (`make eval`, which loads .env). EVAL_MODEL overrides the
 default model. A run writes evals/results/YYYY-MM-DD_<model>_<commit>.json and rebuilds
-summary.md; --limit N asks only the first N questions.
+summary.md; --limit N asks only the first N questions, and --min-interval sets the least
+time between two model requests.
 
 Every results file is JSON with `suite`, `date`, `generated_at`, `commit` and
 `dataset_version`. summary.md is rebuilt from the newest file of each suite (the latest
@@ -392,8 +393,11 @@ def _grounding_lines(path: Path, data: Mapping[str, Any]) -> list[str]:
         "model calling this server's tools over stdio. Golden answers are computed by the",
         "server's own query functions from the bundled data. An error is the mean absolute",
         "percentage error over the answers that gave numbers; an answer without numbers is left",
-        "out of it and counts as outside 10%. Shares run from 0 to 1. n is the number of",
-        "questions behind a row, or of tool calls for latency.",
+        "out of it and counts as outside 10%. A question whose model request failed after its",
+        "retries is an API error: it is counted on its own row and left out of every other one.",
+        "Shares run from 0 to 1. n is the number of questions behind a row, or of tool calls",
+        "for latency. The model runs at the provider's default temperature, so answers vary",
+        "from run to run.",
         "",
         "| Measure | Baseline | This project | n | Model | Date | Commit | Dataset version "
         "| Results file |",
@@ -501,7 +505,8 @@ def _print_table(rows: Sequence[Sequence[str]]) -> None:
 def print_grounding_report(result: Mapping[str, Any]) -> None:
     print(
         f"Grounding: {result['n']} questions, model {result['model']}, "
-        f"dataset {result['dataset_version']}, commit {result['commit']}"
+        f"dataset {result['dataset_version']}, commit {result['commit']}, requests at least "
+        f"{result['min_request_interval_s']:g} s apart"
     )
     print()
     _print_table(
@@ -534,7 +539,7 @@ def print_grounding_report(result: Mapping[str, Any]) -> None:
     )
 
 
-def run_grounding(limit: int | None, out: Path) -> int:
+def run_grounding(limit: int | None, out: Path, min_interval: float) -> int:
     """Run the grounding suite, write its results file and rebuild summary.md.
 
     The key is checked first, so a run without one starts no server and builds no client.
@@ -558,6 +563,7 @@ def run_grounding(limit: int | None, out: Path) -> int:
                 now=datetime.now(UTC),
                 commit=git_commit(),
                 dataset_version=dataset_version(loader.bundled_dir()),
+                min_interval=min_interval,
             )
         )
     except (grounding.GroundingError, loader.DataError) as err:
@@ -581,6 +587,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--suite", required=True, choices=SUITES)
     parser.add_argument("--limit", type=int, metavar="N", help="grounding: first N questions")
     parser.add_argument(
+        "--min-interval",
+        type=float,
+        metavar="SECONDS",
+        help="grounding: least time between the starts of two model requests "
+        f"(default {grounding.MIN_REQUEST_INTERVAL_S:g}, sized for the free tier)",
+    )
+    parser.add_argument(
         "--out", type=Path, default=RESULTS, help="folder for results files and summary.md"
     )
     parser.add_argument(
@@ -596,9 +609,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             parser.error("--check applies to the data_accuracy suite only")
         if args.limit is not None and args.limit < 1:
             parser.error("--limit must be 1 or more")
-        return run_grounding(args.limit, args.out)
+        interval = args.min_interval
+        if interval is None:
+            # Read here, not when the parser is built, so a test can shorten it.
+            interval = grounding.MIN_REQUEST_INTERVAL_S
+        elif not math.isfinite(interval) or interval < 0:
+            parser.error("--min-interval must be a finite number of seconds, 0 or more")
+        return run_grounding(args.limit, args.out, interval)
     if args.limit is not None:
         parser.error("--limit applies to the grounding suite only")
+    if args.min_interval is not None:
+        parser.error("--min-interval applies to the grounding suite only")
 
     try:
         result = data_accuracy(REFERENCES, now=datetime.now(UTC), commit=git_commit())

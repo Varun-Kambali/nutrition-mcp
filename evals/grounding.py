@@ -48,7 +48,12 @@ ROOT = Path(__file__).resolve().parent.parent
 QUESTIONS = ROOT / "evals" / "datasets" / "questions.jsonl"
 
 DEFAULT_MODEL = "gemini-3.1-flash-lite"
-TEMPERATURE = 0.0
+# Temperature is left to the provider: Google advises keeping Gemini 3 models at their default
+# of 1.0, because lower values can make them loop. Answers therefore vary from run to run.
+TEMPERATURE = "default"
+# Seconds between the starts of two model requests. Google publishes free-tier limits per
+# project in AI Studio, not in its docs, so this is a conservative guess: 15 requests a minute.
+MIN_REQUEST_INTERVAL_S = 4.0
 # Model turns per question in the with-tools arm. Search, then compute, then answer takes 3.
 MAX_TURNS = 8
 # Waits before each retry of a request the API turned away as busy (429 or 5xx). Free-tier
@@ -191,7 +196,14 @@ class Failed:
     reason: str
 
 
-Parsed = Numbers | Missing | Failed
+@dataclass(frozen=True, slots=True)
+class ApiError:
+    """No answer, because the model request failed after its retries. Not scored at all."""
+
+    kind: str
+
+
+Parsed = Numbers | Missing | Failed | ApiError
 
 
 def _last_object(text: str) -> dict[str, Any] | None:
@@ -422,12 +434,37 @@ class Outcome:
 
 
 Sleep = Callable[[float], Awaitable[None]]
+Clock = Callable[[], float]
+
+
+class Pacer:
+    """Keeps at least `interval` seconds between the starts of model requests, retries included."""
+
+    def __init__(
+        self, interval: float, *, clock: Clock = time.monotonic, sleep: Sleep = anyio.sleep
+    ) -> None:
+        self.interval = interval
+        self._clock = clock
+        self._sleep = sleep
+        self._last: float | None = None
+
+    async def wait(self) -> None:
+        if self._last is not None:
+            gap = self._last + self.interval - self._clock()
+            if gap > 0:
+                await self._sleep(gap)
+        self._last = self._clock()
 
 
 async def _generate(
-    model: ModelClient, history: Sequence[Message], specs: Sequence[ToolSpec], sleep: Sleep
+    model: ModelClient,
+    history: Sequence[Message],
+    specs: Sequence[ToolSpec],
+    pacer: Pacer,
+    sleep: Sleep,
 ) -> ModelReply:
     for delay in (*RETRY_DELAYS, None):
+        await pacer.wait()
         try:
             return await model.generate(SYSTEM_PROMPT, history, specs)
         except RetryableModelError as err:
@@ -439,17 +476,26 @@ async def _generate(
 
 
 async def answer(
-    model: ModelClient, question: Question, tools: ToolBox | None, *, sleep: Sleep = anyio.sleep
+    model: ModelClient,
+    question: Question,
+    tools: ToolBox | None,
+    *,
+    pacer: Pacer | None = None,
+    sleep: Sleep = anyio.sleep,
 ) -> Outcome:
-    """Ask one question, running the model's tool calls until it answers or hits MAX_TURNS."""
+    """Ask one question, running the model's tool calls until it answers or hits MAX_TURNS.
+
+    A request that still fails after its retries ends the question with an ApiError.
+    """
+    pacer = pacer if pacer is not None else Pacer(0.0, sleep=sleep)
     specs = list(tools.specs) if tools is not None else []
     history: list[Message] = [UserText(question.question)]
     outcome = Outcome(Failed("turn cap reached"))
     for turn in range(1, MAX_TURNS + 1):
         try:
-            reply = await _generate(model, history, specs, sleep)
+            reply = await _generate(model, history, specs, pacer, sleep)
         except ModelError as err:
-            outcome.parsed = Failed(f"model error: {err.kind}")
+            outcome.parsed = ApiError(err.kind)
             outcome.turns = turn
             return outcome
         outcome.turns = turn
@@ -477,6 +523,8 @@ def _label(parsed: Parsed) -> str:
         return "answered"
     if isinstance(parsed, Missing):
         return "reported missing"
+    if isinstance(parsed, ApiError):
+        return f"API error ({parsed.kind})"
     return f"failed ({parsed.reason})"
 
 
@@ -485,12 +533,13 @@ async def run_arm(
     questions: Sequence[Question],
     tools: ToolBox | None,
     *,
+    pacer: Pacer | None = None,
     sleep: Sleep = anyio.sleep,
 ) -> dict[str, Outcome]:
     arm = "without_tools" if tools is None else "with_tools"
     outcomes: dict[str, Outcome] = {}
     for question in questions:
-        outcome = await answer(model, question, tools, sleep=sleep)
+        outcome = await answer(model, question, tools, pacer=pacer, sleep=sleep)
         # Ids and outcomes only: questions and answers stay out of the logs.
         log.info("%s %s: %s", arm, question.id, _label(outcome.parsed))
         outcomes[question.id] = outcome
@@ -527,10 +576,13 @@ def score_arm(
     """MAPE and within-10% shares per nutrient, failed answers and missing dishes reported.
 
     MAPE covers the questions with items whose answer gave numbers (`n`). An answer without
-    numbers, failed or a missing list, is left out of the MAPE and counts as outside 10%.
+    numbers, failed or a missing list, is left out of the MAPE and counts as outside 10%. A
+    question with an API error got no answer at all, so it is left out of every measure and
+    only counted in `api_errors`.
     """
-    with_items = [q for q in questions if q.items]
-    expecting_missing = [q for q in questions if q.expect_missing]
+    answered = [q for q in questions if not isinstance(outcomes[q.id].parsed, ApiError)]
+    with_items = [q for q in answered if q.items]
+    expecting_missing = [q for q in answered if q.expect_missing]
     errors: dict[str, list[float]] = {key: [] for key in ANSWER_KEYS}
     for question in with_items:
         parsed = outcomes[question.id].parsed
@@ -549,6 +601,7 @@ def score_arm(
     metrics["missing_answers"] = sum(isinstance(outcomes[q.id].parsed, Missing) for q in with_items)
     reported = sum(reports_missing(q, outcomes[q.id].parsed) for q in expecting_missing)
     metrics["missing_reported"] = _share(reported, len(expecting_missing))
+    metrics["api_errors"] = len(questions) - len(answered)
     return metrics
 
 
@@ -569,6 +622,7 @@ def _arm_row(outcome: Outcome, golden: Golden | None) -> dict[str, Any]:
         "answer": parsed.values if isinstance(parsed, Numbers) else None,
         "missing": list(parsed.foods) if isinstance(parsed, Missing) else None,
         "failure": parsed.reason if isinstance(parsed, Failed) else None,
+        "api_error": parsed.kind if isinstance(parsed, ApiError) else None,
         "ape": None,
         "turns": outcome.turns,
         "turns_capped": outcome.capped,
@@ -618,6 +672,7 @@ def summary_rows(result: Mapping[str, Any]) -> list[dict[str, Any]]:
             "missing_reported",
         ),
         row("Failed answers (count)", result["n"], "failed_answers"),
+        row("API errors (count)", result["n"], "api_errors"),
         {
             "measure": "p95 tool latency (ms)",
             "n": result["tool_calls"],
@@ -637,6 +692,7 @@ def build_result(
     now: datetime,
     commit: str,
     dataset_version: str,
+    min_interval: float,
 ) -> dict[str, Any]:
     utc = now.astimezone(UTC)
     records = [record for outcome in with_.values() for record in outcome.tool_calls]
@@ -657,6 +713,7 @@ def build_result(
         "cost_usd": 0.0,
         "temperature": TEMPERATURE,
         "max_turns": MAX_TURNS,
+        "min_request_interval_s": min_interval,
         "n": len(questions),
         "questions_with_items": sum(bool(q.items) for q in questions),
         "questions_expecting_missing": sum(bool(q.expect_missing) for q in questions),
@@ -693,18 +750,22 @@ async def run(
     now: datetime,
     commit: str,
     dataset_version: str,
+    min_interval: float,
     toolbox: Toolboxes = stdio_toolbox,
+    clock: Clock = time.monotonic,
     sleep: Sleep = anyio.sleep,
 ) -> dict[str, Any]:
     """Both arms over the questions, as a results dict for run_evals.write_results.
 
     Golden answers are worked out and the server is started before the first model request,
-    so a bad question or a server that will not start costs no requests.
+    so a bad question or a server that will not start costs no requests. Every request, in
+    both arms, waits on one pacer, `min_interval` seconds apart.
     """
     golden = golden_answers(questions)
+    pacer = Pacer(min_interval, clock=clock, sleep=sleep)
     async with toolbox() as tools:
-        without = await run_arm(model, questions, None, sleep=sleep)
-        with_ = await run_arm(model, questions, tools, sleep=sleep)
+        without = await run_arm(model, questions, None, pacer=pacer, sleep=sleep)
+        with_ = await run_arm(model, questions, tools, pacer=pacer, sleep=sleep)
     return build_result(
         model.model,
         questions,
@@ -714,6 +775,7 @@ async def run(
         now=now,
         commit=commit,
         dataset_version=dataset_version,
+        min_interval=min_interval,
     )
 
 
@@ -846,7 +908,10 @@ def model_error(err: "genai_errors.APIError") -> ModelError:
 
 
 class GeminiClient:
-    """ModelClient over google-genai's async API, with automatic function calling off."""
+    """ModelClient over google-genai's async API, with automatic function calling off.
+
+    Temperature is not set, so the model runs at the provider's default (see TEMPERATURE).
+    """
 
     def __init__(self, model: str, client: "genai.Client") -> None:
         self._model = model
@@ -864,7 +929,6 @@ class GeminiClient:
 
         config = types.GenerateContentConfig(
             system_instruction=system,
-            temperature=TEMPERATURE,
             tools=[types.Tool(function_declarations=[function_declaration(t) for t in tools])]
             if tools
             else None,

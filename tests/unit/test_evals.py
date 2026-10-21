@@ -526,7 +526,15 @@ def test_grounding_needs_the_api_key(
     assert not out.exists()
 
 
-@pytest.mark.parametrize("args", [["--check", "evals/thresholds.toml"], ["--limit", "0"]])
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--check", "evals/thresholds.toml"],
+        ["--limit", "0"],
+        ["--min-interval", "-1"],
+        ["--min-interval", "nan"],
+    ],
+)
 def test_grounding_rejects_options_it_cannot_use(
     args: list[str], restore_logging: None, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -565,13 +573,15 @@ def test_a_grounding_run_writes_the_results_file_and_summary(
     monkeypatch.setattr(run_evals, "git_commit", lambda: "abc1234")
     out = tmp_path / "results"
 
-    assert run_evals.main(["--suite", "grounding", "--limit", "2", "--out", str(out)]) == 0
+    args = ["--suite", "grounding", "--limit", "2", "--min-interval", "0", "--out", str(out)]
+    assert run_evals.main(args) == 0
 
     assert built == [("gemini-test", "stand-in")]
     [results] = [path for path in out.iterdir() if path.suffix == ".json"]
     assert results.name.endswith("_gemini-test_abc1234.json")
     data = json.loads(results.read_text(encoding="utf-8"))
     assert data["n"] == 2 and data["model"] == "gemini-test"
+    assert data["min_request_interval_s"] == 0.0
     assert data["dataset_version"] == run_evals.dataset_version(loader.bundled_dir())
     summary = (out / "summary.md").read_text(encoding="utf-8")
     assert "| Mean absolute error on calories (%) |" in summary
@@ -592,5 +602,20 @@ def test_eval_model_defaults_in_code(
         return AnswersAtOnce(model)
 
     monkeypatch.setattr(grounding, "gemini_client", fake_client)
+    # The default interval is read from grounding when the flag is left out; a small value
+    # keeps the test quick.
+    assert grounding.MIN_REQUEST_INTERVAL_S == 4.0
+    monkeypatch.setattr(grounding, "MIN_REQUEST_INTERVAL_S", 0.01)
     assert run_evals.main(["--suite", "grounding", "--limit", "1", "--out", str(tmp_path)]) == 0
     assert built == [grounding.DEFAULT_MODEL] == ["gemini-3.1-flash-lite"]
+    [results] = tmp_path.glob("*.json")
+    assert json.loads(results.read_text(encoding="utf-8"))["min_request_interval_s"] == 0.01
+
+
+def test_min_interval_applies_to_grounding_only(
+    restore_logging: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        run_evals.main(["--suite", "data_accuracy", "--min-interval", "1"])
+    assert exit_info.value.code == 2
+    assert "--min-interval" in capsys.readouterr().err

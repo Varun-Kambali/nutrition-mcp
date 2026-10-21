@@ -79,6 +79,7 @@ async def test_a_scripted_model_answers_through_the_stdio_server() -> None:
         now=datetime(2026, 10, 21, 9, 0, tzinfo=UTC),
         commit="abc1234",
         dataset_version="0123456789ab",
+        min_interval=0.0,
     )
 
     [row] = result["rows"]
