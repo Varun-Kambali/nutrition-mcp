@@ -1,0 +1,2568 @@
+{
+  "suite": "grounding",
+  "date": "2026-10-21",
+  "generated_at": "2026-10-21T09:26:37+00:00",
+  "commit": "8262476",
+  "dirty": false,
+  "dataset_version": "24143edbb56e",
+  "questions_version": "c8b108a71138",
+  "model": "gemini-3.1-flash-lite",
+  "tier": "free",
+  "cost_usd": 0.0,
+  "temperature": "default",
+  "max_turns": 8,
+  "min_request_interval_s": 4.0,
+  "n": 30,
+  "questions_total": 30,
+  "limit": null,
+  "questions_with_items": 26,
+  "questions_expecting_missing": 4,
+  "tokens": {
+    "without_tools": {
+      "input": 4655,
+      "output": 6162
+    },
+    "with_tools": {
+      "input": 273239,
+      "output": 4576
+    }
+  },
+  "n_paired": 26,
+  "without_tools": {
+    "n_numbers": 26,
+    "n_items": 26,
+    "n_missing_dishes": 4,
+    "n_replied": 30,
+    "mape_kcal": 16.0,
+    "mape_protein": 13.2,
+    "mape_carbs": 20.2,
+    "within_10pct_kcal": 0.38,
+    "within_10pct_protein": 0.58,
+    "within_10pct_carbs": 0.35,
+    "failed_answers": 0,
+    "missing_answers": 0,
+    "missing_reported": 0.0,
+    "api_errors": 0
+  },
+  "with_tools": {
+    "n_numbers": 26,
+    "n_items": 26,
+    "n_missing_dishes": 4,
+    "n_replied": 30,
+    "mape_kcal": 0.0,
+    "mape_protein": 0.0,
+    "mape_carbs": 0.0,
+    "within_10pct_kcal": 1.0,
+    "within_10pct_protein": 1.0,
+    "within_10pct_carbs": 1.0,
+    "failed_answers": 1,
+    "missing_answers": 0,
+    "missing_reported": 0.5,
+    "api_errors": 0
+  },
+  "tool_calls": 89,
+  "tool_errors": {
+    "count": 0,
+    "by_tool": {}
+  },
+  "p95_tool_latency_ms": 10.4,
+  "turns_capped": 1,
+  "summary": [
+    {
+      "measure": "Calorie error against the dataset totals, MAPE (%)",
+      "n_without_tools": 26,
+      "n_with_tools": 26,
+      "without_tools": 16.0,
+      "with_tools": 0.0
+    },
+    {
+      "measure": "Protein error against the dataset totals, MAPE (%)",
+      "n_without_tools": 26,
+      "n_with_tools": 26,
+      "without_tools": 13.2,
+      "with_tools": 0.0
+    },
+    {
+      "measure": "Carbohydrate error against the dataset totals, MAPE (%)",
+      "n_without_tools": 26,
+      "n_with_tools": 26,
+      "without_tools": 20.2,
+      "with_tools": 0.0
+    },
+    {
+      "measure": "Answers within 10% on calories (share)",
+      "n_without_tools": 26,
+      "n_with_tools": 26,
+      "without_tools": 0.38,
+      "with_tools": 1.0
+    },
+    {
+      "measure": "Missing dishes reported (share)",
+      "n_without_tools": null,
+      "n_with_tools": 4,
+      "without_tools": null,
+      "with_tools": 0.5
+    },
+    {
+      "measure": "Failed answers (count)",
+      "n_without_tools": 30,
+      "n_with_tools": 30,
+      "without_tools": 0,
+      "with_tools": 1
+    },
+    {
+      "measure": "API errors (count)",
+      "n_without_tools": 30,
+      "n_with_tools": 30,
+      "without_tools": 0,
+      "with_tools": 0
+    },
+    {
+      "measure": "Tool errors (count)",
+      "n_without_tools": null,
+      "n_with_tools": 89,
+      "without_tools": null,
+      "with_tools": 0
+    },
+    {
+      "measure": "p95 tool latency (ms)",
+      "n_without_tools": null,
+      "n_with_tools": 89,
+      "without_tools": null,
+      "with_tools": 10.4
+    }
+  ],
+  "rows": [
+    {
+      "id": "q01",
+      "question": "How much protein is in 2 rotis and a katori of rajma?",
+      "golden": {
+        "kcal": 336.53,
+        "protein_g": 14.27,
+        "carbs_g": 49.15
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 320.0,
+          "protein_g": 13.5,
+          "carbs_g": 44.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 4.9,
+          "protein_g": 5.4,
+          "carbs_g": 10.5
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 336.53,
+          "protein_g": 14.27,
+          "carbs_g": 49.15
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "roti"
+            },
+            "is_error": false,
+            "latency_ms": 82.69
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "rajma"
+            },
+            "is_error": false,
+            "latency_ms": 3.56
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "amount": 2,
+                  "unit": "roti",
+                  "food_id": "chapati"
+                },
+                {
+                  "unit": "katori",
+                  "amount": 1,
+                  "food_id": "rajma_masala"
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 25.06
+          }
+        ]
+      }
+    },
+    {
+      "id": "q02",
+      "question": "How many carbs are in 2 plain parathas?",
+      "golden": {
+        "kcal": 331.27,
+        "protein_g": 9.5,
+        "carbs_g": 43.91
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 380.0,
+          "protein_g": 10.0,
+          "carbs_g": 54.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 14.7,
+          "protein_g": 5.3,
+          "carbs_g": 23.0
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 331.27,
+          "protein_g": 9.5,
+          "carbs_g": 43.91
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "plain paratha"
+            },
+            "is_error": false,
+            "latency_ms": 9.34
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "food_id": "plain_paratha",
+                  "amount": 2,
+                  "unit": "piece"
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 4.77
+          }
+        ]
+      }
+    },
+    {
+      "id": "q03",
+      "question": "I had a katori of palak paneer with 3 rotis. What are the calories, protein and carbs?",
+      "golden": {
+        "kcal": 476.36,
+        "protein_g": 23.65,
+        "carbs_g": 53.25
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 490.0,
+          "protein_g": 19.0,
+          "carbs_g": 53.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 2.9,
+          "protein_g": 19.7,
+          "carbs_g": 0.5
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 476.36,
+          "protein_g": 23.65,
+          "carbs_g": 53.25
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "palak paneer"
+            },
+            "is_error": false,
+            "latency_ms": 9.5
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "roti"
+            },
+            "is_error": false,
+            "latency_ms": 7.0
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "unit": "katori",
+                  "food_id": "palak_paneer",
+                  "amount": 1
+                },
+                {
+                  "unit": "roti",
+                  "food_id": "chapati",
+                  "amount": 3
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 4.38
+          }
+        ]
+      }
+    },
+    {
+      "id": "q04",
+      "question": "Lunch was a katori of chole, 2 rotis and a katori of jeera rice. How many calories is that?",
+      "golden": {
+        "kcal": 574.91,
+        "protein_g": 17.6,
+        "carbs_g": 91.39
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 600.0,
+          "protein_g": 19.0,
+          "carbs_g": 98.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 4.4,
+          "protein_g": 8.0,
+          "carbs_g": 7.2
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 574.91,
+          "protein_g": 17.6,
+          "carbs_g": 91.39
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "chole"
+            },
+            "is_error": false,
+            "latency_ms": 9.19
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "roti"
+            },
+            "is_error": false,
+            "latency_ms": 7.16
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "jeera rice"
+            },
+            "is_error": false,
+            "latency_ms": 7.0
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "food_id": "chana_masala",
+                  "amount": 1,
+                  "unit": "katori"
+                },
+                {
+                  "unit": "roti",
+                  "amount": 2,
+                  "food_id": "chapati"
+                },
+                {
+                  "amount": 1,
+                  "unit": "katori",
+                  "food_id": "jeera_rice"
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 6.34
+          }
+        ]
+      }
+    },
+    {
+      "id": "q05",
+      "question": "What is the nutrition in 200 g of aloo gobi?",
+      "golden": {
+        "kcal": 198.12,
+        "protein_g": 4.54,
+        "carbs_g": 22.63
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 220.0,
+          "protein_g": 4.0,
+          "carbs_g": 24.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 11.0,
+          "protein_g": 11.9,
+          "carbs_g": 6.1
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 198.12,
+          "protein_g": 4.54,
+          "carbs_g": 22.63
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "aloo gobi"
+            },
+            "is_error": false,
+            "latency_ms": 9.14
+          },
+          {
+            "name": "get_nutrition",
+            "arguments": {
+              "amount": 200,
+              "food_id": "aloo_gobi",
+              "unit": "g"
+            },
+            "is_error": false,
+            "latency_ms": 21.93
+          }
+        ]
+      }
+    },
+    {
+      "id": "q06",
+      "question": "A thali of 2 rotis, a katori of dal tadka, a katori of steamed rice and a katori of aloo gobi: calories, protein and carbs?",
+      "golden": {
+        "kcal": 634.45,
+        "protein_g": 19.93,
+        "carbs_g": 105.4
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 705.0,
+          "protein_g": 22.0,
+          "carbs_g": 107.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 11.1,
+          "protein_g": 10.4,
+          "carbs_g": 1.5
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 634.45,
+          "protein_g": 19.93,
+          "carbs_g": 105.4
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "roti"
+            },
+            "is_error": false,
+            "latency_ms": 9.35
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "dal tadka"
+            },
+            "is_error": false,
+            "latency_ms": 7.39
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "steamed rice"
+            },
+            "is_error": false,
+            "latency_ms": 6.62
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "aloo gobi"
+            },
+            "is_error": false,
+            "latency_ms": 5.98
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "unit": "roti",
+                  "amount": 2,
+                  "food_id": "chapati"
+                },
+                {
+                  "unit": "katori",
+                  "amount": 1,
+                  "food_id": "dal_tadka"
+                },
+                {
+                  "amount": 1,
+                  "unit": "katori",
+                  "food_id": "steamed_rice"
+                },
+                {
+                  "unit": "katori",
+                  "food_id": "aloo_gobi",
+                  "amount": 1
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 6.59
+          }
+        ]
+      }
+    },
+    {
+      "id": "q07",
+      "question": "How many carbohydrates are in 3 rotis?",
+      "golden": {
+        "kcal": 267.75,
+        "protein_g": 10.4,
+        "carbs_g": 48.25
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 270.0,
+          "protein_g": 9.0,
+          "carbs_g": 39.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.8,
+          "protein_g": 13.5,
+          "carbs_g": 19.2
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 267.75,
+          "protein_g": 10.4,
+          "carbs_g": 48.25
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "roti"
+            },
+            "is_error": false,
+            "latency_ms": 10.06
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "unit": "piece",
+                  "amount": 3,
+                  "food_id": "chapati"
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 4.36
+          }
+        ]
+      }
+    },
+    {
+      "id": "q08",
+      "question": "Carbs in a plate of idli with a katori of sambar?",
+      "golden": {
+        "kcal": 217.91,
+        "protein_g": 8.68,
+        "carbs_g": 37.09
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 215.0,
+          "protein_g": 7.5,
+          "carbs_g": 35.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 1.3,
+          "protein_g": 13.6,
+          "carbs_g": 5.6
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 217.91,
+          "protein_g": 8.68,
+          "carbs_g": 37.09
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "idli"
+            },
+            "is_error": false,
+            "latency_ms": 9.65
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "sambar"
+            },
+            "is_error": false,
+            "latency_ms": 6.87
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "unit": "plate",
+                  "food_id": "idli",
+                  "amount": 1
+                },
+                {
+                  "unit": "katori",
+                  "food_id": "sambar",
+                  "amount": 1
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 5.37
+          }
+        ]
+      }
+    },
+    {
+      "id": "q09",
+      "question": "Breakfast was 3 idlis, a katori of sambar and 2 tablespoons of coconut chutney. Calories and protein?",
+      "golden": {
+        "kcal": 334.08,
+        "protein_g": 11.66,
+        "carbs_g": 50.68
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 300.0,
+          "protein_g": 8.0,
+          "carbs_g": 40.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 10.2,
+          "protein_g": 31.4,
+          "carbs_g": 21.1
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 334.08,
+          "protein_g": 11.66,
+          "carbs_g": 50.68
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "idli"
+            },
+            "is_error": false,
+            "latency_ms": 9.55
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "sambar"
+            },
+            "is_error": false,
+            "latency_ms": 7.0
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "coconut chutney"
+            },
+            "is_error": false,
+            "latency_ms": 7.19
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "amount": 3,
+                  "food_id": "idli",
+                  "unit": "piece"
+                },
+                {
+                  "unit": "katori",
+                  "amount": 1,
+                  "food_id": "sambar"
+                },
+                {
+                  "amount": 2,
+                  "food_id": "coconut_chutney",
+                  "unit": "tbsp"
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 5.62
+          }
+        ]
+      }
+    },
+    {
+      "id": "q10",
+      "question": "What do 2 plain dosas with a katori of coconut chutney come to?",
+      "golden": {
+        "kcal": 378.25,
+        "protein_g": 9.2,
+        "carbs_g": 45.83
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 620.0,
+          "protein_g": 10.0,
+          "carbs_g": 95.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 63.9,
+          "protein_g": 8.7,
+          "carbs_g": 107.3
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 378.25,
+          "protein_g": 9.2,
+          "carbs_g": 45.83
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "plain dosa"
+            },
+            "is_error": false,
+            "latency_ms": 9.75
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "coconut chutney"
+            },
+            "is_error": false,
+            "latency_ms": 7.64
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "unit": "piece",
+                  "food_id": "plain_dosa",
+                  "amount": 2
+                },
+                {
+                  "food_id": "coconut_chutney",
+                  "unit": "katori",
+                  "amount": 1
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 5.18
+          }
+        ]
+      }
+    },
+    {
+      "id": "q11",
+      "question": "How many calories are in a katori of curd rice?",
+      "golden": {
+        "kcal": 132.56,
+        "protein_g": 3.91,
+        "carbs_g": 20.29
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 180.0,
+          "protein_g": 5.0,
+          "carbs_g": 26.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 35.8,
+          "protein_g": 27.9,
+          "carbs_g": 28.1
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 132.56,
+          "protein_g": 3.91,
+          "carbs_g": 20.29
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "curd rice"
+            },
+            "is_error": false,
+            "latency_ms": 10.0
+          },
+          {
+            "name": "get_nutrition",
+            "arguments": {
+              "food_id": "curd_rice",
+              "amount": 1,
+              "unit": "katori"
+            },
+            "is_error": false,
+            "latency_ms": 4.43
+          }
+        ]
+      }
+    },
+    {
+      "id": "q12",
+      "question": "How many carbs in 250 g of lemon rice?",
+      "golden": {
+        "kcal": 432.7,
+        "protein_g": 9.53,
+        "carbs_g": 62.93
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 380.0,
+          "protein_g": 7.0,
+          "carbs_g": 68.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 12.2,
+          "protein_g": 26.5,
+          "carbs_g": 8.1
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 432.7,
+          "protein_g": 9.53,
+          "carbs_g": 62.93
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "lemon rice"
+            },
+            "is_error": false,
+            "latency_ms": 10.09
+          },
+          {
+            "name": "get_nutrition",
+            "arguments": {
+              "food_id": "lemon_rice",
+              "unit": "g",
+              "amount": 250
+            },
+            "is_error": false,
+            "latency_ms": 4.05
+          }
+        ]
+      }
+    },
+    {
+      "id": "q13",
+      "question": "A katori each of steamed rice, sambar and rasam, plus 100 g of curd. What are the totals?",
+      "golden": {
+        "kcal": 390.52,
+        "protein_g": 13.26,
+        "carbs_g": 62.79
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 420.0,
+          "protein_g": 13.5,
+          "carbs_g": 70.5
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 7.5,
+          "protein_g": 1.8,
+          "carbs_g": 12.3
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 390.52,
+          "protein_g": 13.26,
+          "carbs_g": 62.79
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "steamed rice"
+            },
+            "is_error": false,
+            "latency_ms": 9.43
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "sambar"
+            },
+            "is_error": false,
+            "latency_ms": 6.75
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "rasam"
+            },
+            "is_error": false,
+            "latency_ms": 7.1
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "curd"
+            },
+            "is_error": false,
+            "latency_ms": 6.12
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "food_id": "steamed_rice",
+                  "amount": 1,
+                  "unit": "katori"
+                },
+                {
+                  "unit": "katori",
+                  "food_id": "sambar",
+                  "amount": 1
+                },
+                {
+                  "unit": "katori",
+                  "amount": 1,
+                  "food_id": "rasam"
+                },
+                {
+                  "amount": 100,
+                  "food_id": "curd",
+                  "unit": "g"
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 7.07
+          }
+        ]
+      }
+    },
+    {
+      "id": "q14",
+      "question": "How much protein is in one and a half katoris of rava upma?",
+      "golden": {
+        "kcal": 259.04,
+        "protein_g": 7.85,
+        "carbs_g": 37.29
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 315.0,
+          "protein_g": 8.5,
+          "carbs_g": 42.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 21.6,
+          "protein_g": 8.3,
+          "carbs_g": 12.6
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 259.04,
+          "protein_g": 7.85,
+          "carbs_g": 37.29
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "rava upma"
+            },
+            "is_error": false,
+            "latency_ms": 10.38
+          },
+          {
+            "name": "get_nutrition",
+            "arguments": {
+              "food_id": "rava_upma",
+              "unit": "katori",
+              "amount": 1.5
+            },
+            "is_error": false,
+            "latency_ms": 4.37
+          }
+        ]
+      }
+    },
+    {
+      "id": "q15",
+      "question": "Machher jhol with rice: a katori of the fish curry and 2 katoris of rice. Calories and protein?",
+      "golden": {
+        "kcal": 510.89,
+        "protein_g": 20.52,
+        "carbs_g": 85.74
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 550.0,
+          "protein_g": 22.0,
+          "carbs_g": 89.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 7.7,
+          "protein_g": 7.2,
+          "carbs_g": 3.8
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 510.89,
+          "protein_g": 20.52,
+          "carbs_g": 85.74
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "machher jhol"
+            },
+            "is_error": false,
+            "latency_ms": 10.34
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "rice"
+            },
+            "is_error": false,
+            "latency_ms": 7.58
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "amount": 1,
+                  "unit": "katori",
+                  "food_id": "machher_jhol"
+                },
+                {
+                  "unit": "katori",
+                  "food_id": "steamed_rice",
+                  "amount": 2
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 5.37
+          }
+        ]
+      }
+    },
+    {
+      "id": "q16",
+      "question": "A katori of musur dal, a katori of rice and 2 pieces of begun bhaja: how many calories?",
+      "golden": {
+        "kcal": 419.3,
+        "protein_g": 10.96,
+        "carbs_g": 56.88
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 490.0,
+          "protein_g": 14.0,
+          "carbs_g": 63.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 16.9,
+          "protein_g": 27.7,
+          "carbs_g": 10.8
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 419.3,
+          "protein_g": 10.96,
+          "carbs_g": 56.88
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "musur dal"
+            },
+            "is_error": false,
+            "latency_ms": 9.26
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "rice"
+            },
+            "is_error": false,
+            "latency_ms": 7.73
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "begun bhaja"
+            },
+            "is_error": false,
+            "latency_ms": 7.02
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "food_id": "musur_dal",
+                  "amount": 1,
+                  "unit": "katori"
+                },
+                {
+                  "unit": "katori",
+                  "food_id": "steamed_rice",
+                  "amount": 1
+                },
+                {
+                  "food_id": "begun_bhaja",
+                  "amount": 2,
+                  "unit": "piece"
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 5.93
+          }
+        ]
+      }
+    },
+    {
+      "id": "q17",
+      "question": "What is the nutrition in 2 katoris of Bengali khichuri?",
+      "golden": {
+        "kcal": 263.69,
+        "protein_g": 10.03,
+        "carbs_g": 40.52
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 390.0,
+          "protein_g": 12.0,
+          "carbs_g": 60.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 47.9,
+          "protein_g": 19.6,
+          "carbs_g": 48.1
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 263.69,
+          "protein_g": 10.03,
+          "carbs_g": 40.52
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "Bengali khichuri"
+            },
+            "is_error": false,
+            "latency_ms": 9.75
+          },
+          {
+            "name": "get_nutrition",
+            "arguments": {
+              "food_id": "bengali_khichuri",
+              "amount": 2,
+              "unit": "katori"
+            },
+            "is_error": false,
+            "latency_ms": 4.36
+          }
+        ]
+      }
+    },
+    {
+      "id": "q18",
+      "question": "Protein in a katori of dimer dalna with 2 rotis?",
+      "golden": {
+        "kcal": 351.85,
+        "protein_g": 14.77,
+        "carbs_g": 44.68
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 370.0,
+          "protein_g": 14.0,
+          "carbs_g": 40.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 5.2,
+          "protein_g": 5.2,
+          "carbs_g": 10.5
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 351.85,
+          "protein_g": 14.77,
+          "carbs_g": 44.68
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "dimer dalna"
+            },
+            "is_error": false,
+            "latency_ms": 9.55
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "roti"
+            },
+            "is_error": false,
+            "latency_ms": 6.53
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "food_id": "dimer_dalna",
+                  "amount": 1,
+                  "unit": "katori"
+                },
+                {
+                  "unit": "piece",
+                  "amount": 2,
+                  "food_id": "chapati"
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 5.3
+          }
+        ]
+      }
+    },
+    {
+      "id": "q19",
+      "question": "How many carbs are in a katori of ghugni?",
+      "golden": {
+        "kcal": 203.08,
+        "protein_g": 8.85,
+        "carbs_g": 19.65
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 180.0,
+          "protein_g": 9.0,
+          "carbs_g": 28.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 11.4,
+          "protein_g": 1.7,
+          "carbs_g": 42.5
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 203.08,
+          "protein_g": 8.85,
+          "carbs_g": 19.65
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "ghugni"
+            },
+            "is_error": false,
+            "latency_ms": 9.27
+          },
+          {
+            "name": "get_nutrition",
+            "arguments": {
+              "unit": "katori",
+              "amount": 1,
+              "food_id": "ghugni"
+            },
+            "is_error": false,
+            "latency_ms": 3.82
+          }
+        ]
+      }
+    },
+    {
+      "id": "q20",
+      "question": "A katori of aloo posto with a katori of steamed rice: calories, protein and carbs?",
+      "golden": {
+        "kcal": 417.73,
+        "protein_g": 8.23,
+        "carbs_g": 65.06
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 375.0,
+          "protein_g": 8.0,
+          "carbs_g": 64.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 10.2,
+          "protein_g": 2.8,
+          "carbs_g": 1.6
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 417.73,
+          "protein_g": 8.23,
+          "carbs_g": 65.06
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "aloo posto"
+            },
+            "is_error": false,
+            "latency_ms": 9.34
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "steamed rice"
+            },
+            "is_error": false,
+            "latency_ms": 6.81
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "amount": 1,
+                  "unit": "katori",
+                  "food_id": "aloo_posto"
+                },
+                {
+                  "amount": 1,
+                  "unit": "katori",
+                  "food_id": "steamed_rice"
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 5.58
+          }
+        ]
+      }
+    },
+    {
+      "id": "q21",
+      "question": "How many calories are in a plate of pav bhaji?",
+      "golden": {
+        "kcal": 453.08,
+        "protein_g": 11.68,
+        "carbs_g": 62.51
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 500.0,
+          "protein_g": 11.0,
+          "carbs_g": 70.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 10.4,
+          "protein_g": 5.8,
+          "carbs_g": 12.0
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 453.08,
+          "protein_g": 11.68,
+          "carbs_g": 62.51
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "pav bhaji"
+            },
+            "is_error": false,
+            "latency_ms": 8.98
+          },
+          {
+            "name": "get_nutrition",
+            "arguments": {
+              "unit": "plate",
+              "amount": 1,
+              "food_id": "pav_bhaji"
+            },
+            "is_error": false,
+            "latency_ms": 4.06
+          }
+        ]
+      }
+    },
+    {
+      "id": "q22",
+      "question": "How many carbs are in 2 batata vadas?",
+      "golden": {
+        "kcal": 281.1,
+        "protein_g": 5.62,
+        "carbs_g": 25.0
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 400.0,
+          "protein_g": 6.0,
+          "carbs_g": 40.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 42.3,
+          "protein_g": 6.8,
+          "carbs_g": 60.0
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 281.1,
+          "protein_g": 5.62,
+          "carbs_g": 25.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "batata vada"
+            },
+            "is_error": false,
+            "latency_ms": 9.36
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "amount": 2,
+                  "food_id": "batata_vada",
+                  "unit": "piece"
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 4.19
+          }
+        ]
+      }
+    },
+    {
+      "id": "q23",
+      "question": "What is the protein in 4 pieces of khaman dhokla?",
+      "golden": {
+        "kcal": 282.79,
+        "protein_g": 11.77,
+        "carbs_g": 28.64
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 360.0,
+          "protein_g": 18.0,
+          "carbs_g": 40.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 27.3,
+          "protein_g": 52.9,
+          "carbs_g": 39.7
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 282.79,
+          "protein_g": 11.77,
+          "carbs_g": 28.64
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "khaman dhokla"
+            },
+            "is_error": false,
+            "latency_ms": 9.54
+          },
+          {
+            "name": "get_nutrition",
+            "arguments": {
+              "amount": 4,
+              "unit": "piece",
+              "food_id": "dhokla"
+            },
+            "is_error": false,
+            "latency_ms": 3.91
+          }
+        ]
+      }
+    },
+    {
+      "id": "q24",
+      "question": "3 methi theplas with 100 g of dahi: calories, protein and carbs?",
+      "golden": {
+        "kcal": 409.43,
+        "protein_g": 15.34,
+        "carbs_g": 49.66
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 450.0,
+          "protein_g": 14.0,
+          "carbs_g": 51.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 9.9,
+          "protein_g": 8.7,
+          "carbs_g": 2.7
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 409.43,
+          "protein_g": 15.34,
+          "carbs_g": 49.66
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "methi thepla"
+            },
+            "is_error": false,
+            "latency_ms": 9.84
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "dahi"
+            },
+            "is_error": false,
+            "latency_ms": 7.06
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "unit": "piece",
+                  "amount": 3,
+                  "food_id": "methi_thepla"
+                },
+                {
+                  "unit": "g",
+                  "food_id": "curd",
+                  "amount": 100
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 4.79
+          }
+        ]
+      }
+    },
+    {
+      "id": "q25",
+      "question": "A katori of sabudana khichdi and a glass of milk. How many calories?",
+      "golden": {
+        "kcal": 544.66,
+        "protein_g": 13.31,
+        "carbs_g": 69.86
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 430.0,
+          "protein_g": 12.0,
+          "carbs_g": 57.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 21.1,
+          "protein_g": 9.8,
+          "carbs_g": 18.4
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 544.66,
+          "protein_g": 13.31,
+          "carbs_g": 69.86
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "sabudana khichdi"
+            },
+            "is_error": false,
+            "latency_ms": 9.5
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "milk"
+            },
+            "is_error": false,
+            "latency_ms": 7.94
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "food_id": "sabudana_khichdi",
+                  "unit": "katori",
+                  "amount": 1
+                },
+                {
+                  "unit": "glass",
+                  "food_id": "whole_milk",
+                  "amount": 1
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 6.12
+          }
+        ]
+      }
+    },
+    {
+      "id": "q26",
+      "question": "Goan fish curry with rice, a katori of each: what are the totals?",
+      "golden": {
+        "kcal": 398.32,
+        "protein_g": 20.27,
+        "carbs_g": 44.81
+      },
+      "expect_missing": [],
+      "without_tools": {
+        "answer": {
+          "kcal": 415.0,
+          "protein_g": 20.0,
+          "carbs_g": 50.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 4.2,
+          "protein_g": 1.3,
+          "carbs_g": 11.6
+        },
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 398.32,
+          "protein_g": 20.27,
+          "carbs_g": 44.81
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": {
+          "kcal": 0.0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0
+        },
+        "turns": 3,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "Goan fish curry"
+            },
+            "is_error": false,
+            "latency_ms": 9.3
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "rice"
+            },
+            "is_error": false,
+            "latency_ms": 7.94
+          },
+          {
+            "name": "compute_meal",
+            "arguments": {
+              "items": [
+                {
+                  "food_id": "goan_fish_curry",
+                  "amount": 1,
+                  "unit": "katori"
+                },
+                {
+                  "unit": "katori",
+                  "amount": 1,
+                  "food_id": "steamed_rice"
+                }
+              ]
+            },
+            "is_error": false,
+            "latency_ms": 5.23
+          }
+        ]
+      }
+    },
+    {
+      "id": "q27",
+      "question": "How many calories, and how much protein and carbs, are in a katori of chicken curry?",
+      "golden": null,
+      "expect_missing": [
+        "chicken curry"
+      ],
+      "without_tools": {
+        "answer": {
+          "kcal": 220.0,
+          "protein_g": 18.0,
+          "carbs_g": 6.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": null,
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": null,
+        "missing": [
+          "chicken curry"
+        ],
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": null,
+        "turns": 2,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "chicken curry",
+              "kind": "dish"
+            },
+            "is_error": false,
+            "latency_ms": 5.82
+          }
+        ]
+      }
+    },
+    {
+      "id": "q28",
+      "question": "What is the nutrition in one masala dosa?",
+      "golden": null,
+      "expect_missing": [
+        "masala dosa"
+      ],
+      "without_tools": {
+        "answer": {
+          "kcal": 320.0,
+          "protein_g": 6.0,
+          "carbs_g": 45.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": null,
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": null,
+        "missing": null,
+        "failure": "turn cap reached",
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": "STOP",
+        "ape": null,
+        "turns": 8,
+        "turns_capped": true,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "masala dosa"
+            },
+            "is_error": false,
+            "latency_ms": 9.41
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "dosa"
+            },
+            "is_error": false,
+            "latency_ms": 9.25
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "aloo masala"
+            },
+            "is_error": false,
+            "latency_ms": 9.55
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "potato masala"
+            },
+            "is_error": false,
+            "latency_ms": 9.78
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "aloo potato curry"
+            },
+            "is_error": false,
+            "latency_ms": 9.11
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "aloo fry"
+            },
+            "is_error": false,
+            "latency_ms": 8.91
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "masala dosa filling"
+            },
+            "is_error": false,
+            "latency_ms": 10.4
+          }
+        ]
+      }
+    },
+    {
+      "id": "q29",
+      "question": "How many calories are in a katori of pulao?",
+      "golden": null,
+      "expect_missing": [
+        "pulao"
+      ],
+      "without_tools": {
+        "answer": {
+          "kcal": 225.0,
+          "protein_g": 4.5,
+          "carbs_g": 38.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": null,
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": {
+          "kcal": 226.07,
+          "protein_g": 3.9,
+          "carbs_g": 40.84
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": null,
+        "turns": 7,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "pulao"
+            },
+            "is_error": false,
+            "latency_ms": 8.87
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "rice pulao"
+            },
+            "is_error": false,
+            "latency_ms": 9.27
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "veg pulao"
+            },
+            "is_error": false,
+            "latency_ms": 9.39
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "pulav"
+            },
+            "is_error": false,
+            "latency_ms": 8.83
+          },
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "rice"
+            },
+            "is_error": false,
+            "latency_ms": 10.73
+          },
+          {
+            "name": "get_nutrition",
+            "arguments": {
+              "amount": 1,
+              "unit": "katori",
+              "food_id": "jeera_rice"
+            },
+            "is_error": false,
+            "latency_ms": 5.11
+          }
+        ]
+      }
+    },
+    {
+      "id": "q30",
+      "question": "How many carbs are in a katori of kheer?",
+      "golden": null,
+      "expect_missing": [
+        "kheer"
+      ],
+      "without_tools": {
+        "answer": {
+          "kcal": 225.0,
+          "protein_g": 6.0,
+          "carbs_g": 30.0
+        },
+        "missing": null,
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": null,
+        "turns": 1,
+        "turns_capped": false,
+        "tool_calls": []
+      },
+      "with_tools": {
+        "answer": null,
+        "missing": [
+          "kheer"
+        ],
+        "failure": null,
+        "model_error": null,
+        "api_error": null,
+        "finish_reason": null,
+        "ape": null,
+        "turns": 2,
+        "turns_capped": false,
+        "tool_calls": [
+          {
+            "name": "search_food",
+            "arguments": {
+              "query": "kheer"
+            },
+            "is_error": false,
+            "latency_ms": 8.38
+          }
+        ]
+      }
+    }
+  ]
+}
