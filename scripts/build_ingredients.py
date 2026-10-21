@@ -229,7 +229,7 @@ def build_row(
     return Built(ingredient, row["source"], description)
 
 
-def _number(value: float | None, places: int = 4) -> str:
+def format_number(value: float | None, places: int = 4) -> str:
     # Fixed places, then trailing zeros dropped: 47.779999 -> "47.78", 328.0 -> "328".
     if value is None:
         return ""
@@ -252,10 +252,10 @@ def write_csv(built: list[Built], path: Path) -> None:
                 "source_record": ingredient.source_record,
                 "gi": "",
                 "gi_ref": "",
-                "density_g_per_ml": _number(ingredient.density_g_per_ml),
+                "density_g_per_ml": format_number(ingredient.density_g_per_ml),
             }
             for key, value in ingredient.per_100g:
-                cells[key] = _number(value)
+                cells[key] = format_number(value)
             writer.writerow([cells[column] for column in INGREDIENT_COLUMNS])
 
 
@@ -271,8 +271,8 @@ def print_review(built: list[Built]) -> None:
                 item.source,
                 item.ingredient.source_record,
                 item.description,
-                _number(values.kcal, 1),
-                _number(values.protein_g, 1),
+                format_number(values.kcal, 1),
+                format_number(values.protein_g, 1),
                 str(gaps),
             )
         )

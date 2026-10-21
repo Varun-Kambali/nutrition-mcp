@@ -1,0 +1,49 @@
+name: latest-deps
+# `uvx --from git+...` installs ignore uv.lock, so a new release of a dependency (an mcp 2.x
+# release most of all) can break real installs while CI, pinned by the lockfile, stays green.
+# The latest job resolves the newest versions pyproject.toml allows for every group and runs
+# lint and tests on them; the runtime job installs the package the way uvx does.
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  latest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          # The cache is keyed on uv.lock, which this job does not follow.
+          enable-cache: false
+      # --upgrade also moves ruff and mypy, so a new lint rule can fail this job with no real
+      # install problem; read the failing step before changing pins.
+      - run: uv sync --upgrade --all-groups
+      - run: make lint
+      - run: make test
+  runtime:
+    # What `uvx --from git+...` installs: the package and its own dependencies at the newest
+    # versions pyproject.toml allows, without uv.lock and without the dev, eval or build-data
+    # groups. pytest and anyio come in only to run the server tests, which drive it over stdio.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest Python pyproject.toml allows, and the newest stable release.
+        python: ["3.12", "3.x"]
+    steps:
+      - uses: actions/checkout@v7
+      - id: python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+          check-latest: true
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: false
+      - name: Server tests on a runtime-only install
+        run: >-
+          uv run --isolated --no-project --python "${{ steps.python.outputs.python-path }}"
+          --with . --with pytest --with anyio pytest tests/integration/test_server.py

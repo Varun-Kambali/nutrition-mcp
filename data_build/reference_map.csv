@@ -1,0 +1,19 @@
+dish_id,source,record,notes
+aloo_gobi,cofid,15-679,"Bangladeshi bhaji of cauliflower and potato, a dry dish like this one, which also has tomato and onion. CoFID 15-741, a Gujarati curry of the same vegetables, has a gravy and was not used"
+bengali_khichuri,cofid,15-528,"Rice and mung bean khichadi with butter ghee, thicker than this one and without its potato, cauliflower and peas. Rice and dal define khichuri, so the match stands; vegetables define dalma, which has no reference for that reason"
+chana_masala,cofid,15-108,"Punjabi whole chick pea curry with onion, tomato and vegetable oil; this recipe uses sunflower oil"
+chapati,cofid,11-459,Chapatis made without fat
+cholar_dal,cofid,15-641,"Punjabi split chick pea dal with tomato and a thicker consistency. This Bengali recipe has coconut, sugar and ghee and no tomato"
+dal_makhani,cofid,15-735,"Whole black gram and red kidney bean curry, the base of dal makhani. CoFID does not name the fat; this recipe has ghee, butter and cream"
+dal_tadka,cofid,15-779,"Split pigeon pea dal with butter. This recipe uses ghee and adds onion and tomato"
+dimer_dalna,cofid,15-750,"Egg and potato curry with tomato. CoFID does not name the fat; this recipe uses mustard oil"
+gujarati_kadhi,cofid,15-809,Gujarati khadhi: yogurt with gram flour and spices
+jeera_rice,cofid,11-968,"Plain pilau rice, cooked with fat and whole spices. This recipe uses ghee and cumin"
+musur_dal,cofid,15-764,"Bangladeshi red lentil dal with vegetable oil, thin like this one but with much more dal per 100 g. This recipe uses mustard oil"
+palak_paneer,usda,2709631,"FNDDS recipe uses full-fat cottage cheese in place of paneer, more cheese than this recipe, and vegetable oil in place of ghee"
+plain_dosa,usda,2708347,"FNDDS recipe uses lentils in place of urad dal and enriched rice, which raises its iron"
+plain_paratha,cofid,11-1104,Homemade paratha. CoFID does not name the flour or the fat
+rajma_masala,cofid,15-146,"Punjabi red kidney bean curry of medium consistency. CoFID does not name the fat; this recipe uses sunflower oil"
+rava_upma,usda,2709128,"FNDDS recipe uses Cream of Wheat (enriched farina) and more onion and tomato. The enrichment raises its iron and calcium"
+sambar,cofid,12-467,"Analysed homemade samples of a spicy yellow lentil stew. CoFID does not name the vegetables"
+steamed_rice,usda,2708408,"FNDDS rice is enriched long-grain rice cooked with salt; this recipe uses unenriched rice and no salt. The enrichment raises its iron"

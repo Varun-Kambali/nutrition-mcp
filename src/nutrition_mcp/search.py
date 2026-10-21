@@ -11,11 +11,15 @@ A food is a result only when one candidate passes two checks:
 - Every query word matches a word in that candidate. Two words match when they are equal,
   or when both have 5 or more letters, start with the same letter and are one edit apart
   (one letter inserted, deleted or changed): "masla" matches "masala", "samber" matches
-  "sambar". The one-edit match applies to a query word only when no food in the searched
-  foods spells it exactly in a name, ID or alias. "chilli" is spelled exactly by green
-  chilli, so it does not also match sugar through its alias "cheeni" ("chini", one edit
-  from "chili"). The check runs on the foods left after the filters, so a food a filter
-  removes cannot take a typo's match away.
+  "sambar". When a food in the searched foods spells a query word exactly in a name, ID or
+  alias, a word with one letter changed no longer matches it, because two words of the same
+  length one letter apart are often two foods: "chilli" is spelled exactly by green chilli,
+  so it does not also match sugar through its alias "cheeni" ("chini", one letter changed
+  from "chili"), and "dalma" does not match "dalna". A letter added or dropped still
+  matches, because that is usually a plural or a spelling variant of the same food:
+  "chickpea" finds the alias "chickpeas" although chana masala spells "chickpea" exactly,
+  and "sorshe tel" finds "sorsher tel". The check runs on the foods left after the
+  filters, so a food a filter removes cannot take a typo's match away.
 - That candidate scores at least RESULT_MIN_SCORE.
 
 The word check is what keeps a dish that is not in the data from returning a different one.
@@ -108,17 +112,22 @@ def normalise(text: str) -> str:
 
 
 def _one_edit_apart(query_word: str, name_word: str) -> bool:
-    """Both words have TYPO_MIN_LETTERS or more, start alike and differ by one edit.
-
-    Equal words are not handled here: a query word that a searched food spells exactly only
-    matches an equal word, and any other query word equals no word of any searched food.
-    """
+    """Both words have TYPO_MIN_LETTERS or more, start alike and differ by one edit."""
     return (
         len(query_word) >= TYPO_MIN_LETTERS
         and len(name_word) >= TYPO_MIN_LETTERS
         and query_word[0] == name_word[0]
         and Levenshtein.distance(query_word, name_word, score_cutoff=1) <= 1
     )
+
+
+def _word_matches(query_word: str, name_word: str, spelled_exactly: set[str]) -> bool:
+    """Equal, or one edit apart unless the edit changes a letter of a word in `spelled_exactly`."""
+    if query_word == name_word:
+        return True
+    if not _one_edit_apart(query_word, name_word):
+        return False
+    return query_word not in spelled_exactly or len(query_word) != len(name_word)
 
 
 def _names(food: Food) -> set[str]:
@@ -128,11 +137,13 @@ def _names(food: Food) -> set[str]:
 def _has_every_word(
     query_words: list[str], name_words: list[str], spelled_exactly: set[str]
 ) -> bool:
-    """Whether every query word is in the name; a word in `spelled_exactly` must be equal."""
+    """Whether every query word matches a word of the name (see `_word_matches`).
+
+    Equal words are compared directly, so the result does not depend on `spelled_exactly`
+    coming from the same foods as the name; it only decides which one-edit matches count.
+    """
     return all(
-        word in name_words
-        if word in spelled_exactly
-        else any(_one_edit_apart(word, other) for other in name_words)
+        any(_word_matches(word, other, spelled_exactly) for other in name_words)
         for word in query_words
     )
 

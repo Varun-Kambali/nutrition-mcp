@@ -32,10 +32,13 @@ dev = [
     "ruff",
     "mypy",
     "types-PyYAML",
+    "types-openpyxl",
     "pre-commit",
 ]
 build-data = ["openpyxl", "httpx"]
-eval = ["google-genai"]
+# The eval code imports anyio itself. mcp depends on it too, so `make eval-data` has it
+# without this group.
+eval = ["google-genai", "anyio>=4.9"]
 
 [tool.hatch.version]
 path = "src/nutrition_mcp/__init__.py"
@@ -53,9 +56,13 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.mypy]
 strict = true
-files = ["src"]
+# The eval and reference-build scripts are typed like the package. The second one imports
+# scripts/build_ingredients.py, which mypy checks through it.
+files = ["src", "evals", "scripts/build_references.py"]
 plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The eval and build scripts are not part of the package; tests import them from here.
+pythonpath = ["evals", "scripts"]
 addopts = "-ra --import-mode=importlib"

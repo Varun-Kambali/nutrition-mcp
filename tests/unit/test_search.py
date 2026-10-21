@@ -5,7 +5,7 @@ from nutrition_mcp.loader import build_registry
 from nutrition_mcp.models import Diet, Food, Nutrients, Region
 from nutrition_mcp.registry import Registry
 from nutrition_mcp.schemas import FoodSummary, SearchResult
-from nutrition_mcp.search import normalise, search_foods
+from nutrition_mcp.search import _has_every_word, normalise, search_foods
 from nutrition_mcp.units import valid_units
 
 SETTINGS = Settings(default_katori_g=150.0)
@@ -19,13 +19,17 @@ def reg() -> Registry:
 
 
 def make_food(
-    food_id: str, name: str, regions: list[Region] | None = None, diet: Diet = "vegan"
+    food_id: str,
+    name: str,
+    regions: list[Region] | None = None,
+    diet: Diet = "vegan",
+    aliases: list[str] | None = None,
 ) -> Food:
     return Food(
         id=food_id,
         kind="dish",
         name=name,
-        aliases=[],
+        aliases=aliases or [],
         regions=regions or ["south"],
         diet=diet,
         source_ids=[],
@@ -341,6 +345,91 @@ def test_an_exact_word_beats_a_one_edit_word(reg: Registry, query: str) -> None:
     found = ids(search_foods(reg, SETTINGS, query, None, None, None, limit=50))
     assert {"green_chilli", "red_chilli_powder"} <= set(found)
     assert "sugar" not in found
+
+
+@pytest.mark.parametrize(
+    ("query", "food_id"),
+    [
+        # "chickpea" is spelled exactly in chana masala's alias "chickpea curry".
+        ("chickpea", "kabuli_chana"),
+        ("kabuli chickpea", "kabuli_chana"),
+        # "shorshe", an alias of mustard seeds, folds to "sorse"; the oil's alias is "sorsher tel".
+        ("sorshe tel", "mustard_oil"),
+        # "khichadi", an alias of sabudana khichdi, is one letter longer than "khichdi".
+        ("khichadi", "bengali_khichuri"),
+    ],
+)
+def test_a_letter_added_or_dropped_still_matches_beside_an_exact_word(
+    reg: Registry, query: str, food_id: str
+) -> None:
+    assert food_id in ids(search_foods(reg, SETTINGS, query, None, None, None, limit=50))
+
+
+def test_mirch_and_mirchi_match_each_other() -> None:
+    pool = Registry({"a": make_food("a", "Hari mirch"), "b": make_food("b", "Mirchi powder")}, {})
+    assert ids(search_foods(pool, SETTINGS, "hari mirchi", None, None, None)) == ["a"]
+    assert ids(search_foods(pool, SETTINGS, "mirch powder", None, None, None)) == ["b"]
+
+
+@pytest.mark.parametrize(("query", "food_id"), [("dalma", "dalma"), ("dalna", "dimer_dalna")])
+def test_a_changed_letter_gives_way_to_the_exact_word(
+    reg: Registry, query: str, food_id: str
+) -> None:
+    # "dalma" and "dalna" are one letter apart and the same length: two different dishes.
+    assert ids(search_foods(reg, SETTINGS, query, None, None, None, limit=50)) == [food_id]
+
+
+def test_an_exact_word_rules_out_only_a_changed_letter() -> None:
+    pool = Registry(
+        {
+            "a": make_food("a", "Samber rice"),
+            "b": make_food("b", "Sambar"),
+            "c": make_food("c", "Sambers"),
+        },
+        {},
+    )
+    # "sambar" changes a letter of "samber"; "sambers" adds one.
+    assert ids(search_foods(pool, SETTINGS, "samber", None, None, None)) == ["a", "c"]
+
+
+def test_an_exact_word_only_in_an_alias_rules_out_a_changed_letter() -> None:
+    pool = Registry(
+        {"a": make_food("a", "Lentil stew", aliases=["Samber"]), "b": make_food("b", "Sambar")},
+        {},
+    )
+    assert ids(search_foods(pool, SETTINGS, "samber", None, None, None)) == ["a"]
+
+
+def test_an_exact_word_only_in_an_id_rules_out_a_changed_letter() -> None:
+    pool = Registry(
+        {"samber_rice": make_food("samber_rice", "Rice bowl"), "b": make_food("b", "Sambar")}, {}
+    )
+    assert ids(search_foods(pool, SETTINGS, "samber", None, None, None)) == ["samber_rice"]
+
+
+def test_a_repeated_query_word_finds_the_same_foods(reg: Registry) -> None:
+    once = search_foods(reg, SETTINGS, "dal", None, None, None, limit=50)
+    twice = search_foods(reg, SETTINGS, "dal dal", None, None, None, limit=50)
+    assert set(ids(twice)) == set(ids(once))
+    assert twice.total == once.total
+    pool = Registry({"a": make_food("a", "Samber rice"), "b": make_food("b", "Sambar")}, {})
+    assert ids(search_foods(pool, SETTINGS, "samber samber", None, None, None)) == ["a"]
+
+
+@pytest.mark.parametrize(("query", "name"), [("sag", "Sago"), ("dosa", "Dosai"), ("dosai", "Dosa")])
+def test_a_word_under_five_letters_matches_only_an_equal_word(query: str, name: str) -> None:
+    # Each pair is one letter apart and scores 80 or more as a whole string.
+    pool = Registry({"a": make_food("a", name)}, {})
+    assert search_foods(pool, SETTINGS, query, None, None, None).results == []
+    assert ids(search_foods(pool, SETTINGS, name, None, None, None)) == ["a"]
+
+
+@pytest.mark.parametrize("words", [["dal"], ["tadka", "dal"]])
+def test_an_equal_word_matches_whatever_the_pool_spells(words: list[str]) -> None:
+    # Equal words are read off the name alone, so the check does not depend on
+    # spelled_exactly coming from the same foods as the name.
+    assert _has_every_word(words, ["dal", "tadka"], set())
+    assert _has_every_word(words, ["dal", "tadka"], set(words))
 
 
 def test_a_typo_is_found_when_no_food_has_the_typed_word() -> None:

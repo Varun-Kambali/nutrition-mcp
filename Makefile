@@ -1,4 +1,6 @@
 COV_MIN ?= 80
+# Extra options for evals/run_evals.py, as in make eval ARGS="--limit 2 --out /tmp/smoke".
+ARGS ?=
 
 .PHONY: setup lint test eval eval-data run docker data gi
 
@@ -9,16 +11,19 @@ setup:
 lint:
 	uv run ruff check .
 	uv run ruff format --check .
-	uv run mypy src
+	uv run mypy
 
 test:
 	uv run pytest --cov=src --cov-fail-under=$(COV_MIN)
 
+# uv reads .env only when the file exists, so `make eval` also works with the key exported.
+ENV_FILE := $(if $(wildcard .env),--env-file .env)
+
 eval:
-	uv run python evals/run_evals.py --suite grounding
+	uv run $(ENV_FILE) --group eval python evals/run_evals.py --suite grounding $(ARGS)
 
 eval-data:
-	uv run python evals/run_evals.py --suite data_accuracy
+	uv run python evals/run_evals.py --suite data_accuracy $(ARGS)
 
 run:
 	uv run nutrition-mcp

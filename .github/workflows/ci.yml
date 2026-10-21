@@ -16,10 +16,33 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true
-      - run: uv sync
+      # With UV_FROZEN set, `uv lock --check` only checks that the lockfile parses, not that
+      # it matches pyproject.toml.
+      - name: Check uv.lock matches pyproject.toml
+        run: uv lock --check
+        env:
+          UV_FROZEN: "0"
+      # All groups, as `make setup` installs: mypy checks scripts/build_references.py, which
+      # imports httpx and openpyxl from the build-data group.
+      - run: uv sync --all-groups
       - run: make lint
       - run: make test
+      - name: Check the committed JSON Schemas match the models
+        run: |
+          uv run python scripts/export_schemas.py
+          # Porcelain status also lists new, untracked schema files, which git diff misses.
+          changes="$(git status --porcelain schemas/)"
+          if [ -n "$changes" ]; then echo "$changes"; git diff schemas/; exit 1; fi
       - run: docker build -t nutrition-mcp .
+  data-accuracy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run python evals/run_evals.py --suite data_accuracy --check evals/thresholds.toml
   secrets-scan:
     runs-on: ubuntu-latest
     steps:
