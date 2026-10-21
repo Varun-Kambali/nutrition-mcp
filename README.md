@@ -154,7 +154,7 @@ Two evaluations, kept apart because one checks the data and the other checks a m
 
 ## Testing
 
-`make test` and `make lint`. CI runs both, checks data accuracy against `evals/thresholds.toml`, and builds the Docker image.
+`make test` and `make lint`. CI runs both, checks data accuracy against `evals/thresholds.toml`, and builds the Docker image, then starts it the way an MCP client would and calls the tools (`tests/integration/test_container.py`, which skips unless `NUTRITION_MCP_IMAGE` names a built image).
 
 ## Deployment
 

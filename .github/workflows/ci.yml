@@ -34,6 +34,11 @@ jobs:
           changes="$(git status --porcelain schemas/)"
           if [ -n "$changes" ]; then echo "$changes"; git diff schemas/; exit 1; fi
       - run: docker build -t nutrition-mcp .
+      # Starts the image as an MCP client would and calls the tools; skipped without the tag.
+      - name: Test the image over stdio
+        run: uv run pytest tests/integration/test_container.py
+        env:
+          NUTRITION_MCP_IMAGE: nutrition-mcp
   data-accuracy:
     runs-on: ubuntu-latest
     steps:
