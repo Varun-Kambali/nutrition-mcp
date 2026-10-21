@@ -242,7 +242,11 @@ Search reads a plural by trying the query again without the final "s" when it fi
 
 ## What I learned
 
-Written as the build goes.
+- **A tool description is read once; a tool result is read when the model decides.** The `search_food` description already said to report a missing dish, and in the first grounding run the model still answered pulao with jeera rice after four empty searches. The fix was to put the instruction in the empty result itself ([ADR 0007](docs/decisions/0007-missing-food-note-and-server-instructions.md)).
+- **An evaluation scored against your own data cannot tell you the data is right.** With the tools, calorie error against the server's totals was 0.0, by construction. Checking the computed dishes against independent CoFID and USDA records gave 18.7% mean error on calories over 18 dishes, which is what the data-accuracy gate in CI now tracks ([ADR 0006](docs/decisions/0006-two-evaluations.md), [results file](evals/results/2026-10-20_data-accuracy_32aa03d.json)).
+- **Fuzzy search needs word rules, not just a score.** A plain similarity score matched "tea" inside "steamed" and returned chana masala for "chicken curry" through its alias "chickpea curry". Requiring every query word to match a word of the name fixed both, and plurals came later as a retry in the singular ([search.py](src/nutrition_mcp/search.py)).
+- **Two open food tables can mean different things by the same nutrient.** USDA reports carbohydrate by difference, fibre included; CoFID reports available carbohydrate and gives fibre no energy. Every source value is mapped to one definition before a dish is computed ([data notes](docs/data.md)).
+- **Missing has to stay missing.** Urad dal has no fibre value in its source, so idli's fibre is reported as a lower bound with the ingredient named, not as a smaller number that looks complete ([ADR 0003](docs/decisions/0003-missing-is-not-zero.md)).
 
 ## License and data
 
