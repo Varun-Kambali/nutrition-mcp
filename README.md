@@ -1,6 +1,6 @@
 # nutrition-mcp
 
-Work in progress. The server and its five tools run over stdio, and the data-accuracy evaluation runs in CI; the grounding evaluation and the demo come next. This README fills in as each part ships; the reasoning behind the project is in the [case study](docs/case-study.md).
+Work in progress. The server and its five tools run over stdio, the data-accuracy evaluation runs in CI, and the first grounding run is recorded under Results; the demo comes next. This README fills in as each part ships; the reasoning behind the project is in the [case study](docs/case-study.md).
 
 An MCP server that gives any assistant or agent sourced nutrition, glycemic load and micronutrient data for Indian dishes and ingredients, for any amount in grams or household measures.
 
@@ -24,7 +24,25 @@ The full list of planned features is in [docs/requirements.md](docs/requirements
 
 ## Results
 
-The data-accuracy evaluation compares the values the server computes for each dish, per 100 g, with an independent record of the same dish: a CoFID 2021 homemade dish or a USDA survey food ([ADR 0006](docs/decisions/0006-two-evaluations.md)). The value is the mean absolute percentage error (MAPE) against those records, and n is the number of dishes compared. A gated nutrient fails CI when it gets worse than `evals/thresholds.toml` allows. The rows are copied from [`evals/results/summary.md`](evals/results/summary.md):
+Two evaluations, kept apart ([ADR 0006](docs/decisions/0006-two-evaluations.md)). The rows below are copied from [`evals/results/summary.md`](evals/results/summary.md), and each row names its results file.
+
+**Grounding.** A Gemini model answered 30 questions twice with the same prompt: from memory (Baseline) and with this server's tools over stdio (This project). Each golden answer is the server's own total for the foods in the question, and 4 of the questions name a dish that is not in the data. The error is the mean absolute percentage error (MAPE) over the 26 questions that both runs answered with numbers. Shares run from 0 to 1, and n is the number of questions behind each value, Baseline first, or the number of tool calls for tool errors and latency.
+
+| Measure | Baseline | This project | n | Model | Date | Commit | Dataset version | Results file |
+|---|---|---|---|---|---|---|---|---|
+| Calorie error against the dataset totals, MAPE (%) | 16.0 | 0.0 | 26 / 26 | gemini-3.1-flash-lite | 2026-10-21 | 8262476 | 24143edbb56e | [2026-10-21_gemini-3.1-flash-lite_8262476.json](evals/results/2026-10-21_gemini-3.1-flash-lite_8262476.json) |
+| Protein error against the dataset totals, MAPE (%) | 13.2 | 0.0 | 26 / 26 | gemini-3.1-flash-lite | 2026-10-21 | 8262476 | 24143edbb56e | [2026-10-21_gemini-3.1-flash-lite_8262476.json](evals/results/2026-10-21_gemini-3.1-flash-lite_8262476.json) |
+| Carbohydrate error against the dataset totals, MAPE (%) | 20.2 | 0.0 | 26 / 26 | gemini-3.1-flash-lite | 2026-10-21 | 8262476 | 24143edbb56e | [2026-10-21_gemini-3.1-flash-lite_8262476.json](evals/results/2026-10-21_gemini-3.1-flash-lite_8262476.json) |
+| Answers within 10% on calories (share) | 0.38 | 1.0 | 26 / 26 | gemini-3.1-flash-lite | 2026-10-21 | 8262476 | 24143edbb56e | [2026-10-21_gemini-3.1-flash-lite_8262476.json](evals/results/2026-10-21_gemini-3.1-flash-lite_8262476.json) |
+| Missing dishes reported (share) | n/a | 0.5 | n/a / 4 | gemini-3.1-flash-lite | 2026-10-21 | 8262476 | 24143edbb56e | [2026-10-21_gemini-3.1-flash-lite_8262476.json](evals/results/2026-10-21_gemini-3.1-flash-lite_8262476.json) |
+| Failed answers (count) | 0 | 1 | 30 / 30 | gemini-3.1-flash-lite | 2026-10-21 | 8262476 | 24143edbb56e | [2026-10-21_gemini-3.1-flash-lite_8262476.json](evals/results/2026-10-21_gemini-3.1-flash-lite_8262476.json) |
+| API errors (count) | 0 | 0 | 30 / 30 | gemini-3.1-flash-lite | 2026-10-21 | 8262476 | 24143edbb56e | [2026-10-21_gemini-3.1-flash-lite_8262476.json](evals/results/2026-10-21_gemini-3.1-flash-lite_8262476.json) |
+| Tool errors (count) | n/a | 0 | n/a / 89 | gemini-3.1-flash-lite | 2026-10-21 | 8262476 | 24143edbb56e | [2026-10-21_gemini-3.1-flash-lite_8262476.json](evals/results/2026-10-21_gemini-3.1-flash-lite_8262476.json) |
+| p95 tool latency (ms) | n/a | 10.4 | n/a / 89 | gemini-3.1-flash-lite | 2026-10-21 | 8262476 | 24143edbb56e | [2026-10-21_gemini-3.1-flash-lite_8262476.json](evals/results/2026-10-21_gemini-3.1-flash-lite_8262476.json) |
+
+The 0.0 is by construction. The golden answers are the server's own totals, so it shows that with the tools the model picked the right food and unit and used the computed total on every one of the 26 questions; it does not show that the totals match what the dishes contain, which the data-accuracy rows below measure against independent records. The Baseline error is also distance from those totals, not from the dishes. The 0.5 for missing dishes and the one failed answer come from the 4 questions about dishes that are not in the data; see Limitations.
+
+**Data accuracy.** The suite compares the values the server computes for each dish, per 100 g, with an independent record of the same dish: a CoFID 2021 homemade dish or a USDA survey food. The value is the MAPE against those records, and n is the number of dishes compared. A gated nutrient fails CI when it gets worse than `evals/thresholds.toml` allows.
 
 | Suite | Measure | n | Value | Date | Commit | Dataset version | Results file |
 |---|---|---|---|---|---|---|---|
@@ -34,7 +52,7 @@ The data-accuracy evaluation compares the values the server computes for each di
 | data accuracy | Iron (mg) MAPE (%), reported | 18 | 44.2 | 2026-10-20 | 32aa03d | 24143edbb56e | [2026-10-20_data-accuracy_32aa03d.json](evals/results/2026-10-20_data-accuracy_32aa03d.json) |
 | data accuracy | Calcium (mg) MAPE (%), reported | 18 | 46.1 | 2026-10-20 | 32aa03d | 24143edbb56e | [2026-10-20_data-accuracy_32aa03d.json](evals/results/2026-10-20_data-accuracy_32aa03d.json) |
 
-The references are UK and US records, so part of each error is a difference in recipe (water, fat, an enriched grain) or in energy basis rather than wrong data; ADR 0006 names the largest cases. The grounding evaluation, a model's accuracy with and without the tools, has not run yet. Its numbers will come from its own results file.
+The references are UK and US records, so part of each error is a difference in recipe (water, fat, an enriched grain) or in energy basis rather than wrong data; ADR 0006 names the largest cases.
 
 ## Architecture
 
@@ -132,7 +150,7 @@ Nutrient values are rounded to 2 decimals, so 0.0 can be a small amount; a value
 Two evaluations, kept apart because one checks the data and the other checks a model using it ([ADR 0006](docs/decisions/0006-two-evaluations.md)):
 
 - **Data accuracy** compares computed dish values with independent records of the same dishes (`evals/datasets/references.csv`, built from `data_build/reference_map.csv` by `scripts/build_references.py`). It needs no model and no API key. Run it with `make eval-data`; CI runs it on every pull request with `--check` against `evals/thresholds.toml`. The latest result is under Results.
-- **Grounding** asks a Gemini model each question in `evals/datasets/questions.jsonl` twice with the same prompt: once from memory, and once with this server's tools over stdio. Each question lists the food ids, amounts and units behind it, and its golden answer comes from the server's own query functions; a few ask about dishes that are not in the data, where the right answer names the dish as missing. The model ends its reply with a JSON answer, so scoring needs no judge model. A run reports the error against the dataset totals (the mean absolute percentage error on kcal, protein and available carbohydrate, over the questions both runs answered with numbers), the share of answers within 10%, the missing dishes reported, failed answers, API and tool errors and p95 tool latency, and writes them to a results file named by date, model and commit. It calls the model, so it runs only on demand: put `GEMINI_API_KEY` in `.env` (see `.env.example`) and run `make eval`. `EVAL_MODEL` overrides the default model set in `evals/grounding.py`. Requests start at least 4 seconds apart by default. That is a conservative default, not a published limit: Google shows free-tier rate limits per project in AI Studio. `make eval ARGS="--min-interval 2"` changes the gap, and `make eval ARGS="--limit 2 --out /tmp/smoke"` asks only the first two questions to check the setup; a run with `--limit` never replaces the headline. It has not run yet.
+- **Grounding** asks a Gemini model each question in `evals/datasets/questions.jsonl` twice with the same prompt: once from memory, and once with this server's tools over stdio. Each question lists the food ids, amounts and units behind it, and its golden answer comes from the server's own query functions; a few ask about dishes that are not in the data, where the right answer names the dish as missing. The model ends its reply with a JSON answer, so scoring needs no judge model. A run reports the error against the dataset totals (the mean absolute percentage error on kcal, protein and available carbohydrate, over the questions both runs answered with numbers), the share of answers within 10%, the missing dishes reported, failed answers, API and tool errors and p95 tool latency, and writes them to a results file named by date, model and commit. It calls the model, so it runs only on demand: put `GEMINI_API_KEY` in `.env` (see `.env.example`) and run `make eval`. `EVAL_MODEL` overrides the default model set in `evals/grounding.py`. Requests start at least 4 seconds apart by default. That is a conservative default, not a published limit: Google shows free-tier rate limits per project in AI Studio. `make eval ARGS="--min-interval 2"` changes the gap, and `make eval ARGS="--limit 2 --out /tmp/smoke"` asks only the first two questions to check the setup; a run with `--limit` never replaces the headline. The first full run is under Results.
 
 ## Testing
 
@@ -162,7 +180,9 @@ docs/                case study, requirements, architecture
 
 ## Limitations and next steps
 
-The grounding evaluation has not run, so the gain from the tools is not measured yet. Its model runs at the provider's default temperature, as Google advises for Gemini 3 models, so its answers, and the numbers built on them, vary from run to run. Its with-tools run passes the model the server's tools but not the instructions the server sends when a client connects, which tell the model to get food ids from `search_food`, use `get_nutrition` or `compute_meal`, and take every number from a tool result. For clients that pass those instructions on to the model, the measured gain is a lower bound.
+The grounding result is one run of one model, on the free tier. Its model runs at the provider's default temperature, as Google advises for Gemini 3 models, so its answers, and the numbers built on them, vary from run to run. Its with-tools run passes the model the server's tools but not the instructions the server sends when a client connects, which tell the model to get food ids from `search_food`, use `get_nutrition` or `compute_meal`, and take every number from a tool result. For clients that pass those instructions on to the model, the measured gain is a lower bound.
+
+Two behaviours with dishes that are not in the data, as observed in the recorded run. For pulao the model searched 5 times and found no pulao, then answered with the numbers for jeera rice. That is a substitution, the behaviour the requirements list as a failure. The data has no pulao, so the choice of another food was the model's, and this run did not pass the server's instructions, so it does not show whether they change it. For masala dosa the model made 7 searches for the dosa and its filling and reached the 8-turn cap without an answer, which is the one failed answer in the table. Only chicken curry and kheer were reported as missing.
 
 Search has no plural forms. A plural matches only as a one-letter slip, which search accepts on words of 5 letters or more, so "chapatis" finds chapati but "rotis", "plain dosas" and "batata vadas" return no results, only the singular name as a suggestion. The data-accuracy evaluation covers only the dishes that have an independent record (n under Results); ADR 0006 lists the others and why they have none. Known limits of the design are in the case study.
 
