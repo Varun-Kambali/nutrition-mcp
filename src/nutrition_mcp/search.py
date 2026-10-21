@@ -112,17 +112,22 @@ def normalise(text: str) -> str:
 
 
 def _one_edit_apart(query_word: str, name_word: str) -> bool:
-    """Both words have TYPO_MIN_LETTERS or more, start alike and differ by one edit.
-
-    Equal words are not handled here: a query word that a searched food spells exactly only
-    matches an equal word, and any other query word equals no word of any searched food.
-    """
+    """Both words have TYPO_MIN_LETTERS or more, start alike and differ by one edit."""
     return (
         len(query_word) >= TYPO_MIN_LETTERS
         and len(name_word) >= TYPO_MIN_LETTERS
         and query_word[0] == name_word[0]
         and Levenshtein.distance(query_word, name_word, score_cutoff=1) <= 1
     )
+
+
+def _word_matches(query_word: str, name_word: str, spelled_exactly: set[str]) -> bool:
+    """Equal, or one edit apart unless the edit changes a letter of a word in `spelled_exactly`."""
+    if query_word == name_word:
+        return True
+    if not _one_edit_apart(query_word, name_word):
+        return False
+    return query_word not in spelled_exactly or len(query_word) != len(name_word)
 
 
 def _names(food: Food) -> set[str]:
@@ -132,18 +137,13 @@ def _names(food: Food) -> set[str]:
 def _has_every_word(
     query_words: list[str], name_words: list[str], spelled_exactly: set[str]
 ) -> bool:
-    """Whether every query word is in the name.
+    """Whether every query word matches a word of the name (see `_word_matches`).
 
-    A word in `spelled_exactly` matches an equal word, or one a letter longer or shorter, but
-    not one with a letter changed.
+    Equal words are compared directly, so the result does not depend on `spelled_exactly`
+    coming from the same foods as the name; it only decides which one-edit matches count.
     """
     return all(
-        any(
-            other == word or (len(other) != len(word) and _one_edit_apart(word, other))
-            for other in name_words
-        )
-        if word in spelled_exactly
-        else any(_one_edit_apart(word, other) for other in name_words)
+        any(_word_matches(word, other, spelled_exactly) for other in name_words)
         for word in query_words
     )
 
