@@ -132,7 +132,7 @@ Nutrient values are rounded to 2 decimals, so 0.0 can be a small amount; a value
 Two evaluations, kept apart because one checks the data and the other checks a model using it ([ADR 0006](docs/decisions/0006-two-evaluations.md)):
 
 - **Data accuracy** compares computed dish values with independent records of the same dishes (`evals/datasets/references.csv`, built from `data_build/reference_map.csv` by `scripts/build_references.py`). It needs no model and no API key. Run it with `make eval-data`; CI runs it on every pull request with `--check` against `evals/thresholds.toml`. The latest result is under Results.
-- **Grounding** asks a model the same questions with and without the server's tools and scores both against answers computed by the server's own query functions. It has not run yet.
+- **Grounding** asks a Gemini model each question in `evals/datasets/questions.jsonl` twice with the same prompt: once from memory, and once with this server's tools over stdio. Each question lists the food ids, amounts and units behind it, and its golden answer comes from the server's own query functions; a few ask about dishes that are not in the data, where the right answer names the dish as missing. The model ends its reply with a JSON answer, so scoring needs no judge model. A run reports the mean absolute percentage error on kcal, protein and available carbohydrate, the share of answers within 10%, the missing dishes reported, tool errors and p95 tool latency, and writes them to a results file named by date, model and commit. It calls the model, so it runs only on demand: put `GEMINI_API_KEY` in `.env` (see `.env.example`) and run `make eval`. `EVAL_MODEL` overrides the default model set in `evals/grounding.py`. It has not run yet.
 
 ## Testing
 
@@ -146,6 +146,7 @@ The server runs on the user's machine over stdio. There is no hosted endpoint.
 
 ```
 src/nutrition_mcp/   server code
+evals/               evaluation runner, datasets and results
 tests/               unit and integration tests
 docs/                case study, requirements, architecture
 ```
